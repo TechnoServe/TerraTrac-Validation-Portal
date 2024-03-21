@@ -17,7 +17,7 @@ Including another URLconf
 
 from django.urls import path
 
-from .views import get_tree_cover_loss_data
+from .views import get_radd_data, get_tree_cover_loss_data
 
 
 urlpatterns = [
@@ -25,5 +25,10 @@ urlpatterns = [
         "get-tree-cover-loss-data/",
         get_tree_cover_loss_data,
         name="get_tree_cover_loss_data",
+    ),
+    path(
+        "get-radd-data/",
+        get_radd_data,
+        name="get_radd_data",
     ),
 ]
