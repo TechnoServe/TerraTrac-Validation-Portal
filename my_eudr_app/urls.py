@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import get_radd_data
+from .views import get_radd_data, index
 
 urlpatterns = [
     path(
@@ -7,4 +7,5 @@ urlpatterns = [
         get_radd_data,
         name="get_radd_data",
     ),
+    path("", index),
 ]
