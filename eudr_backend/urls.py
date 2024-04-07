@@ -24,4 +24,5 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("my_eudr_app.urls")),
     path("", views.index, name="index"),
+    path("validator/", views.validator, name="validator"),
 ]

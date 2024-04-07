@@ -10,6 +10,10 @@ def index(request):
     return render(request, "index.html")
 
 
+def validator(request):
+    return render(request, "validator.html")
+
+
 @api_view(["POST"])
 def get_radd_data(request):
     # token = get_auth_token()
