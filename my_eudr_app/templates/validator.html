@@ -109,7 +109,7 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="./pages/map.html">
+            <a class="nav-link" href="{% url 'map' %}">
               <div
                 class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center"
               >
@@ -119,7 +119,7 @@
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="./pages/users.html">
+            <a class="nav-link" href="{% url 'users' %}">
               <div
                 class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center"
               >
@@ -933,7 +933,7 @@
               </button>
             </div>
             <div class="mt-3">
-              <input type="file" class="form-control" />
+              <input type="file" class="form-control" accept=".csv" />
               <i class="text-xs text-muted mt-2"
                 >N.B: File should be in <b>.csv</b> format.</i
               >

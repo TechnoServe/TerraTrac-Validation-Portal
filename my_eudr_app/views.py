@@ -14,6 +14,14 @@ def validator(request):
     return render(request, "validator.html")
 
 
+def map(request):
+    return render(request, "map.html")
+
+
+def users(request):
+    return render(request, "users.html")
+
+
 @api_view(["POST"])
 def get_radd_data(request):
     # token = get_auth_token()

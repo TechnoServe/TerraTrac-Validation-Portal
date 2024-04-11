@@ -25,4 +25,6 @@ urlpatterns = [
     path("api/", include("my_eudr_app.urls")),
     path("", views.index, name="index"),
     path("validator/", views.validator, name="validator"),
+    path("map/", views.map, name="map"),
+    path("users/", views.users, name="users"),
 ]
