@@ -7,19 +7,27 @@ from dotenv import load_dotenv
 
 
 def index(request):
-    return render(request, "index.html")
+    active_page = "index"
+
+    return render(request, "index.html", {"active_page": active_page})
 
 
 def validator(request):
-    return render(request, "validator.html")
+    active_page = "validator"
+
+    return render(request, "validator.html", {"active_page": active_page})
 
 
 def map(request):
-    return render(request, "map.html")
+    active_page = "map"
+
+    return render(request, "map.html", {"active_page": active_page})
 
 
 def users(request):
-    return render(request, "users.html")
+    active_page = "users"
+
+    return render(request, "users.html", {"active_page": active_page})
 
 
 @api_view(["POST"])
