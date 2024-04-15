@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "my_eudr_app",
+    "eudr_backend",
     "corsheaders",
 ]
 

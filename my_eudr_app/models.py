@@ -11,11 +11,3 @@ class APIKey(models.Model):
     email = models.EmailField()
     organization = models.CharField(max_length=100)
     domains = models.CharField(max_length=255)
-
-
-class EUDRModel(models.Model):
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-
-    def __str__(self):
-        return self.title

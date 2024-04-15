@@ -1,4 +1,5 @@
 from django.contrib import admin
-from .models import EUDRModel
 
-admin.site.register(EUDRModel)
+from eudr_backend.models import EUDRFarmModel
+
+admin.site.register(EUDRFarmModel)
