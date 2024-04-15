@@ -18,7 +18,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from eudr_backend.views import create_farm_data, get_radd_data, retrieve_farm_data
+from eudr_backend.views import (
+    create_farm_data,
+    download_template,
+    get_radd_data,
+    retrieve_farm_data,
+)
 from my_eudr_app import views
 
 urlpatterns = [
@@ -34,4 +39,5 @@ urlpatterns = [
         get_radd_data,
         name="get_radd_data",
     ),
+    path("api/download-template/", download_template, name="download_template"),
 ]

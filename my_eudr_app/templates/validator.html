@@ -12,6 +12,7 @@
 
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 -->
+<!-- prettier-ignore -->
 {% extends 'base.html' %} {% block title %}Validator{% endblock %} {% block content %}
 
 <div class="row">
@@ -409,6 +410,65 @@
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="modal fade"
+    id="uploadFarmInfoModal"
+    tabindex="-1"
+    aria-labelledby="uploadFarmInfoModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="uploadFarmInfoModalLabel">
+            Upload Farm Info
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <p>Download the template below to fill in your farm information.</p>
+          <div class="col-md-12 d-flex justify-content-center">
+            <select class="btn btn-primary btn-sm" id="templateFormat">
+              <option value="" class="btn btn-white">
+                Download Format Template
+              </option>
+              <option value="csv" class="btn btn-white">CSV</option>
+              <option value="excel" class="btn btn-white">Excel</option>
+              <option value="geojson" class="btn btn-white">GeoJSON</option>
+            </select>
+          </div>
+          <div class="mt-3">
+            <form id="uploadForm">
+              <input type="file" class="form-control" />
+            </form>
+            <i class="text-xs text-muted mt-2"
+              >N.B: File should be in <b>.csv</b> format.</i
+            >
+            <i class="text-xs text-muted mt-2"
+              >And Make sure to upload info within fields mentioned in the
+              template.</i
+            >
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Close
+          </button>
+          <button type="button" class="btn btn-primary">Save</button>
         </div>
       </div>
     </div>
