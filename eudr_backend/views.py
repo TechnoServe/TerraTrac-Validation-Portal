@@ -28,6 +28,10 @@ def create_farm_data(request):
     for item in data:
         serializer = EUDRFarmModelSerializer(data=item)
 
+        # if farmer_name is empty, skip the record
+        if not item.get("farmer_name"):
+            continue
+
         # Check if a similar record already exists for each item
         if EUDRFarmModel.objects.filter(
             farmer_name=item.get("farmer_name"),
@@ -91,20 +95,15 @@ def download_template(request):
 
     # Create a sample template dataframe
     data = {
-        "farmer_name": ["John Doe", "Jane Smith"],
-        "farm_size": [10.5, 8.2],
-        "collection_site": ["Site A", "Site B"],
-        "farm_village": ["Village A", "Village B"],
-        "farm_district": ["District A", "District B"],
-        "farm_coordinates": ['["40.7128", "74.0060"]', '["41.8781", "87.6298"]'],
-        "farm_polygon_coordinates": [
-            '[["40.7128", "74.0060"], ["40.7128", "74.0061"]]',
-            '[["41.8781", "87.6298"], ["41.8781", "87.6299"]]',
-        ],
-        "plantation_name": ["Plantation 1", "Plantation 2"],
-        "plantation_code": ["P001", "P002"],
-        "is_validated": [True, False],
-        "validated_at": ["2024-04-15T12:00:00Z", None],
+        "farmer_name": "Mama Magufuli",
+        "farm_size": 8.2,
+        "collection_site": "Site C",
+        "farm_village": "Village C",
+        "farm_district": "District C",
+        "farm_coordinates": ["41.8781", "87.6298"],
+        "farm_polygon_coordinates": [["41.8781", "87.6298"], ["41.8781", "87.6299"]],
+        "plantation_name": "Plantation 3",
+        "plantation_code": "P005",
     }
 
     df = pd.DataFrame(data)

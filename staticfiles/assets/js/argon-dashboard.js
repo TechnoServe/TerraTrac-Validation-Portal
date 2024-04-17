@@ -28,18 +28,251 @@
   }
 })();
 
-// invoke leaflet map
-if (document.getElementById("map")) {
-  var map = L.map("map").setView([-1.9507, 30.0663], 11);
+function mapDefaultLocation() {
+  var osm = L.tileLayer("http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
+    mqi = L.tileLayer("http://{s}.mqcdn.com/tiles/1.0.0/sat/{z}/{x}/{y}.png", {
+      subdomains: ["otile1", "otile2", "otile3", "otile4"],
+    });
+  var map = L.map("map", {
+    layers: [osm, mqi],
+  }).setView([-1.9507, 30.0663], 11);
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-  }).addTo(map);
+  var baseMaps = {
+    OpenStreetMap: osm,
+    "OpenStreetMap.HOT": osmHOT,
+  };
+
+  var overlayMaps = {};
+
+  var layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+  var openTopoMap = L.tileLayer(
+    "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+    {
+      maxZoom: 19,
+      attribution:
+        "Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)",
+    }
+  );
+
+  layerControl.addBaseLayer(openTopoMap, "OpenTopoMap");
+  layerControl.addOverlay(parks, "Parks");
 
   L.marker([-1.9507, 30.0663])
     .addTo(map)
     .bindPopup("Your current location.")
     .openPopup();
+}
+
+// invoke leaflet map
+if (document.getElementById("map")) {
+  // request access to location, otherwise use default location
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      function (position) {
+        var osm = L.tileLayer(
+          "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          {
+            maxZoom: 19,
+            attribution: "© OpenStreetMap",
+          }
+        );
+
+        var googleSat = L.tileLayer(
+          "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+          {
+            maxZoom: 20,
+            attribution: "© Google",
+          }
+        );
+
+        var map = L.map("map", {
+          layers: [osm],
+        }).setView([position.coords.latitude, position.coords.longitude], 11);
+
+        var baseMaps = {
+          OpenStreetMap: osm,
+          "Google Satellite": googleSat,
+        };
+
+        var overlayMaps = {};
+
+        L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 18,
+        }).addTo(map);
+
+        // Define custom icons for markers
+        var greenIcon = L.icon({
+          iconUrl: "/static/assets/img/green-pin.png",
+          iconSize: [38, 95],
+          shadowSize: [50, 64],
+          iconAnchor: [22, 94],
+          shadowAnchor: [4, 62],
+          popupAnchor: [-3, -76],
+        });
+
+        var redIcon = L.icon({
+          iconUrl: "/static/assets/img/red-pin.png",
+          iconSize: [20, 20],
+          shadowSize: [20, 20],
+          iconAnchor: [22, 94],
+          shadowAnchor: [4, 62],
+          popupAnchor: [-3, -76],
+        });
+
+        // Create markers for each feature
+        var geoJsonLayer = L.geoJson(null, {
+          pointToLayer: function (feature, latlng) {
+            var icon = feature.properties.is_eudr_compliant
+              ? greenIcon
+              : redIcon;
+            return L.marker(latlng, { icon: icon });
+          },
+          onEachFeature: function (feature, layer) {
+            var popupContent = `
+          <b>Farmer Name:</b> ${feature.properties.farmer_name}<br>
+          <b>Farm Size:</b> ${feature.properties.farm_size}<br>
+          <b>Collection Site:</b> ${feature.properties.collection_site}<br>
+          <b>Farm Village:</b> ${feature.properties.farm_village}<br>
+          <b>Plantation Name:</b> ${feature.properties.plantation_name}<br>
+          <b>Plantation Code:</b> ${feature.properties.plantation_code}<br>
+          <b>Validated:</b> ${
+            feature.properties.is_validated ? "Yes" : "No"
+          }<br>
+          <b>EUDR Compliant:</b> ${
+            feature.properties.is_eudr_compliant ? "Yes" : "No"
+          }<br>
+          <b>Created At:</b> ${feature.properties.created_at}<br>
+          <b>Updated At:</b> ${feature.properties.updated_at}
+      `;
+            layer.bindPopup(popupContent);
+          },
+        }).addTo(map);
+
+        // Add legend
+        var legend = L.control({ position: "bottomright" });
+        legend.onAdd = function (map) {
+          var div = L.DomUtil.create("div", "legend");
+          // add background color to legend, shadow, border radius, and padding
+          div.style.backgroundColor = "rgba(255, 255, 255, 0.8)";
+          div.style.boxShadow = "0 1px 5px rgba(0, 0, 0, 0.4)";
+          div.style.borderRadius = "5px";
+          div.style.padding = "10px";
+          div.innerHTML += "<h6>Legend</h6>";
+          div.innerHTML +=
+            "<p class='fs-6'><img src='/static/assets/img/green-pin.png' alt='green pin' style='width: 20px; height: 20px;'> EUDR Compliant</p>";
+          div.innerHTML +=
+            "<p class='fs-6'><img src='/static/assets/img/red-pin.png' alt='green pin' style='width: 20px; height: 20px;'> Not EUDR Compliant</p>";
+
+          return div;
+        };
+        legend.addTo(map);
+
+        // Load GeoJSON data
+        var geojsonData = [
+          {
+            type: "Feature",
+            properties: {
+              farmer_name: "John Doe",
+              farm_size: 10.5,
+              collection_site: "Site A",
+              farm_village: "Village A",
+              plantation_name: "Plantation A",
+              plantation_code: "P123",
+              is_validated: true,
+              is_eudr_compliant: false,
+              created_at: "2024-04-15T07:39:59.337432Z",
+              updated_at: "2024-04-15T07:39:59.337432Z",
+            },
+            geometry: {
+              type: "MultiPolygon",
+              coordinates: [
+                [
+                  [
+                    [2.403637000523464, 9.808962999547964],
+                    [2.403526999225821, 9.808952000034356],
+                    [2.403400000302579, 9.808956999635576],
+                    [2.403272999830111, 9.808970000600517],
+                    [2.403147000036964, 9.809019999530923],
+                    [2.403037999995064, 9.809063000085501],
+                    [2.402905000139508, 9.809071999136428],
+                    [2.40277300038654, 9.809101999649894],
+                    [2.402646999597414, 9.809152999579267],
+                    [2.402519999556543, 9.809182000369692],
+                    [2.402390000414746, 9.809213000022243],
+                    [2.402268000130128, 9.809242000483529],
+                    [2.4021469999294, 9.809292999990461],
+                    [2.402175000064603, 9.809414999678843],
+                    [2.402233000208718, 9.80951700034007],
+                    [2.40223500039765, 9.809646999913321],
+                    [2.402246999876439, 9.80976699974824],
+                    [2.402283000296378, 9.80989999953533],
+                    [2.402298000082538, 9.810027000353925],
+                    [2.402282999891717, 9.810146999616473],
+                    [2.402312000707739, 9.81027700066214],
+                    [2.402298000015546, 9.810399999840794],
+                    [2.402288000021151, 9.810533000826808],
+                    [2.402304999949636, 9.810671999599133],
+                    [2.402336999748919, 9.810795000284525],
+                    [2.402353000596902, 9.81091499993108],
+                    [2.402376999622676, 9.811038000074564],
+                    [2.402396999296453, 9.811164999751025],
+                    [2.402434999387635, 9.811289999827594],
+                    [2.402462000205962, 9.811408000191697],
+                    [2.402571999937241, 9.81143199933343],
+                    [2.402682000077364, 9.811411999265584],
+                    [2.402802999797487, 9.811379999688748],
+                    [2.402928000140625, 9.811354999192485],
+                    [2.403051999799465, 9.811319999416803],
+                    [2.403173000709951, 9.811297999889364],
+                    [2.403287000070256, 9.811272000400985],
+                    [2.403372000037872, 9.81119799923909],
+                    [2.403360000269459, 9.811081999681722],
+                    [2.403347000073796, 9.81096300020695],
+                    [2.40332700052714, 9.810850000099316],
+                    [2.403309999982164, 9.810731999298236],
+                    [2.403296999430051, 9.810602000250826],
+                    [2.403270000716033, 9.810473000368672],
+                    [2.403350000057729, 9.810408000238754],
+                    [2.403478000143298, 9.8103849999472],
+                    [2.403604999993024, 9.810364999620555],
+                    [2.403707000225672, 9.810329999767408],
+                    [2.403733000481938, 9.810226999363994],
+                    [2.403719999220036, 9.810106999600155],
+                    [2.403704999867739, 9.8099820002986],
+                    [2.403686999727203, 9.809861999880836],
+                    [2.403672999986336, 9.809742000167136],
+                    [2.403629999870178, 9.809619999511776],
+                    [2.403595000143266, 9.809511999798852],
+                    [2.403611999846758, 9.80939999995004],
+                    [2.403626999817904, 9.80926300018786],
+                    [2.403627999675904, 9.809148000265127],
+                    [2.403613000256115, 9.809045000098992],
+                    [2.403637000523464, 9.808962999547964],
+                  ],
+                ],
+              ],
+            },
+          },
+        ];
+
+        geoJsonLayer.addData(geojsonData);
+
+        L.marker([position.coords.latitude, position.coords.longitude])
+          .addTo(map)
+          .bindPopup("Your current location.")
+          .openPopup();
+      },
+      function () {
+        mapDefaultLocation();
+      }
+    );
+  } else {
+    mapDefaultLocation();
+  }
 }
 
 // Verify navbar blur on scroll

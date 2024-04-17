@@ -10,7 +10,7 @@ class EUDRFarmModel(models.models.Model):
     farm_polygon_coordinates = models.models.JSONField()
     plantation_name = models.models.CharField(max_length=255)
     plantation_code = models.models.CharField(max_length=255)
-    is_validated = models.models.BooleanField()
+    is_validated = models.models.BooleanField(default=False)
     is_eudr_compliant = models.models.BooleanField(default=False)
     validated_at = models.models.DateTimeField(null=True, blank=True)
     created_at = models.models.DateTimeField(auto_now_add=True)
