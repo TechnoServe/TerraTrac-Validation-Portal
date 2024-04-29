@@ -20,9 +20,15 @@ from django.urls import path
 
 from eudr_backend.views import (
     create_farm_data,
+    create_user,
+    delete_user,
     download_template,
     get_radd_data,
     retrieve_farm_data,
+    retrieve_files,
+    retrieve_user,
+    retrieve_users,
+    update_user,
 )
 from my_eudr_app import views
 
@@ -30,10 +36,17 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", views.index, name="index"),
     path("validator/", views.validator, name="validator"),
+    path("validated_files/", views.validated_files, name="validated_files"),
     path("map/", views.map, name="map"),
     path("users/", views.users, name="users"),
+    path("api/users/", retrieve_users, name="user_list"),
+    path("api/users/<int:pk>/", retrieve_user, name="user_detail"),
+    path("api/users/add/", create_user, name="user_create"),
+    path("api/users/update/<int:pk>/", update_user, name="user_update"),
+    path("api/users/delete/<int:pk>/", delete_user, name="user_delete"),
     path("api/farm/add/", create_farm_data, name="create_farm_data"),
     path("api/farm/list/", retrieve_farm_data, name="retrieve_farm_data"),
+    path("api/files/list/", retrieve_files, name="retrieve_files"),
     path(
         "api/get-radd-data/",
         get_radd_data,

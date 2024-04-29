@@ -126,6 +126,19 @@
           </li>
           <li class="nav-item">
             <a
+              class="nav-link {% if active_page == 'validated_files' %}active{% endif %}"
+              href="{% url 'validated_files' %}"
+            >
+              <div
+                class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center"
+              >
+                <i class="ni ni-folder-17 text-primary text-sm opacity-10"></i>
+              </div>
+              <span class="nav-link-text ms-1">Validated Files</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
               class="nav-link {% if active_page == 'map' %}active{% endif %}"
               href="{% url 'map' %}"
             >
@@ -174,20 +187,9 @@
       >
         <div class="container-fluid py-1 px-3">
           <nav aria-label="breadcrumb">
-            <ol
-              class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5"
-            >
-              <li class="breadcrumb-item text-sm">
-                <a class="opacity-5 text-white" href="javascript:;">Pages</a>
-              </li>
-              <li
-                class="breadcrumb-item text-sm text-white active"
-                aria-current="page"
-              >
-                Dashboard
-              </li>
-            </ol>
-            <h6 class="font-weight-bolder text-white mb-0">Dashboard</h6>
+            <h6 class="font-weight-bolder text-white mb-0">
+              {% block additional_title_content %}{% endblock %}
+            </h6>
           </nav>
           <div
             class="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4"
@@ -676,6 +678,7 @@
         const fileInput = document.getElementById("uploadFile");
         const file = fileInput.files[0];
         const format = file.name.split(".").pop().toLowerCase();
+        const file_name = file.name.split(".")[0];
 
         const reader = new FileReader();
         reader.onload = function (e) {
@@ -698,7 +701,7 @@
           if (data) {
             // Now we have the formatted data
             // Send it to the API
-            sendDataToAPI(data);
+            sendDataToAPI(data, file_name, format);
           } else {
             alert("Invalid file format or file is empty.");
           }
@@ -711,13 +714,17 @@
         }
       }
 
-      function sendDataToAPI(data) {
+      function sendDataToAPI(data, file_name, format) {
         fetch("/api/farm/add/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(data),
+          body: JSON.stringify({
+            data: data,
+            file_name: file_name,
+            format: format,
+          }),
         })
           .then((response) => {
             if (!response.ok) {
@@ -808,6 +815,18 @@
           .then((data) => {
             let i = 0;
 
+            console.log(data);
+
+            if (data.length < 1) {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                  <td colspan="8">
+                    <p class="text-xs font-weight-bold text-center mb-0">No data available</p>
+                  </td>
+              `;
+              farmsContainer.appendChild(tr);
+            }
+
             while (i < data.length) {
               const tr = document.createElement("tr");
               tr.innerHTML = `
@@ -836,16 +855,6 @@
                   <td>
                     <p class="text-xs font-weight-bold mb-0">Gasabo</p>
                   </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">${
-                      data[i].plantation_name
-                    }</p>
-                  </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">${
-                      data[i].plantation_code
-                    }</p>
-                  </td>
                   <td class="align-middle text-center text-sm">
                     <span class="badge badge-sm ${
                       data[i].is_validated
@@ -871,6 +880,65 @@
                   </td>
               `;
               farmsContainer.appendChild(tr);
+              i++;
+            }
+          })
+          .catch((error) => {
+            console.error(
+              "There was a problem with the fetch operation:",
+              error
+            );
+          });
+      }
+    </script>
+    <script>
+      const filesContainer = document.getElementById("filesContainer");
+
+      if (filesContainer) {
+        fetch("/api/files/list/")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            let i = 0;
+
+            while (i < data.length) {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                  <td>
+                    <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
+                  </td>
+                  <td>
+                    <div class="d-flex px-2 py-1">
+                      <div class="d-flex justify-content-center align-items-center gap-2">
+                        <span class="fas fa-file-alt text-primary text-xs"></span>
+                        <h6 class="mb-0 text-sm">${data[i].file_name}</h6>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <p class="text-xs font-weight-bold mb-0">${
+                      data[i].uploaded_by
+                    }</p>
+                  </td>
+                  <td>
+                    <p class="text-xs font-weight-bold mb-0">${new Date(
+                      data[i].updated_at
+                    ).toLocaleString()}</p>
+                  </td>
+                  <td class="align-middle text-center">
+                    <a
+                      href="javascript:;"
+                      class="btn btn-primary text-white font-weight-bold text-xs"
+                      >View on Map</a
+                    >
+                  </td>
+              `;
+
+              filesContainer.appendChild(tr);
               i++;
             }
           })

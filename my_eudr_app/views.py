@@ -13,6 +13,12 @@ def validator(request):
     return render(request, "validator.html", {"active_page": active_page})
 
 
+def validated_files(request):
+    active_page = "validated_files"
+
+    return render(request, "validated_files.html", {"active_page": active_page})
+
+
 def map(request):
     active_page = "map"
 

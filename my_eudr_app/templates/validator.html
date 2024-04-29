@@ -13,7 +13,9 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 -->
 <!-- prettier-ignore -->
-{% extends 'base.html' %} {% block title %}Validator{% endblock %} {% block content %}
+{% extends 'base.html' %} {% block title %}Validator{% endblock %} {% block additional_title_content %}
+Validator
+{% endblock %} {% block content %}
 
 <div class="row">
   <div class="row mb-5">
@@ -21,7 +23,7 @@
       <div class="card">
         <div class="card-header pb-0">
           <div class="d-flex align-items-center">
-            <p class="mb-0">Farm Information</p>
+            <p class="mb-0">Upload Farm Information</p>
           </div>
         </div>
         <div class="card-body">
@@ -35,86 +37,8 @@
                 <i
                   class="ni ni-cloud-upload-96 text-white text-sm opacity-10 me-3"
                 ></i
-                >Upload Data
+                >Upload Here
               </button>
-            </div>
-          </div>
-
-          <div class="row mt-5 mb-5">
-            <div class="col-sm-5">
-              <hr class="horizontal dark my-2" />
-            </div>
-            <div class="col-sm-2 text-center">
-              <span class="or-text">OR</span>
-            </div>
-            <div class="col-sm-5">
-              <hr class="horizontal dark my-2" />
-            </div>
-          </div>
-
-          <div class="row">
-            <p class="text-uppercase text-sm">Fill Up Information</p>
-            <div class="col-md-6">
-              <div class="form-group">
-                <label for="example-text-input" class="form-control-label"
-                  >Site Name</label
-                >
-                <input class="form-control" type="text" value="" />
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group">
-                <label for="example-text-input" class="form-control-label"
-                  >Farmer Name</label
-                >
-                <input class="form-control" type="text" value="" />
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group">
-                <label for="example-text-input" class="form-control-label"
-                  >Village</label
-                >
-                <input class="form-control" type="text" value="" />
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group">
-                <label for="example-text-input" class="form-control-label"
-                  >District</label
-                >
-                <input class="form-control" type="text" value="" />
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group">
-                <label for="example-text-input" class="form-control-label"
-                  >Farm Size</label
-                >
-                <input class="form-control" type="number" value="" />
-              </div>
-            </div>
-            <div class="col-md-6"></div>
-            <div class="col-md-6">
-              <div class="form-group">
-                <label for="example-text-input" class="form-control-label"
-                  >Latitude</label
-                >
-                <input class="form-control" type="number" value="0" />
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="form-group">
-                <label for="example-text-input" class="form-control-label"
-                  >Longitude</label
-                >
-                <input class="form-control" type="number" value="0" />
-              </div>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col-md-12 d-flex justify-content-end">
-              <button class="btn btn-primary btn-sm">Save</button>
             </div>
           </div>
         </div>
@@ -157,16 +81,6 @@
                     class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"
                   >
                     District
-                  </th>
-                  <th
-                    class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
-                  >
-                    Plantation Name
-                  </th>
-                  <th
-                    class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
-                  >
-                    Plantation Code
                   </th>
                   <th
                     class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
