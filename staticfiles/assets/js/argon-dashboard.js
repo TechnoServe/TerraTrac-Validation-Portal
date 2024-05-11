@@ -134,6 +134,15 @@ if (document.getElementById("map")) {
             return L.marker(latlng, { icon: icon });
           },
           onEachFeature: function (feature, layer) {
+            // loop through object keys and put them in a list
+            var analysisList = "<ul>";
+            for (const [key, value] of Object.entries(
+              feature.properties.analysis
+            )) {
+              analysisList += `<li><b>${key}:</b> ${value}</li>`;
+            }
+            analysisList += "</ul>";
+
             var popupContent = `
           <b>Farmer Name:</b> ${feature.properties.farmer_name}<br>
           <b>Farm Size:</b> ${feature.properties.farm_size}<br>
@@ -147,7 +156,9 @@ if (document.getElementById("map")) {
           <b>EUDR Compliant:</b> ${
             feature.properties.is_eudr_compliant ? "Yes" : "No"
           }<br>
-          <b>Updated At:</b> ${feature.properties.updated_at}
+          <b>Updated At:</b> ${feature.properties.updated_at}<br/><hr/>
+          <b>Whisp Analysis:</b><br/>
+          ${analysisList}
       `;
             layer.bindPopup(popupContent);
           },
@@ -180,6 +191,7 @@ if (document.getElementById("map")) {
             return response.json();
           })
           .then((data) => {
+            console.log(data);
             for (const farm of data) {
               geojsonData.push({
                 type: "Feature",
@@ -193,6 +205,7 @@ if (document.getElementById("map")) {
                   is_validated: farm.is_validated,
                   is_eudr_compliant: farm.is_eudr_compliant,
                   updated_at: farm.updated_at,
+                  analysis: farm?.analysis?.data[0],
                 },
                 geometry: {
                   type:

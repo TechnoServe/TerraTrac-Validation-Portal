@@ -99,23 +99,6 @@ def create_farm_data(request):
         if EUDRFarmModel.objects.filter(
             farmer_name=item.get("farmer_name"),
         ).exists():
-            # send new API request to validate the data from get-radd-data endpoint
-            # data = {
-            #     "geometry": {
-            #         "coordinates": [[item.get("farm_polygon_coordinates")]],
-            #         "type": "Polygon",
-            #     },
-            #     "sql": "SELECT longitude, latitude, wur_radd_alerts__date, wur_radd_alerts__confidence FROM results",
-            # }
-
-            # # do post request on api/get-radd-data/ endpoint
-            # url = "http://127.0.0.1:8000/api/get-radd-data/"
-
-            # # Sending the POST request
-            # response = requests.post(url, json=json.dumps(data))
-
-            # print(response)
-
             errors.append(
                 {
                     "error": "Duplicate entry. This combination already exists.",
@@ -142,6 +125,44 @@ def retrieve_farm_data(request):
     data = EUDRFarmModel.objects.all()
 
     serializer = EUDRFarmModelSerializer(data, many=True)
+
+    for item in serializer.data:
+        url = "https://whisp-app-vdfqchwaca-uc.a.run.app/api/geojson"
+        headers = {"Content-Type": "application/json"}
+        body = {
+            "type": "Feature",
+            "properties": {"additionalProp1": {}},
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [2.409321999382013, 9.804877000584383],
+                        [2.409434999977374, 9.804842999320023],
+                        [2.409563000175726, 9.80480000070348],
+                        [2.409686999738807, 9.804751999949644],
+                        [2.409804999662065, 9.804712000083464],
+                        [2.409906999574861, 9.804646999429137],
+                        [2.409959999309937, 9.804575000108485],
+                        [2.409928000184609, 9.804457999911044],
+                        [2.409835000267832, 9.804371999392338],
+                        [2.409723000499936, 9.80436199967945],
+                        [2.409616999589066, 9.804396999958765],
+                        [2.409494999797888, 9.804427000743976],
+                        [2.409353000585733, 9.80444800021868],
+                        [2.409253000519262, 9.8044480006396],
+                        [2.409279999514484, 9.804544999923984],
+                        [2.409295000417291, 9.804662000415428],
+                        [2.409273000257091, 9.804786999396958],
+                        [2.409295000508686, 9.804867999787927],
+                        [2.409307000067207, 9.804875000111155],
+                        [2.409321999382013, 9.804877000584383],
+                    ]
+                ],
+            },
+        }
+        response = requests.post(url, headers=headers, json=body)
+        item["analysis"] = response.json()
+
     return Response(serializer.data)
 
 
