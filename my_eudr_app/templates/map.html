@@ -12,14 +12,17 @@
 
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 -->
+<!-- prettier-ignore -->
+{% extends 'base.html' %} {% block title %}Map{% endblock %} {% block additional_title_content %} Map {% endblock %} {% block content %}
 
-{% extends 'base.html' %} {% block title %}Map{% endblock %} {% block additional_title_content %}
-Map
-{% endblock %} {% block content %}
-
-<div class="row mb-5">
+<div class="w-100">
   <div class="col-md-12">
-    <div id="map" style="height: 500px; border-radius: 10px"></div>
+    <div id="map-preLoader">
+      <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">Loading...</span>
+      </div>
+    </div>
+    <div id="map" style="height: 80vh; border-radius: 10px"></div>
   </div>
 </div>
 

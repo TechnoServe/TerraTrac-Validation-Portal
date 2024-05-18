@@ -17,13 +17,13 @@
 Validator
 {% endblock %} {% block content %}
 
-<div class="row">
+<div class="w-100 px-4">
   <div class="row mb-5">
     <div class="col-md-12">
       <div class="card">
         <div class="card-header pb-0">
           <div class="d-flex align-items-center">
-            <p class="mb-0">Upload Farm Information</p>
+            <h6 class="mb-0">Upload New Farm(s) Information</h6>
           </div>
         </div>
         <div class="card-body">
@@ -50,11 +50,17 @@ Validator
       <div class="card mb-4">
         <div class="d-flex card-header pb-0">
           <h6>Farms List</h6>
-          <button class="btn btn-primary btn-sm ms-auto">Validate All</button>
+          <button class="btn btn-primary btn-sm ms-auto text-white" disabled>
+            Re-Validate All
+          </button>
         </div>
         <div class="card-body px-0 pt-0 pb-2">
           <div class="table-responsive p-0">
-            <table class="table align-items-center mb-0">
+            <table
+              id="farms"
+              class="table table-striped align-items-center mb-0"
+              style="width: 100%"
+            >
               <thead>
                 <tr>
                   <th
@@ -85,7 +91,12 @@ Validator
                   <th
                     class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
                   >
-                    Validation Status
+                    Detailed Analysis
+                  </th>
+                  <th
+                    class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
+                  >
+                    Is Validated
                   </th>
                   <th
                     class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
@@ -98,6 +109,41 @@ Validator
               <tbody id="farmsBodyContainer"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="modal fade"
+    id="whispAnalysisModal"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="whispAnalysisModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="whispAnalysisModalLabel">
+            WHISP Analysis Overview
+          </h5>
+          <button
+            type="button"
+            class="close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          >
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="whispCardsContainer" class="row"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">
+            Close
+          </button>
         </div>
       </div>
     </div>

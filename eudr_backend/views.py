@@ -1,5 +1,7 @@
+import ast
 import json
 import os
+import httpx
 from django.http import HttpResponse
 from django.utils import timezone
 from dotenv import load_dotenv
@@ -8,6 +10,7 @@ import requests
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from asgiref.sync import async_to_sync, sync_to_async
 
 from eudr_backend.models import EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
 from .serializers import (
@@ -61,6 +64,67 @@ def delete_user(request, pk):
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+# Define an async function
+async def async_create_farm_data(data, serializer, file_id):
+    errors = []
+    created_data = []
+
+    farm_data = data[0]["data"]
+
+    for item in farm_data:
+        serializer = EUDRFarmModelSerializer(data=item)
+
+        # if farmer_name is empty, skip the record
+        if not item.get("farmer_name"):
+            continue
+
+        # Check if a similar record already exists for each item
+        if await EUDRFarmModel.objects.filter(
+            farmer_name=item.get("farmer_name"),
+        ).aexists():
+            errors.append(
+                {
+                    "error": "Duplicate entry. This combination already exists.",
+                    "data": item,
+                }
+            )
+        elif serializer.is_valid():
+            # add the file_id to the serializer data
+            serializer.validated_data["file_id"] = file_id
+            # do whisp analysis POST request
+            # Convert the string to a list of tuples
+            tuple_list = ast.literal_eval(item["polygon"])
+
+            # Convert the list of tuples to a list of lists
+            formatted_polygon = [list(coord) for coord in tuple_list]
+            url = "https://whisp-app-vdfqchwaca-uc.a.run.app/api/geojson"
+            headers = {"Content-Type": "application/json"}
+            body = {
+                "type": "Feature",
+                "properties": {"additionalProp1": {}},
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [formatted_polygon],
+                },
+            }
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(url, headers=headers, json=body)
+                response_data = response.json()
+
+            item["analysis"] = response_data
+
+            # add the analysis result to the serializer data
+            serializer.validated_data["analysis"] = item["analysis"]
+
+            # Save the serializer data with the external analysis result
+            await sync_to_async(serializer.save)()
+            created_data.append(serializer.data)
+        else:
+            errors.append({"error": serializer.errors, "data": item})
+
+    return errors, created_data
+
+
 @api_view(["POST"])
 def create_farm_data(request):
     serializer = EUDRFarmModelSerializer(data=request.data)
@@ -82,37 +146,10 @@ def create_farm_data(request):
 
     if not isinstance(data, list):
         data = [data]
-
-    errors = []
-    created_data = []
-
-    farm_data = data[0]["data"]
-
-    for item in farm_data:
-        serializer = EUDRFarmModelSerializer(data=item)
-
-        # if farmer_name is empty, skip the record
-        if not item.get("farmer_name"):
-            continue
-
-        # Check if a similar record already exists for each item
-        if EUDRFarmModel.objects.filter(
-            farmer_name=item.get("farmer_name"),
-        ).exists():
-            errors.append(
-                {
-                    "error": "Duplicate entry. This combination already exists.",
-                    "data": item,
-                }
-            )
-        elif serializer.is_valid():
-            # add the file_id to the serializer data
-            serializer.validated_data["file_id"] = file_id
-
-            serializer.save()
-            created_data.append(serializer.data)
-        else:
-            errors.append({"error": serializer.errors, "data": item})
+    # Call the async function from sync context
+    errors, created_data = async_to_sync(async_create_farm_data)(
+        data, serializer, file_id
+    )
 
     if errors:
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
@@ -122,46 +159,9 @@ def create_farm_data(request):
 
 @api_view(["GET"])
 def retrieve_farm_data(request):
-    data = EUDRFarmModel.objects.all()
+    data = EUDRFarmModel.objects.all().order_by("-updated_at")
 
     serializer = EUDRFarmModelSerializer(data, many=True)
-
-    for item in serializer.data:
-        url = "https://whisp-app-vdfqchwaca-uc.a.run.app/api/geojson"
-        headers = {"Content-Type": "application/json"}
-        body = {
-            "type": "Feature",
-            "properties": {"additionalProp1": {}},
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [
-                    [
-                        [2.409321999382013, 9.804877000584383],
-                        [2.409434999977374, 9.804842999320023],
-                        [2.409563000175726, 9.80480000070348],
-                        [2.409686999738807, 9.804751999949644],
-                        [2.409804999662065, 9.804712000083464],
-                        [2.409906999574861, 9.804646999429137],
-                        [2.409959999309937, 9.804575000108485],
-                        [2.409928000184609, 9.804457999911044],
-                        [2.409835000267832, 9.804371999392338],
-                        [2.409723000499936, 9.80436199967945],
-                        [2.409616999589066, 9.804396999958765],
-                        [2.409494999797888, 9.804427000743976],
-                        [2.409353000585733, 9.80444800021868],
-                        [2.409253000519262, 9.8044480006396],
-                        [2.409279999514484, 9.804544999923984],
-                        [2.409295000417291, 9.804662000415428],
-                        [2.409273000257091, 9.804786999396958],
-                        [2.409295000508686, 9.804867999787927],
-                        [2.409307000067207, 9.804875000111155],
-                        [2.409321999382013, 9.804877000584383],
-                    ]
-                ],
-            },
-        }
-        response = requests.post(url, headers=headers, json=body)
-        item["analysis"] = response.json()
 
     return Response(serializer.data)
 

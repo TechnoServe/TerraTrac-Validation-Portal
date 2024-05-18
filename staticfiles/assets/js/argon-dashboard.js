@@ -67,6 +67,8 @@ function mapDefaultLocation() {
 // invoke leaflet map
 if (document.getElementById("map")) {
   let geojsonData = [];
+  const mapPreloader = document.getElementById("map-preLoader");
+  mapPreloader.style.display = "block";
 
   // request access to location, otherwise use default location
   if (navigator.geolocation) {
@@ -91,6 +93,8 @@ if (document.getElementById("map")) {
         var map = L.map("map", {
           layers: [osm],
         }).setView([position.coords.latitude, position.coords.longitude], 11);
+
+        mapPreloader.style.display = "none";
 
         var baseMaps = {
           OpenStreetMap: osm,
@@ -139,7 +143,17 @@ if (document.getElementById("map")) {
             for (const [key, value] of Object.entries(
               feature.properties.analysis
             )) {
-              analysisList += `<li><b>${key}:</b> ${value}</li>`;
+              if (key === "geometry") continue;
+
+              analysisList += `<li><b>${
+                key === "gaul0"
+                  ? "Country"
+                  : key === "gaul1"
+                  ? "District"
+                  : key === "gaul2"
+                  ? "Village"
+                  : key
+              }:</b> ${value}</li>`;
             }
             analysisList += "</ul>";
 
@@ -157,8 +171,14 @@ if (document.getElementById("map")) {
             feature.properties.is_eudr_compliant ? "Yes" : "No"
           }<br>
           <b>Updated At:</b> ${feature.properties.updated_at}<br/><hr/>
-          <b>Whisp Analysis:</b><br/>
-          ${analysisList}
+          <div class="accordion">
+            <div class="accordion-item" onclick="toggleAccordion(this)">
+              <b>Whisp Analysis:</b><br/>
+            </div>
+            <div class="accordion-item-content">
+              ${analysisList}
+            </div>
+          </div>
       `;
             layer.bindPopup(popupContent);
           },
