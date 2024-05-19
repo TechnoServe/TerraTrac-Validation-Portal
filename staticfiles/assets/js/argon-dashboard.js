@@ -35,7 +35,7 @@ function mapDefaultLocation() {
     });
   var map = L.map("map", {
     layers: [osm, mqi],
-  }).setView([-1.9507, 30.0663], 11);
+  }).setView([-1.9507, 30.0663], 15);
 
   var baseMaps = {
     OpenStreetMap: osm,
@@ -66,6 +66,8 @@ function mapDefaultLocation() {
 
 // invoke leaflet map
 if (document.getElementById("map")) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const farmId = urlParams.get("farm-id");
   let geojsonData = [];
   const mapPreloader = document.getElementById("map-preLoader");
   mapPreloader.style.display = "block";
@@ -92,7 +94,7 @@ if (document.getElementById("map")) {
 
         var map = L.map("map", {
           layers: [osm],
-        }).setView([position.coords.latitude, position.coords.longitude], 11);
+        }).setView([position.coords.latitude, position.coords.longitude], 15);
 
         mapPreloader.style.display = "none";
 
@@ -140,20 +142,22 @@ if (document.getElementById("map")) {
           onEachFeature: function (feature, layer) {
             // loop through object keys and put them in a list
             var analysisList = "<ul>";
-            for (const [key, value] of Object.entries(
-              feature.properties.analysis
-            )) {
-              if (key === "geometry") continue;
+            if (feature.properties.analysis) {
+              for (const [key, value] of Object.entries(
+                feature.properties.analysis
+              )) {
+                if (key === "geometry") continue;
 
-              analysisList += `<li><b>${
-                key === "gaul0"
-                  ? "Country"
-                  : key === "gaul1"
-                  ? "District"
-                  : key === "gaul2"
-                  ? "Village"
-                  : key
-              }:</b> ${value}</li>`;
+                analysisList += `<li><b>${
+                  key === "gaul0"
+                    ? "Country"
+                    : key === "gaul1"
+                    ? "District"
+                    : key === "gaul2"
+                    ? "Village"
+                    : key
+                }:</b> ${value}</li>`;
+              }
             }
             analysisList += "</ul>";
 
@@ -165,20 +169,28 @@ if (document.getElementById("map")) {
           <b>Farm Village:</b> ${feature.properties.farm_village}<br>
           <b>District:</b> ${feature.properties.farm_district}<br>
           <b>Validated:</b> ${
-            feature.properties.is_validated ? "Yes" : "No"
+            feature.properties.is_validated ? "Yes" : "Not Yet"
           }<br>
           <b>EUDR Compliant:</b> ${
-            feature.properties.is_eudr_compliant ? "Yes" : "No"
+            feature.properties.is_validated
+              ? feature.properties.is_eudr_compliant
+                ? "Yes"
+                : "No"
+              : "-"
           }<br>
           <b>Updated At:</b> ${feature.properties.updated_at}<br/><hr/>
-          <div class="accordion">
+          ${
+            feature.properties.analysis
+              ? `<div class="accordion">
             <div class="accordion-item" onclick="toggleAccordion(this)">
               <b>Whisp Analysis:</b><br/>
             </div>
             <div class="accordion-item-content">
               ${analysisList}
             </div>
-          </div>
+          </div>`
+              : ""
+          }
       `;
             layer.bindPopup(popupContent);
           },
@@ -197,7 +209,7 @@ if (document.getElementById("map")) {
           div.innerHTML +=
             "<p class='fs-6'><img src='/static/assets/img/green-pin.png' alt='green pin' style='width: 20px; height: 20px;'> EUDR Compliant</p>";
           div.innerHTML +=
-            "<p class='fs-6'><img src='/static/assets/img/red-pin.png' alt='green pin' style='width: 20px; height: 20px;'> Not EUDR Compliant</p>";
+            "<p class='fs-6'><img src='/static/assets/img/red-pin.png' alt='red pin' style='width: 20px; height: 20px;'> Not EUDR Compliant</p>";
 
           return div;
         };
@@ -213,9 +225,14 @@ if (document.getElementById("map")) {
           .then((data) => {
             console.log(data);
             for (const farm of data) {
+              const reversedCoords = JSON.parse(
+                farm.polygon.replace(/\(/g, "[").replace(/\)/g, "]")
+              ).map((coord) => coord.reverse());
+
               geojsonData.push({
                 type: "Feature",
                 properties: {
+                  id: farm.id,
                   farmer_name: farm.farmer_name,
                   farm_size: farm.farm_size,
                   collection_site: farm.collection_site,
@@ -238,22 +255,58 @@ if (document.getElementById("map")) {
                     JSON.parse(
                       farm.polygon.replace(/\(/g, "[").replace(/\)/g, "]")
                     ).length > 0
-                      ? [
-                          [
-                            JSON.parse(
-                              farm.polygon
-                                .replace(/\(/g, "[")
-                                .replace(/\)/g, "]")
-                            ),
-                          ],
-                        ]
-                      : [farm.latitude, farm.longitude],
+                      ? [[reversedCoords]]
+                      : [farm.longitude, farm.latitude],
                 },
               });
             }
 
             geoJsonLayer.addData(geojsonData);
             geoJsonLayer.addTo(map);
+
+            // if farm id is present, zoom to the farm
+            if (farmId) {
+              const farm = geojsonData.find(
+                (farm) => farm.properties.id === +farmId
+              );
+
+              // if farm is found, zoom to the farm
+              if (farm) {
+                if (farm.geometry.type === "Point") {
+                  const reversedPoint = farm.geometry.coordinates.reverse();
+                  map.setView(reversedPoint, 19);
+                  // open popup
+                  geoJsonLayer.eachLayer(function (layer) {
+                    if (layer.feature.properties.id === +farmId) {
+                      layer.openPopup();
+                    }
+                  });
+                } else {
+                  const reversedFarm = farm.geometry.coordinates[0][0].map(
+                    (coord) => coord.reverse()
+                  );
+
+                  map.fitBounds(reversedFarm);
+
+                  // highlight the farm with random color
+                  geoJsonLayer.eachLayer(function (layer) {
+                    if (layer.feature.properties.id === +farmId) {
+                      layer.setStyle({
+                        fillColor: "#ff0000",
+                        fillOpacity: 0.5,
+                      });
+                    }
+                  });
+
+                  // open popup
+                  geoJsonLayer.eachLayer(function (layer) {
+                    if (layer.feature.properties.id === +farmId) {
+                      layer.openPopup();
+                    }
+                  });
+                }
+              }
+            }
           })
           .catch((error) => {
             console.error(
@@ -261,11 +314,6 @@ if (document.getElementById("map")) {
               error
             );
           });
-
-        L.marker([position.coords.latitude, position.coords.longitude])
-          .addTo(map)
-          .bindPopup("Your current location.")
-          .openPopup();
       },
       function () {
         mapDefaultLocation();

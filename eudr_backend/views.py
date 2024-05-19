@@ -167,6 +167,13 @@ def retrieve_farm_data(request):
 
 
 @api_view(["GET"])
+def retrieve_farm_detail(request, pk):
+    data = EUDRFarmModel.objects.get(id=pk)
+    serializer = EUDRFarmModelSerializer(data, many=False)
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
 def retrieve_files(request):
     data = EUDRUploadedFilesModel.objects.all()
     serializer = EUDRUploadedFilesModelSerializer(data, many=True)
