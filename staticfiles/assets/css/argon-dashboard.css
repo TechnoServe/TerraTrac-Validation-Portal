@@ -27551,6 +27551,10 @@ pre[class*="language-"] {
   width: 11px;
 }
 
+.accordion-item b {
+  color: #333;
+}
+
 /* MS supports */
 @supports (-ms-overflow-style: none) {
   .ps {

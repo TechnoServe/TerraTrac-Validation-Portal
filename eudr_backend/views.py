@@ -174,8 +174,15 @@ def retrieve_farm_detail(request, pk):
 
 
 @api_view(["GET"])
+def retrieve_farm_data_from_file_id(request, pk):
+    data = EUDRFarmModel.objects.filter(file_id=pk)
+    serializer = EUDRFarmModelSerializer(data, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
 def retrieve_files(request):
-    data = EUDRUploadedFilesModel.objects.all()
+    data = EUDRUploadedFilesModel.objects.all().order_by("-updated_at")
     serializer = EUDRUploadedFilesModelSerializer(data, many=True)
     return Response(serializer.data)
 

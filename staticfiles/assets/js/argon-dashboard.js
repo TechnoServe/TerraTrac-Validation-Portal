@@ -68,6 +68,7 @@ function mapDefaultLocation() {
 if (document.getElementById("map")) {
   const urlParams = new URLSearchParams(window.location.search);
   const farmId = urlParams.get("farm-id");
+  const fileId = urlParams.get("file-id");
   let geojsonData = [];
   const mapPreloader = document.getElementById("map-preLoader");
   mapPreloader.style.display = "block";
@@ -223,7 +224,6 @@ if (document.getElementById("map")) {
             return response.json();
           })
           .then((data) => {
-            console.log(data);
             for (const farm of data) {
               const reversedCoords = JSON.parse(
                 farm.polygon.replace(/\(/g, "[").replace(/\)/g, "]")
@@ -239,6 +239,7 @@ if (document.getElementById("map")) {
                   agent_name: farm.agent_name,
                   farm_village: farm.farm_village,
                   farm_district: farm.farm_district,
+                  file_id: farm.file_id,
                   is_validated: farm.is_validated,
                   is_eudr_compliant: farm.is_eudr_compliant,
                   updated_at: farm.updated_at,
@@ -307,6 +308,50 @@ if (document.getElementById("map")) {
                 }
               }
             }
+
+            if (fileId) {
+              // find the farm with the file id
+              const farm = geojsonData.find(
+                (farm) => farm.properties.file_id === fileId
+              );
+
+              // if farm is found, zoom to the first farm
+              if (farm) {
+                if (farm.geometry.type === "Point") {
+                  const reversedPoint = farm.geometry.coordinates.reverse();
+                  map.setView(reversedPoint, 19);
+                  // open popup
+                  geoJsonLayer.eachLayer(function (layer) {
+                    if (layer.feature.properties.file_id === fileId) {
+                      layer.openPopup();
+                    }
+                  });
+                } else {
+                  const reversedFarm = farm.geometry.coordinates[0][0].map(
+                    (coord) => coord.reverse()
+                  );
+
+                  map.fitBounds(reversedFarm);
+
+                  // highlight the farm with random color
+                  geoJsonLayer.eachLayer(function (layer) {
+                    if (layer.feature.properties.file_id === fileId) {
+                      layer.setStyle({
+                        fillColor: "#ff0000",
+                        fillOpacity: 0.5,
+                      });
+                    }
+                  });
+
+                  // open popup
+                  geoJsonLayer.eachLayer(function (layer) {
+                    if (layer.feature.properties.file_id === fileId) {
+                      layer.openPopup();
+                    }
+                  });
+                }
+              }
+            }
           })
           .catch((error) => {
             console.error(
@@ -321,6 +366,15 @@ if (document.getElementById("map")) {
     );
   } else {
     mapDefaultLocation();
+  }
+}
+
+function toggleAccordion(item) {
+  var content = item.nextElementSibling;
+  if (content.style.display === "block") {
+    content.style.display = "none";
+  } else {
+    content.style.display = "block";
   }
 }
 
