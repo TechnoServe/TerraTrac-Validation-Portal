@@ -717,32 +717,35 @@
         high: "high",
       };
 
-      if (farmsContainer) {
-        fetch("/api/farm/list/")
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Network response was not ok");
-            }
-            return response.json();
-          })
-          .then((data) => {
-            let i = 0;
+      fetch("/api/farm/list/")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          let i = 0;
 
-            farmData = data;
+          farmData = data;
 
-            if (data.length < 1) {
-              const tr = document.createElement("tr");
-              tr.innerHTML = `
+          if (document.querySelector("#total_farms")) {
+            document.querySelector("#total_farms").innerText = data.length;
+          }
+
+          if (data.length < 1) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
                   <td colspan="8">
                     <p class="text-xs font-weight-bold text-center mb-0">No data available</p>
                   </td>
               `;
-              farmsContainer.appendChild(tr);
-            }
+            farmsContainer.appendChild(tr);
+          }
 
-            while (i < data.length) {
-              const tr = document.createElement("tr");
-              tr.innerHTML = `
+          while (i < data.length) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
                   <td>
                     <p class="text-xs text-center font-weight-bold mb-0">${
                       i + 1
@@ -803,39 +806,35 @@
                     >
                   </td>
               `;
-              farmsContainer.appendChild(tr);
-              i++;
-            }
+            farmsContainer.appendChild(tr);
+            i++;
+          }
 
-            $("#farms").DataTable({
-              //disable sorting on last column
-              columnDefs: [{ orderable: false, targets: 5 }],
-              language: {
-                //customize pagination prev and next buttons: use arrows instead of words
-                paginate: {
-                  previous: '<span class="fa fa-chevron-left"></span>',
-                  next: '<span class="fa fa-chevron-right"></span>',
-                },
-                //customize number of elements to be displayed
-                lengthMenu:
-                  'Display <select class="form-control input-sm">' +
-                  '<option value="10">10</option>' +
-                  '<option value="20">20</option>' +
-                  '<option value="30">30</option>' +
-                  '<option value="40">40</option>' +
-                  '<option value="50">50</option>' +
-                  '<option value="-1">All</option>' +
-                  "</select> results",
+          $("#farms").DataTable({
+            //disable sorting on last column
+            columnDefs: [{ orderable: false, targets: 5 }],
+            language: {
+              //customize pagination prev and next buttons: use arrows instead of words
+              paginate: {
+                previous: '<span class="fa fa-chevron-left"></span>',
+                next: '<span class="fa fa-chevron-right"></span>',
               },
-            });
-          })
-          .catch((error) => {
-            console.error(
-              "There was a problem with the fetch operation:",
-              error
-            );
+              //customize number of elements to be displayed
+              lengthMenu:
+                'Display <select class="form-control input-sm">' +
+                '<option value="10">10</option>' +
+                '<option value="20">20</option>' +
+                '<option value="30">30</option>' +
+                '<option value="40">40</option>' +
+                '<option value="50">50</option>' +
+                '<option value="-1">All</option>' +
+                "</select> results",
+            },
           });
-      }
+        })
+        .catch((error) => {
+          console.error("There was a problem with the fetch operation:", error);
+        });
 
       function viewAnalysis(id) {
         const container = document.getElementById("whispCardsContainer");
@@ -876,20 +875,24 @@
     <script>
       const filesContainer = document.getElementById("filesContainer");
 
-      if (filesContainer) {
-        fetch("/api/files/list/")
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Network response was not ok");
-            }
-            return response.json();
-          })
-          .then((data) => {
-            let i = 0;
+      fetch("/api/files/list/")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          let i = 0;
 
-            while (i < data.length) {
-              const tr = document.createElement("tr");
-              tr.innerHTML = `
+          if (document.querySelector("#total_files_uploaded")) {
+            document.querySelector("#total_files_uploaded").innerText =
+              data.length;
+          }
+
+          while (i < data.length) {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
                   <td>
                     <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
                   </td>
@@ -921,37 +924,33 @@
                   </td>
               `;
 
-              filesContainer.appendChild(tr);
-              i++;
-            }
+            filesContainer.appendChild(tr);
+            i++;
+          }
 
-            $("#files").DataTable({
-              language: {
-                //customize pagination prev and next buttons: use arrows instead of words
-                paginate: {
-                  previous: '<span class="fa fa-chevron-left"></span>',
-                  next: '<span class="fa fa-chevron-right"></span>',
-                },
-                //customize number of elements to be displayed
-                lengthMenu:
-                  'Display <select class="form-control input-sm">' +
-                  '<option value="10">10</option>' +
-                  '<option value="20">20</option>' +
-                  '<option value="30">30</option>' +
-                  '<option value="40">40</option>' +
-                  '<option value="50">50</option>' +
-                  '<option value="-1">All</option>' +
-                  "</select> results",
+          $("#files").DataTable({
+            language: {
+              //customize pagination prev and next buttons: use arrows instead of words
+              paginate: {
+                previous: '<span class="fa fa-chevron-left"></span>',
+                next: '<span class="fa fa-chevron-right"></span>',
               },
-            });
-          })
-          .catch((error) => {
-            console.error(
-              "There was a problem with the fetch operation:",
-              error
-            );
+              //customize number of elements to be displayed
+              lengthMenu:
+                'Display <select class="form-control input-sm">' +
+                '<option value="10">10</option>' +
+                '<option value="20">20</option>' +
+                '<option value="30">30</option>' +
+                '<option value="40">40</option>' +
+                '<option value="50">50</option>' +
+                '<option value="-1">All</option>' +
+                "</select> results",
+            },
           });
-      }
+        })
+        .catch((error) => {
+          console.error("There was a problem with the fetch operation:", error);
+        });
     </script>
   </body>
 </html>
