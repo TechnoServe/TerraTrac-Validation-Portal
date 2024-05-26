@@ -227,15 +227,15 @@ def download_template(request):
         "latitude": "-1.62883139933721",
         "longitude": "29.9898212498949",
         "polygon": (
-            '[("41.8781", "87.6298"), ("41.8781", "87.6299")]'
+            "[(41.8781, 87.6298), (41.8781, 87.6299)]"
             if format == "csv"
             else [[41.8781, 87.6298], [41.8781, 87.6299]]
         ),
-        "created_at": "2021-09-01T00:00:00Z",
-        "updated_at": "2021-09-01T00:00:00Z",
+        "created_at": "",
+        "updated_at": "",
     }
 
-    df = pd.DataFrame(data)
+    df = pd.DataFrame([data])
 
     timestamp_str = timezone.now().strftime("%Y-%m-%d-%H-%M-%S")
 
@@ -243,7 +243,7 @@ def download_template(request):
         response = HttpResponse(content_type="text/csv")
         filename = f"eudr-upload-template-{timestamp_str}.csv"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        df.to_csv(response, index=False)
+        df.to_csv(response, index=True)
     elif format == "excel":
         response = HttpResponse(
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
