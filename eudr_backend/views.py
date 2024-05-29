@@ -1,12 +1,9 @@
 import ast
 import json
-import os
 import httpx
 from django.http import HttpResponse
 from django.utils import timezone
-from dotenv import load_dotenv
 import pandas as pd
-import requests
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -101,7 +98,16 @@ async def async_create_farm_data(data, serializer, file_id):
             headers = {"Content-Type": "application/json"}
             body = {
                 "type": "Feature",
-                "properties": {"additionalProp1": {}},
+                "properties": {
+                    "farmer_name": item["farmer_name"],
+                    "collection_site": item["collection_site"],
+                    "agent_name": item["agent_name"],
+                    "farm_village": item["farm_village"],
+                    "farm_district": item["farm_district"],
+                    "farm_size": item["farm_size"],
+                    "latitude": item["latitude"],
+                    "longitude": item["longitude"],
+                },
                 "geometry": {
                     "type": "Polygon",
                     "coordinates": [formatted_polygon],
@@ -187,31 +193,6 @@ def retrieve_files(request):
     return Response(serializer.data)
 
 
-@api_view(["POST"])
-def get_radd_data(request):
-    # token = get_auth_token()
-    # if not token:
-    #     return Response({"error": "Failed to get auth token"}, status=500)
-
-    # api_key_response = get_api_key(token)
-    # if not api_key_response or "api_key" not in api_key_response:
-    #     return Response({"error": "Failed to get API key"}, status=500)
-
-    load_dotenv()
-
-    api_key = os.getenv("API_KEY")
-
-    url = f"{os.getenv('API_BASE_URL')}/dataset/wur_radd_alerts/latest/query"
-    headers = {"x-api-key": api_key, "Content-Type": "application/json"}
-
-    response = requests.post(url, headers=headers, json=request.data)
-
-    if response.status_code == 200:
-        return Response(response.json())
-    else:
-        return Response(response.json(), status=response.status_code)
-
-
 @api_view(["GET"])
 def download_template(request):
     format_val = request.GET.urlencode().split("%3D")[1]
@@ -219,20 +200,14 @@ def download_template(request):
 
     # Create a sample template dataframe
     data = {
-        "farmer_name": "Mama Magufuli",
-        "farm_size": 8.2,
+        "farmer_name": "John Doe",
+        "farm_size": 4,
         "collection_site": "Site A",
         "farm_village": "Village A",
         "farm_district": "District A",
         "latitude": "-1.62883139933721",
         "longitude": "29.9898212498949",
-        "polygon": (
-            "[(41.8781, 87.6298), (41.8781, 87.6299)]"
-            if format == "csv"
-            else [[41.8781, 87.6298], [41.8781, 87.6299]]
-        ),
-        "created_at": "",
-        "updated_at": "",
+        "polygon": "[[41.8781, 87.6298], [41.8781, 87.6299]]",
     }
 
     df = pd.DataFrame([data])
@@ -244,16 +219,9 @@ def download_template(request):
         filename = f"eudr-upload-template-{timestamp_str}.csv"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         df.to_csv(response, index=True)
-    elif format == "excel":
-        response = HttpResponse(
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-        filename = f"eudr-upload-template-{timestamp_str}.xlsx"
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        df.to_excel(response, index=False)
-    elif format == "geojson":
+    elif format == "json":
         response = HttpResponse(content_type="application/json")
-        filename = f"eudr-upload-template-{timestamp_str}.geojson"
+        filename = f"eudr-upload-template-{timestamp_str}.json"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         # GeoJSON format will depend on your specific data structure
         # This is just an example

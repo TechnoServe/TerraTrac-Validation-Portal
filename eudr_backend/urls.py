@@ -23,7 +23,6 @@ from eudr_backend.views import (
     create_user,
     delete_user,
     download_template,
-    get_radd_data,
     retrieve_farm_data,
     retrieve_farm_data_from_file_id,
     retrieve_farm_detail,
@@ -54,11 +53,6 @@ urlpatterns = [
         "api/farm/list/file/<int:pk>/",
         retrieve_farm_data_from_file_id,
         name="retrieve_farm_data_from_file_id",
-    ),
-    path(
-        "api/get-radd-data/",
-        get_radd_data,
-        name="get_radd_data",
     ),
     path("api/download-template/", download_template, name="download_template"),
 ]

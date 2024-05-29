@@ -170,15 +170,17 @@ Validator
           ></button>
         </div>
         <div class="modal-body">
-          <p>Download the template below to fill in your farm information.</p>
+          <em>
+            <b>Note:</b> Download the template if you are not sure of farm info
+            format to upload.
+          </em>
           <div class="col-md-12 d-flex justify-content-center">
             <select class="btn btn-primary btn-sm" id="templateFormat">
               <option value="" class="btn btn-white">
                 Download Format Template
               </option>
-              <option value="csv" class="btn btn-white">CSV</option>
-              <option value="excel" class="btn btn-white">Excel</option>
-              <option value="geojson" class="btn btn-white">GeoJSON</option>
+              <option value="csv" class="btn btn-white">CSV Format</option>
+              <option value="json" class="btn btn-white">JSON Format</option>
             </select>
           </div>
           <div class="mt-3">
@@ -188,11 +190,11 @@ Validator
                 class="form-control"
                 id="uploadFile"
                 name="file"
-                accept=".csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, .geojson"
+                accept=".csv, .json"
               />
             </form>
             <i class="text-xs text-muted mt-2"
-              >N.B: File should be in <b>.csv, .xlsx or .geojson</b> format.</i
+              >N.B: File should be in <b>.csv</b> or <b>.json</b> format.</i
             >
             <i class="text-xs text-muted mt-2"
               >And Make sure to upload info within fields mentioned in the

@@ -538,6 +538,7 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     ></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/earthengine/0.1.365/earthengine-api.min.js"></script>
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"
       integrity="sha512-dfX5uYVXzyU8+KHqj8bjo7UkOdg18PaOtpa48djpNbZHwExddghZ+ZmzWT06R5v6NSk3ZUfsH6FNEDepLx9hPQ=="
@@ -554,6 +555,12 @@
     <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.1.0/js/dataTables.responsive.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.5/js/dataTables.bootstrap5.min.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/0.0.124/turf.min.js"
+      integrity="sha512-jpnZ8xGKbS7L9S6d5fk/zDVgF6OoVKLMoEliLxf24BRX+orWhxqJuUcoM+vGmOaozS9dD9ABjQZKAgjjcwTndA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
     <!-- Control Center for Soft Dashboard: parallax effects, scripts for the example pages etc -->
     <script src="{% static 'assets/js/argon-dashboard.js' %}"></script>
 
@@ -646,6 +653,11 @@
               gravity: "top",
               position: "right",
               backgroundColor: "green",
+              onclose: function () {
+                setTimeout(function () {
+                  window.location.href = "/validated_files";
+                }, 0);
+              },
             }).showToast();
           })
           .catch((error) => {
@@ -852,10 +864,18 @@
               : colorClasses.high;
 
           const card = document.createElement("div");
-          card.className = "card card-custom " + colorClass;
+          card.className = "card card-custom whisp-item-card " + colorClass;
           card.innerHTML = `
             <div class="card-body">
-                <h5 class="card-title">${key}</h5>
+                <h5 class="card-title">${
+                  key === "gaul0"
+                    ? "Country"
+                    : key === "gaul1"
+                    ? "District"
+                    : key === "gaul2"
+                    ? "Village"
+                    : key
+                }</h5>
                 <p class="card-text">${value}</p>
             </div>
         `;

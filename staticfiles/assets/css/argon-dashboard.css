@@ -5226,6 +5226,19 @@ fieldset:disabled .btn {
   color: var(--bs-card-color);
 }
 
+#whispCardsContainer {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.whisp-item-card {
+  width: 50% !important;
+}
+.whisp-item-card .card-body {
+  padding: 1rem 0.7rem !important;
+}
+
 .card-title {
   margin-bottom: var(--bs-card-title-spacer-y);
 }
