@@ -227,10 +227,6 @@ if (document.getElementById("map")) {
           })
           .then((data) => {
             for (const farm of data) {
-              const reversedCoords = JSON.parse(
-                farm.polygon.replace(/\(/g, "[").replace(/\)/g, "]")
-              ).map((coord) => coord.reverse());
-
               geojsonData.push({
                 type: "Feature",
                 properties: {
@@ -249,16 +245,12 @@ if (document.getElementById("map")) {
                 },
                 geometry: {
                   type:
-                    JSON.parse(
-                      farm.polygon.replace(/\(/g, "[").replace(/\)/g, "]")
-                    ).length > 0
+                    JSON.parse(farm.polygon).length > 0
                       ? "MultiPolygon"
                       : "Point",
                   coordinates:
-                    JSON.parse(
-                      farm.polygon.replace(/\(/g, "[").replace(/\)/g, "]")
-                    ).length > 0
-                      ? [[reversedCoords]]
+                    JSON.parse(farm.polygon).length > 0
+                      ? [[JSON.parse(farm.polygon)]]
                       : [farm.longitude, farm.latitude],
                 },
               });
@@ -276,8 +268,7 @@ if (document.getElementById("map")) {
               // if farm is found, zoom to the farm
               if (farm) {
                 if (farm.geometry.type === "Point") {
-                  const reversedPoint = farm.geometry.coordinates.reverse();
-                  map.setView(reversedPoint, 19);
+                  map.setView(farm.geometry.coordinates, 19);
                   // open popup
                   geoJsonLayer.eachLayer(function (layer) {
                     if (layer.feature.properties.id === +farmId) {
@@ -285,11 +276,7 @@ if (document.getElementById("map")) {
                     }
                   });
                 } else {
-                  const reversedFarm = farm.geometry.coordinates[0][0].map(
-                    (coord) => coord.reverse()
-                  );
-
-                  map.fitBounds(reversedFarm);
+                  map.fitBounds(farm.geometry.coordinates[0][0]);
 
                   // highlight the farm with random color
                   geoJsonLayer.eachLayer(function (layer) {
@@ -320,8 +307,7 @@ if (document.getElementById("map")) {
               // if farm is found, zoom to the first farm
               if (farm) {
                 if (farm.geometry.type === "Point") {
-                  const reversedPoint = farm.geometry.coordinates.reverse();
-                  map.setView(reversedPoint, 19);
+                  map.setView(farm.geometry.coordinates, 19);
                   // open popup
                   geoJsonLayer.eachLayer(function (layer) {
                     if (layer.feature.properties.file_id === fileId) {
@@ -329,11 +315,7 @@ if (document.getElementById("map")) {
                     }
                   });
                 } else {
-                  const reversedFarm = farm.geometry.coordinates[0][0].map(
-                    (coord) => coord.reverse()
-                  );
-
-                  map.fitBounds(reversedFarm);
+                  map.fitBounds(farm.geometry.coordinates[0][0]);
 
                   // highlight the farm with random color
                   geoJsonLayer.eachLayer(function (layer) {

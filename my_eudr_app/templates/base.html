@@ -745,16 +745,6 @@
             document.querySelector("#total_farms").innerText = data.length;
           }
 
-          if (data.length < 1) {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-                  <td colspan="8">
-                    <p class="text-xs font-weight-bold text-center mb-0">No data available</p>
-                  </td>
-              `;
-            farmsContainer.appendChild(tr);
-          }
-
           while (i < data.length) {
             const tr = document.createElement("tr");
             tr.innerHTML = `
@@ -850,6 +840,8 @@
 
       function viewAnalysis(id) {
         const container = document.getElementById("whispCardsContainer");
+        container.innerHTML = "";
+
         const obj = farmData.find((farm) => farm.id === id);
 
         Object.keys(obj?.analysis?.data?.[0]).forEach((key) => {
