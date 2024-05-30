@@ -628,6 +628,9 @@
       }
 
       function sendDataToAPI(data, file_name, format) {
+        document.querySelector("#saveBtn").innerHTML = "Processing...";
+        document.querySelector("#saveBtn").setAttribute("disabled", true);
+        document.querySelector("#closeBtn").setAttribute("disabled", true);
         fetch("/api/farm/add/", {
           method: "POST",
           headers: {
@@ -642,6 +645,17 @@
           .then((response) => {
             if (!response.ok) {
               throw new Error("Network response was not ok");
+              Toastify({
+                text: "Network response was not ok",
+                duration: 3000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                backgroundColor: "red",
+              }).showToast();
+              document.querySelector("#saveBtn").innerHTML = "Save";
+              document.querySelector("#saveBtn").removeAttribute("disabled");
+              document.querySelector("#closeBtn").removeAttribute("disabled");
             }
             return response.json();
           })
@@ -653,15 +667,27 @@
               gravity: "top",
               position: "right",
               backgroundColor: "green",
-              onclose: function () {
-                setTimeout(function () {
-                  window.location.href = "/validated_files";
-                }, 0);
-              },
             }).showToast();
+
+            setTimeout(function () {
+              document.querySelector("#saveBtn").innerHTML = "Save";
+              document.querySelector("#saveBtn").removeAttribute("disabled");
+              document.querySelector("#closeBtn").removeAttribute("disabled");
+              window.location.href = "/validated_files";
+            }, 2000);
           })
           .catch((error) => {
-            alert("Error uploading data");
+            Toastify({
+              text: "Error while uploading data. please try again",
+              duration: 3000,
+              close: true,
+              gravity: "top",
+              position: "right",
+              backgroundColor: "red",
+            }).showToast();
+            document.querySelector("#saveBtn").innerHTML = "Save";
+            document.querySelector("#saveBtn").removeAttribute("disabled");
+            document.querySelector("#closeBtn").removeAttribute("disabled");
           });
       }
     </script>
@@ -707,7 +733,7 @@
       }
 
       function uploadFile(file) {
-        console.log("Uploading", file.name);
+        console.log("Uploading...");
       }
 
       dropArea.addEventListener("click", () => {

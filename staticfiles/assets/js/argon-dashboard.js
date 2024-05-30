@@ -155,9 +155,9 @@ if (document.getElementById("map")) {
                   key === "gaul0"
                     ? "Country"
                     : key === "gaul1"
-                    ? "District"
+                    ? "Province"
                     : key === "gaul2"
-                    ? "Village"
+                    ? "District"
                     : key
                 }:</b> ${value}</li>`;
               }
@@ -238,19 +238,18 @@ if (document.getElementById("map")) {
                   farm_village: farm.farm_village,
                   farm_district: farm.farm_district,
                   file_id: farm.file_id,
+                  latitude: farm.latitude,
+                  longitude: farm.longitude,
                   is_validated: farm.is_validated,
                   is_eudr_compliant: farm.is_eudr_compliant,
                   updated_at: farm.updated_at,
                   analysis: farm?.analysis?.data[0],
                 },
                 geometry: {
-                  type:
-                    JSON.parse(farm.polygon).length > 0
-                      ? "MultiPolygon"
-                      : "Point",
+                  type: farm.polygon.length > 0 ? "MultiPolygon" : "Point",
                   coordinates:
-                    JSON.parse(farm.polygon).length > 0
-                      ? [[JSON.parse(farm.polygon)]]
+                    farm.polygon.length > 0
+                      ? [[farm.polygon]]
                       : [farm.longitude, farm.latitude],
                 },
               });
@@ -355,7 +354,6 @@ if (document.getElementById("map")) {
 
 function treeCoverLossLayer(map) {
   ee.data.authenticate();
-  console.log(ee);
   ee.initialize();
   var dataset = ee.Image("UMD/hansen/global_forest_change_2023_v1_11");
   var treeCoverVisParam = {
