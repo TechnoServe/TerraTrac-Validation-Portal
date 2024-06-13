@@ -186,7 +186,7 @@ if (document.getElementById("map")) {
             feature.properties.analysis
               ? `<div class="accordion">
             <div class="accordion-item" onclick="toggleAccordion(this)">
-              <b>Whisp Analysis:</b><br/>
+              <b>General Analysis:</b><br/>
             </div>
             <div class="accordion-item-content">
               ${analysisList}
@@ -232,7 +232,11 @@ if (document.getElementById("map")) {
                 properties: {
                   id: farm.id,
                   farmer_name: farm.farmer_name,
-                  farm_size: farm.farm_size,
+                  farm_size: `${farm?.analysis
+                    ? farm?.analysis?.error
+                      ? farm.farm_size
+                      : farm?.analysis?.data?.[0]?.area
+                    : farm.farm_size} ha`,
                   collection_site: farm.collection_site,
                   agent_name: farm.agent_name,
                   farm_village: farm.farm_village,
@@ -243,13 +247,20 @@ if (document.getElementById("map")) {
                   is_validated: farm.is_validated,
                   is_eudr_compliant: farm.is_eudr_compliant,
                   updated_at: farm.updated_at,
-                  analysis: farm?.analysis?.data[0],
+                  analysis: farm?.analysis
+                    ? farm?.analysis?.error
+                      ? null
+                      : farm?.analysis?.data?.[0]
+                    : null,
                 },
                 geometry: {
-                  type: farm.polygon.length > 0 ? "MultiPolygon" : "Point",
+                  type:
+                    typeof JSON.parse(farm.polygon)[0] === "object"
+                      ? "Polygon"
+                      : "Point",
                   coordinates:
-                    farm.polygon.length > 0
-                      ? [[farm.polygon]]
+                    typeof JSON.parse(farm.polygon)[0] === "object"
+                      ? [JSON.parse(farm.polygon)]
                       : [farm.longitude, farm.latitude],
                 },
               });
@@ -275,7 +286,7 @@ if (document.getElementById("map")) {
                     }
                   });
                 } else {
-                  map.fitBounds(farm.geometry.coordinates[0][0]);
+                  map.fitBounds(farm.geometry.coordinates[0]);
 
                   // highlight the farm with random color
                   geoJsonLayer.eachLayer(function (layer) {
@@ -314,7 +325,7 @@ if (document.getElementById("map")) {
                     }
                   });
                 } else {
-                  map.fitBounds(farm.geometry.coordinates[0][0]);
+                  map.fitBounds(farm.geometry.coordinates[0]);
 
                   // highlight the farm with random color
                   geoJsonLayer.eachLayer(function (layer) {

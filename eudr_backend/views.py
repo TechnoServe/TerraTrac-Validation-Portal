@@ -86,12 +86,20 @@ async def async_create_farm_data(data, serializer, file_id, format):
             )
         )
         # if farmer_name is empty, skip the record
-        if not item["properties"]["farmer_name"]:
+        if not (
+            item["properties"]["farmer_name"]
+            if format == "json"
+            else item["farmer_name"]
+        ):
             continue
 
         # Check if a similar record already exists for each item
         if await EUDRFarmModel.objects.filter(
-            farmer_name=item["properties"]["farmer_name"],
+            farmer_name=(
+                item["properties"]["farmer_name"]
+                if format == "json"
+                else item["farmer_name"]
+            ),
         ).aexists():
             errors.append(
                 {
@@ -105,22 +113,35 @@ async def async_create_farm_data(data, serializer, file_id, format):
             coordinates = (
                 item["geometry"]["coordinates"][0]
                 if format == "json"
-                else item["polygon"]
+                else ast.literal_eval(item["polygon"])
             )
 
-            # do whisp analysis POST request
-            url = "https://whisp-app-vdfqchwaca-uc.a.run.app/api/wkt"
-            headers = {"Content-Type": "application/json"}
-            body = {
-                "wkt": "POLYGON(("
-                + ",".join(f"{lon} {lat}" for lon, lat in coordinates)
-                + "))",
-            }
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(url, headers=headers, json=body)
-                response_data = response.json()
+            if (
+                len(
+                    item["geometry"]["coordinates"]
+                    if format == "json"
+                    else ast.literal_eval(item["polygon"])
+                )
+                <= 1
+            ):
+                item["analysis"] = None
+            else:
+                # do whisp analysis POST request
+                print("POLYGON(("
+                    + ",".join(f"{lon} {lat}" for lon, lat in coordinates)
+                    + "))")
+                url = "https://whisp-app-vdfqchwaca-uc.a.run.app/api/wkt"
+                headers = {"Content-Type": "application/json"}
+                body = {
+                    "wkt": "POLYGON(("
+                    + ",".join(f"{lon} {lat}" for lon, lat in coordinates)
+                    + "))",
+                }
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    response = await client.post(url, headers=headers, json=body)
+                    response_data = response.json()
 
-            item["analysis"] = response_data
+                item["analysis"] = response_data
 
             # add the analysis result to the serializer data
             serializer.validated_data["analysis"] = item["analysis"]
@@ -151,6 +172,7 @@ def create_farm_data(request):
         file_serializer.save()
         file_id = file_serializer.data.get("id")
     else:
+        EUDRUploadedFilesModel.objects.get(id=file_serializer.data.get("id")).delete()
         return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     data = request.data

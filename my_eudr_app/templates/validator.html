@@ -50,9 +50,20 @@ Validator
       <div class="card mb-4">
         <div class="d-flex card-header pb-0">
           <h6>Farms List</h6>
-          <button class="btn btn-primary btn-sm ms-auto text-white" disabled>
-            Re-Validate All
-          </button>
+          <div class="ms-auto">
+            <button class="btn btn-primary btn-sm ms-auto text-white" disabled>
+              <i class="fas fa-redo me-2"></i>
+              Re-Validate All
+            </button>
+            <button
+              class="btn btn-primary btn-sm ms-auto text-white"
+              id="export-btn"
+              disabled
+            >
+              <i class="fas fa-download me-2"></i>
+              Export All
+            </button>
+          </div>
         </div>
         <div class="card-body px-0 pt-0 pb-2">
           <div class="table-responsive p-0">
@@ -126,7 +137,7 @@ Validator
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title" id="whispAnalysisModalLabel">
-            WHISP Analysis Overview
+            General Analysis Overview
           </h5>
           <button
             type="button"

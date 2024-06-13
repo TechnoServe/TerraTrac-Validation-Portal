@@ -771,7 +771,12 @@
             document.querySelector("#total_farms").innerText = data.length;
           }
 
+          if (data.length > 0) {
+            document.querySelector("#export-btn").removeAttribute("disabled");
+          }
+
           while (i < data.length) {
+            console.log(data[i]);
             const tr = document.createElement("tr");
             tr.innerHTML = `
                   <td>
@@ -803,7 +808,7 @@
                   </td>
                   <td>
                     ${
-                      !data[i].analysis
+                      !data[i].analysis || data[i].analysis?.error
                         ? '<p class="text-xs font-weight-bold mb-0"> - </p>'
                         : `<i class="bi bi-eye mt-5 text-primary text-lg" data-toggle="modal" data-target="#whispDataModal"
                       id="viewAnalysisBtn" role="button" onclick="viewAnalysis(${data[i].id})" title="View Analysis"></i>`
@@ -909,6 +914,54 @@
 
         whispDataModal.show();
       }
+
+      document.querySelector("#export-btn").addEventListener("click", () => {
+        // Define the title and two empty rows
+        const title = `Overview of ${farmData[0]?.collection_site} client farms`;
+        const emptyRows = ["", ""];
+
+        // Map the farm data to the desired structure
+        const data = farmData.map((farm) => {
+          return {
+            "Farmer Name": farm.farmer_name,
+            "Farm Size": farm.farm_size,
+            Village: farm.farm_village,
+            District: farm.farm_district,
+            "Is Validated": farm.is_validated ? "Yes" : "No",
+            "Validated At": farm.validated_at
+              ? new Date(farm.validated_at).toDateString()
+              : "-",
+          };
+        });
+
+        // Convert the mapped data to CSV format
+        const csvData = Papa.unparse(data);
+
+        // Split the CSV data into an array of rows
+        const csvRows = csvData.split("\n");
+
+        // Prepend the title and empty rows
+        csvRows.unshift(...emptyRows);
+        csvRows.unshift(title);
+
+        // Join the rows back into a single CSV string
+        const finalCsv = csvRows.join("\n");
+
+        // Create a blob from the CSV string
+        const blob = new Blob([finalCsv], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+
+        // Create a temporary link to download the CSV file
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "farms.csv";
+        document.body.appendChild(a);
+        a.click();
+
+        // Clean up the URL object and remove the link
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      });
     </script>
     <script>
       const filesContainer = document.getElementById("filesContainer");
