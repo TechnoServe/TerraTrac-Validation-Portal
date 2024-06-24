@@ -115,10 +115,9 @@ async def async_create_farm_data(data, serializer, file_id, format):
                 if format == "json"
                 else ast.literal_eval(item["polygon"])
             )
-
             if (
                 len(
-                    item["geometry"]["coordinates"]
+                    item["geometry"]["coordinates"][0][0]
                     if format == "json"
                     else ast.literal_eval(item["polygon"])
                 )
@@ -126,20 +125,35 @@ async def async_create_farm_data(data, serializer, file_id, format):
             ):
                 item["analysis"] = None
             else:
-                # do whisp analysis POST request
-                print("POLYGON(("
-                    + ",".join(f"{lon} {lat}" for lon, lat in coordinates)
-                    + "))")
-                url = "https://whisp-app-vdfqchwaca-uc.a.run.app/api/wkt"
-                headers = {"Content-Type": "application/json"}
-                body = {
-                    "wkt": "POLYGON(("
-                    + ",".join(f"{lon} {lat}" for lon, lat in coordinates)
-                    + "))",
-                }
-                async with httpx.AsyncClient(timeout=60.0) as client:
-                    response = await client.post(url, headers=headers, json=body)
-                    response_data = response.json()
+                # do general analysis POST request
+                response_data = None
+                # url = "https://whisp-app-vdfqchwaca-uc.a.run.app/api/wkt"
+                # headers = {"Content-Type": "application/json"}
+                # body = {
+                #     "wkt": "POLYGON(("
+                #     + ",".join(f"{lon} {lat}" for lon, lat in coordinates)
+                #     + "))",
+                # }
+                # async with httpx.AsyncClient(timeout=60.0) as client:
+                #     response = await client.post(url, headers=headers, json=body)
+                #     response_data = response.json()
+
+                # tree cover loss after 2020
+                # tcl_url = "https://data-api.globalforestwatch.org/dataset/umd_tree_cover_loss/latest/query"
+                # tcl_headers = {"Content-Type": "application/json"}
+                # tcl_body = {
+                #     "geometry": {
+                #         "type": "Polygon",
+                #         "coordinates": [coordinates],
+                #     },
+                #     "sql": "SELECT SUM(area__ha) FROM results WHERE umd_tree_cover_loss__year > 2020"
+                # }
+                # async with httpx.AsyncClient(timeout=60.0) as client:
+                #     tcl_response = await client.post(tcl_url, json=tcl_body)
+                #     tcl_response_data = tcl_response.json()
+
+                # if response_data["status"] == "success":
+                #     response_data["data"]["tree_cover_loss_after_2020"] = tcl_response_data["data"][0]["area__ha"]
 
                 item["analysis"] = response_data
 
@@ -151,7 +165,9 @@ async def async_create_farm_data(data, serializer, file_id, format):
             created_data.append(serializer.data)
         else:
             # delete the file if the serializer is not valid
-            EUDRUploadedFilesModel.objects.get(id=file_id).delete()
+            # if file_id:
+            #     EUDRUploadedFilesModel.objects.get(id=file_id).delete()
+
             errors.append({"error": serializer.errors, "data": item})
 
     return errors, created_data
@@ -172,7 +188,8 @@ def create_farm_data(request):
         file_serializer.save()
         file_id = file_serializer.data.get("id")
     else:
-        EUDRUploadedFilesModel.objects.get(id=file_serializer.data.get("id")).delete()
+        EUDRUploadedFilesModel.objects.get(
+            id=file_serializer.data.get("id")).delete()
         return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     data = request.data
@@ -190,6 +207,58 @@ def create_farm_data(request):
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
     return Response(created_data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+def sync_farm_data(request):
+    serializer = EUDRFarmModelSerializer(data=request.data)
+    # read the data from the request, loop through the data, check if the record exists, if not, create the record,
+    # if it exists, update the record
+    data = request.data
+
+    # check if data device_id exists in file table
+    if not EUDRUploadedFilesModel.objects.filter(device_id=data["device_id"]).exists():
+        # update farm data with file_id corresponding to the device_id
+        file_data = EUDRUploadedFilesModel.objects.get(
+            device_id=data["device_id"])
+        file_id = file_data.id
+        # Call the async function from sync context
+        errors, created_data = async_to_sync(async_create_farm_data)(
+            data, serializer, file_id, request.data.get("format")
+        )
+
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(created_data, status=status.HTTP_201_CREATED)
+    else:
+        # create a new file record
+        file_data = {
+            "file_name": f"{data.get('device_id')}.{data.get('format')}",
+            "device_id": data["device_id"],
+            "uploaded_by": "admin",
+        }
+        file_serializer = EUDRUploadedFilesModelSerializer(data=file_data)
+
+        if file_serializer.is_valid():
+            file_serializer.save()
+            file_id = file_serializer.data.get("id")
+        else:
+            EUDRUploadedFilesModel.objects.get(
+                id=file_serializer.data.get("id")).delete()
+            return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Call the async function from sync context
+        errors, created_data = async_to_sync(async_create_farm_data)(
+            data, serializer, file_id, request.data.get("format")
+        )
+
+        if errors:
+            # delete the file if there are errors
+            EUDRUploadedFilesModel.objects.get(id=file_id).delete()
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(created_data, status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])

@@ -29,6 +29,7 @@ from eudr_backend.views import (
     retrieve_files,
     retrieve_user,
     retrieve_users,
+    sync_farm_data,
     update_user,
 )
 from my_eudr_app import views
@@ -38,7 +39,7 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("validator/", views.validator, name="validator"),
     path("validated_files/", views.validated_files, name="validated_files"),
-    path("map/", views.map, name="map"),
+    path("map/", views.map_view, name='map'),
     path("users/", views.users, name="users"),
     path("api/users/", retrieve_users, name="user_list"),
     path("api/users/<int:pk>/", retrieve_user, name="user_detail"),
@@ -46,8 +47,10 @@ urlpatterns = [
     path("api/users/update/<int:pk>/", update_user, name="user_update"),
     path("api/users/delete/<int:pk>/", delete_user, name="user_delete"),
     path("api/farm/add/", create_farm_data, name="create_farm_data"),
+    path("api/farm/sync/", sync_farm_data, name="sync_farm_data"),
     path("api/farm/list/", retrieve_farm_data, name="retrieve_farm_data"),
-    path("api/farm/list/<int:pk>/", retrieve_farm_detail, name="retrieve_farm_detail"),
+    path("api/farm/list/<int:pk>/", retrieve_farm_detail,
+         name="retrieve_farm_detail"),
     path("api/files/list/", retrieve_files, name="retrieve_files"),
     path(
         "api/farm/list/file/<int:pk>/",

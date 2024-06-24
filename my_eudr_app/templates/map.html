@@ -22,8 +22,10 @@
         <span class="sr-only">Loading...</span>
       </div>
     </div>
-    <div id="map" style="height: 80vh; border-radius: 10px"></div>
+    <div id="mapMonde" style="height: 80vh; border-radius: 10px">
+      {{ map_html|safe }}
+    </div>
   </div>
-</div>
 
-{% endblock %}
+  {% endblock %}
+</div>

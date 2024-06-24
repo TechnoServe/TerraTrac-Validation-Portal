@@ -48,6 +48,7 @@ class EUDRFarmModel(models.models.Model):
 
 class EUDRUploadedFilesModel(models.models.Model):
     file_name = models.models.CharField(max_length=255)
+    device_id = models.models.CharField(max_length=255, null=True, blank=True)
     uploaded_by = models.models.CharField(max_length=255)
     created_at = models.models.DateTimeField(auto_now_add=True)
     updated_at = models.models.DateTimeField(auto_now=True)

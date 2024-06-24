@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+import ee
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -33,7 +35,21 @@ SECRET_KEY = "django-insecure-y35l4sq8toqp+be0eu1rxh)h0!q%43^o^nle@#lco*0%@w6-%+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    "27c2-41-186-78-254.ngrok-free.app"
+]
+
+
+if os.name == 'nt':
+    import platform
+    OSGEO4W = r"C:\OSGeo4W"
+    assert os.path.isdir(OSGEO4W), "Directory does not exist: " + OSGEO4W
+    os.environ['OSGEO4W_ROOT'] = OSGEO4W
+    os.environ['GDAL_DATA'] = OSGEO4W + r"\share\apps\gdal"
+    os.environ['PROJ_LIB'] = OSGEO4W + r"\share\proj"
+    os.environ['PATH'] = OSGEO4W + r"\bin;" + os.environ['PATH']
 
 
 # Application definition
@@ -45,6 +61,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # "django.contrib.gis.utils",
     "rest_framework",
     "my_eudr_app",
     "eudr_backend",
@@ -65,6 +82,17 @@ MIDDLEWARE = [
 ROOT_URLCONF = "eudr_backend.urls"
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
+
+EE_CREDENTIALS = os.path.join(BASE_DIR, 'ee-eudr-compliance-68c5ebef5f20.json')
+
+
+def initialize_earth_engine():
+    ee.Initialize(ee.ServiceAccountCredentials(
+        "tns-2024@ee-eudr-compliance.iam.gserviceaccount.com", EE_CREDENTIALS
+    ))
+
 
 TEMPLATES = [
     {

@@ -28,22 +28,7 @@
   }
 })();
 
-function mapDefaultLocation() {
-  var osm = L.tileLayer("http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
-    mqi = L.tileLayer("http://{s}.mqcdn.com/tiles/1.0.0/sat/{z}/{x}/{y}.png", {
-      subdomains: ["otile1", "otile2", "otile3", "otile4"],
-    });
-  var map = L.map("map", {
-    layers: [osm, mqi],
-  }).setView([-1.9507, 30.0663], 15);
-
-  var baseMaps = {
-    OpenStreetMap: osm,
-    "OpenStreetMap.HOT": osmHOT,
-  };
-
-  var overlayMaps = {};
-
+function mapDefaultLocation(baseMaps, overlayMaps) {
   var layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
 
   var openTopoMap = L.tileLayer(
@@ -64,8 +49,8 @@ function mapDefaultLocation() {
     .openPopup();
 }
 
-// invoke leaflet map
-if (document.getElementById("map")) {
+// initialize map
+function initMap() {
   const urlParams = new URLSearchParams(window.location.search);
   const farmId = urlParams.get("farm-id");
   const fileId = urlParams.get("file-id");
@@ -93,27 +78,29 @@ if (document.getElementById("map")) {
           }
         );
 
+        var googleMaps = L.tileLayer(
+          "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+          {
+            maxZoom: 20,
+            attribution: "© Google",
+          }
+        );
+
         var map = L.map("map", {
-          layers: [osm],
+          layers: [googleMaps],
         }).setView([position.coords.latitude, position.coords.longitude], 15);
 
         mapPreloader.style.display = "none";
 
         var baseMaps = {
+          "Google Map": googleMaps,
           OpenStreetMap: osm,
           "Google Satellite": googleSat,
         };
 
-        var overlayMaps = {
-          // "Tree Cover Loss": treeCoverLossLayer(map),
-        };
+        var overlayMaps = {};
 
         L.control.layers(baseMaps, overlayMaps).addTo(map);
-
-        // Add OpenStreetMap tile layer
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 12,
-        }).addTo(map);
 
         // Define custom icons for markers
         var greenIcon = L.icon({
@@ -227,16 +214,19 @@ if (document.getElementById("map")) {
           })
           .then((data) => {
             for (const farm of data) {
+              console.log(data);
               geojsonData.push({
                 type: "Feature",
                 properties: {
                   id: farm.id,
                   farmer_name: farm.farmer_name,
-                  farm_size: `${farm?.analysis
-                    ? farm?.analysis?.error
-                      ? farm.farm_size
-                      : farm?.analysis?.data?.[0]?.area
-                    : farm.farm_size} ha`,
+                  farm_size: `${
+                    farm?.analysis
+                      ? farm?.analysis?.error
+                        ? farm.farm_size
+                        : farm?.analysis?.data?.[0]?.area
+                      : farm.farm_size
+                  } ha`,
                   collection_site: farm.collection_site,
                   agent_name: farm.agent_name,
                   farm_village: farm.farm_village,
@@ -255,12 +245,10 @@ if (document.getElementById("map")) {
                 },
                 geometry: {
                   type:
-                    typeof JSON.parse(farm.polygon)[0] === "object"
-                      ? "Polygon"
-                      : "Point",
+                    typeof farm.polygon[0] === "object" ? "Polygon" : "Point",
                   coordinates:
-                    typeof JSON.parse(farm.polygon)[0] === "object"
-                      ? [JSON.parse(farm.polygon)]
+                    typeof farm.polygon[0] === "object"
+                      ? [farm.polygon]
                       : [farm.longitude, farm.latitude],
                 },
               });
@@ -355,33 +343,12 @@ if (document.getElementById("map")) {
           });
       },
       function () {
-        mapDefaultLocation();
+        mapDefaultLocation(baseMaps, overlayMaps);
       }
     );
   } else {
-    mapDefaultLocation();
+    mapDefaultLocation(baseMaps, overlayMaps);
   }
-}
-
-function treeCoverLossLayer(map) {
-  ee.data.authenticate();
-  ee.initialize();
-  var dataset = ee.Image("UMD/hansen/global_forest_change_2023_v1_11");
-  var treeCoverVisParam = {
-    bands: ["treecover2000"],
-    min: 0,
-    max: 100,
-    palette: ["black", "green"],
-  };
-  map.addLayer(dataset, treeCoverVisParam, "tree cover 2000");
-
-  var treeLossVisParam = {
-    bands: ["lossyear"],
-    min: 0,
-    max: 23,
-    palette: ["yellow", "red"],
-  };
-  map.addLayer(dataset, treeLossVisParam, "tree loss year");
 }
 
 function toggleAccordion(item) {
