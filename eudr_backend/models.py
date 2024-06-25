@@ -25,6 +25,7 @@ class EUDRUserModel(models.models.Model):
 
 
 class EUDRFarmModel(models.models.Model):
+    remote_id = models.models.CharField(max_length=255, null=True, blank=True)
     farmer_name = models.models.CharField(max_length=255)
     farm_size = models.models.FloatField()
     collection_site = models.models.CharField(max_length=255)
