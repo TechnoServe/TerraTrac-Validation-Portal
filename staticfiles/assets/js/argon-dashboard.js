@@ -214,7 +214,6 @@ function initMap() {
           })
           .then((data) => {
             for (const farm of data) {
-              console.log(data);
               geojsonData.push({
                 type: "Feature",
                 properties: {

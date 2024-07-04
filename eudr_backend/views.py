@@ -1,15 +1,18 @@
 import ast
 import json
+import ee
 import httpx
 from django.http import HttpResponse
 from django.utils import timezone
 import pandas as pd
+import requests
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from asgiref.sync import async_to_sync, sync_to_async
 
 from eudr_backend.models import EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
+from eudr_backend.settings import initialize_earth_engine
 from .serializers import (
     EUDRFarmModelSerializer,
     EUDRUploadedFilesModelSerializer,
@@ -267,6 +270,18 @@ def create_farm_data(request):
     return Response(created_data, status=status.HTTP_201_CREATED)
 
 
+@api_view(["PUT"])
+def update_farm_data(request, pk):
+    farm_data = EUDRFarmModel.objects.get(id=pk)
+    serializer = EUDRFarmModelSerializer(instance=farm_data, data=request.data)
+
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(["POST"])
 def sync_farm_data(request):
     serializer = EUDRFarmModelSerializer(data=request.data)
@@ -326,9 +341,45 @@ def sync_farm_data(request):
 
 @api_view(["GET"])
 def retrieve_farm_data(request):
+    initialize_earth_engine()
     data = EUDRFarmModel.objects.all().order_by("-updated_at")
 
+    # Add deforestation layer (2021-2023)
+    deforestation = ee.Image(
+        'UMD/hansen/global_forest_change_2023_v1_11').select('lossyear').eq(1).selfMask()
+    # Fetch protected areas
+    protected_areas = ee.FeatureCollection("WCMC/WDPA/current/polygons")
+
     serializer = EUDRFarmModelSerializer(data, many=True)
+
+    # loop through the data and update the analysis field with the external analysis result
+    try:
+        for item in serializer.data:
+            polygon = item['polygon']
+            if polygon:
+                farm_feature = ee.Feature(ee.Geometry.Polygon(polygon))
+                intersecting_areas = protected_areas.filterBounds(
+                    farm_feature.geometry())
+                # Check if the farm intersects with deforestation areas
+                intersecting_deforestation = deforestation.reduceRegions(collection=ee.FeatureCollection(
+                    [farm_feature]), reducer=ee.Reducer.anyNonZero(), scale=30).first().get('any').getInfo()
+
+                if intersecting_deforestation or intersecting_areas.size().getInfo() > 0:
+                    item['analysis'] = {
+                        'deforestation':
+                            True if intersecting_deforestation else False,
+                        'protected_areas': intersecting_areas.size().getInfo() > 0 or False
+                    }
+                else:
+                    item['analysis'] = {
+                        'deforestation': False,
+                        'protected_areas': False
+                    }
+
+                    requests.put(
+                        f'http://localhost:8000/api/farm/update/{item["id"]}/', json=item)
+    except Exception as e:
+        print(f"Failed to update farm analysis: {e}")
 
     return Response(serializer.data)
 

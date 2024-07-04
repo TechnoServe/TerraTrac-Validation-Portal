@@ -16,7 +16,8 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
+from django.contrib.auth.views import LogoutView
 
 from eudr_backend.views import (
     create_farm_data,
@@ -30,6 +31,7 @@ from eudr_backend.views import (
     retrieve_user,
     retrieve_users,
     sync_farm_data,
+    update_farm_data,
     update_user,
 )
 from my_eudr_app import views
@@ -37,16 +39,19 @@ from my_eudr_app import views
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", views.index, name="index"),
+    path("auth/", include("my_eudr_app.urls")),
     path("validator/", views.validator, name="validator"),
     path("validated_files/", views.validated_files, name="validated_files"),
-    path("map/", views.map_view, name='map'),
+    path("map/", views.map_view, name="map"),
     path("users/", views.users, name="users"),
+    path("logout/", views.logout_view, name="logout"),
     path("api/users/", retrieve_users, name="user_list"),
     path("api/users/<int:pk>/", retrieve_user, name="user_detail"),
     path("api/users/add/", create_user, name="user_create"),
     path("api/users/update/<int:pk>/", update_user, name="user_update"),
     path("api/users/delete/<int:pk>/", delete_user, name="user_delete"),
     path("api/farm/add/", create_farm_data, name="create_farm_data"),
+    path("api/farm/update/<int:pk>/", update_farm_data, name="update_farm_data"),
     path("api/farm/sync/", sync_farm_data, name="sync_farm_data"),
     path("api/farm/list/", retrieve_farm_data, name="retrieve_farm_data"),
     path("api/farm/list/<int:pk>/", retrieve_farm_detail,

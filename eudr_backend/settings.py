@@ -87,6 +87,11 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
 EE_CREDENTIALS = os.path.join(BASE_DIR, 'ee-eudr-compliance-68c5ebef5f20.json')
 
+LOGIN_URL = 'login'
+
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'login'
+
 
 def initialize_earth_engine():
     ee.Initialize(ee.ServiceAccountCredentials(
