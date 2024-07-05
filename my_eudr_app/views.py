@@ -7,6 +7,7 @@ import ee
 import folium
 import geemap.foliumap as geemap
 import requests
+from shapely.geometry import Polygon
 
 from eudr_backend.settings import initialize_earth_engine
 
@@ -100,6 +101,7 @@ def map_view(request):
         # Fetch protected areas
         protected_areas = ee.FeatureCollection("WCMC/WDPA/current/polygons")
 
+        shapely_polygons = []
         for farm in farms:
             # Assuming farm data has 'farmer_name', 'latitude', 'longitude', 'farm_size', and 'polygon' fields
             if 'polygon' in farm:
@@ -139,23 +141,27 @@ def map_view(request):
                     except Exception as e:
                         print(f"Failed to update farm analysis: {e}")
 
-                    folium.GeoJson(
-                        {
-                            "type": "Feature",
-                            "properties": {
-                                "farmer_name": farm['farmer_name'],
-                                "farm_size": farm.get('farm_size', 'N/A')
-                            },
-                            "geometry": {
-                                "type": "Polygon",
-                                "coordinates": [polygon]
-                            }
-                        },
-                        control=False,
-                        popup=f"<b>Farmer Name:</b> {
-                            farm['farmer_name']}<br/>",
-                        style_function=lambda x, color=color: {
-                            'color': color, 'fillColor': color}
+                    shapely_polygon = Polygon(polygon)
+
+                    # Check for overlap with existing polygons
+                    overlap = any(shapely_polygon.intersects(existing_polygon)
+                                  for existing_polygon in shapely_polygons)
+                    shapely_polygons.append(shapely_polygon)
+                    folium.Polygon(
+                        locations=[polygon],
+                        tooltip=f"""<b>Farmer Name:</b> {farm['farmer_name']}<br>
+          <b>Farm Size:</b> {farm['farm_size']}<br>
+          <b>Collection Site:</b> {farm['collection_site']}<br>
+          <b>Agent Name:</b> {farm['agent_name']}<br>
+          <b>Farm Village:</b> {farm['farm_village']}<br>
+          <b>District:</b> {farm['farm_district']}<br>
+          <b>Overlapping?:</b> {'Yes' if overlap else 'No'}<br>
+          <b>Is in Deforested Area:</b> {'Yes' if farm['analysis']['deforestation'] else 'No'}<br/>
+          <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['protected_areas'] else 'No'}<br/>
+          """,
+                        color=color,
+                        fill=True,
+                        fill_color=color
                     ).add_to(m)
             else:
                 folium.Marker(
