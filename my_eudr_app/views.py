@@ -7,7 +7,7 @@ import ee
 import folium
 import geemap.foliumap as geemap
 import requests
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point
 
 from eudr_backend.settings import initialize_earth_engine
 
@@ -148,7 +148,7 @@ def map_view(request):
                                   for existing_polygon in shapely_polygons)
                     shapely_polygons.append(shapely_polygon)
                     folium.Polygon(
-                        locations=[polygon],
+                        locations=[reverse_polygon_points(polygon)],
                         tooltip=f"""<b>Farmer Name:</b> {farm['farmer_name']}<br>
           <b>Farm Size:</b> {farm['farm_size']}<br>
           <b>Collection Site:</b> {farm['collection_site']}<br>
@@ -164,9 +164,24 @@ def map_view(request):
                         fill_color=color
                     ).add_to(m)
             else:
+                shapely_polygon = Point([farm['longitude'], farm['latitude']])
+
+                # Check for overlap with existing polygons
+                overlap = any(shapely_polygon.intersects(existing_polygon)
+                              for existing_polygon in shapely_polygons)
+                shapely_polygons.append(shapely_polygon)
                 folium.Marker(
                     location=[farm['latitude'], farm['longitude']],
-                    popup=farm['farmer_name'],
+                    tooltip=f"""<b>Farmer Name:</b> {farm['farmer_name']}<br>
+          <b>Farm Size:</b> {farm['farm_size']}<br>
+          <b>Collection Site:</b> {farm['collection_site']}<br>
+          <b>Agent Name:</b> {farm['agent_name']}<br>
+          <b>Farm Village:</b> {farm['farm_village']}<br>
+          <b>District:</b> {farm['farm_district']}<br>
+          <b>Overlapping?:</b> {'Yes' if overlap else 'No'}<br>
+          <b>Is in Deforested Area:</b> {'Yes' if farm['analysis']['deforestation'] else 'No'}<br/>
+          <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['protected_areas'] else 'No'}<br/>
+          """,
                     icon=folium.Icon(color='green', icon='leaf')
                 ).add_to(m)
     else:
@@ -204,3 +219,8 @@ def map_view(request):
     map_html = m._repr_html_()
 
     return render(request, 'map.html', {'map_html': map_html})
+
+
+def reverse_polygon_points(polygon):
+    reversed_polygon = [[lon, lat] for lat, lon in polygon]
+    return reversed_polygon
