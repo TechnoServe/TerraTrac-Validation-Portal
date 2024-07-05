@@ -75,17 +75,24 @@
   <body class="g-sidenav-show bg-gray-100">
     <main class="main-content position-relative border-radius-lg">
       <div
-        class="d-flex align-items-center justify-content-center position-relative my-3"
+        class="min-vh-90 d-flex align-items-center justify-content-center position-relative"
       >
-        <div class="col-md-4 bg-white border-0 border-radius-xl my-3 ms-4">
-          <h2>Login</h2>
+        <div class="col-md-4 bg-white border-0 border-radius-xl">
+          <h2 class="text-center my-3">EUDR Login</h2>
           <form method="POST">
-            {{ form.as_p }} {% csrf_token %}
-            <button type="submit" class="btn btn-primary">Login</button>
-            <p class="mt-3">
-              Don't have an account?
-              <a href="{% url 'signup' %}">Sign Up</a>
-            </p>
+            <div class="d-flex flex-column align-items-center">
+              {{ form.as_p }} {% csrf_token %}
+              <button
+                type="submit"
+                class="btn btn-primary d-flex justify-content-center"
+              >
+                Login
+              </button>
+              <p class="mt-3">
+                Don't have an account?
+                <a href="{% url 'signup' %}">Sign Up</a>
+              </p>
+            </div>
           </form>
         </div>
       </div>
