@@ -7,8 +7,6 @@ import ee
 import folium
 import geemap.foliumap as geemap
 import requests
-from shapely.geometry import Polygon, Point
-
 from eudr_backend.settings import initialize_earth_engine
 
 
@@ -79,74 +77,44 @@ def logout_view(request):
 
 def map_view(request):
     initialize_earth_engine()
+    fileId = request.GET.get('file-id')
+    farmId = request.GET.get('farm-id')
+    farmId = int(farmId) if farmId else None
 
     # Create a Folium map object.
     m = folium.Map(location=[-1.964959990770339, 30.06470165146533],
-                   zoom_start=5, control_scale=True, tiles=None)
+                   zoom_start=12, control_scale=True, tiles=None)
 
     # Add base layers.
     folium.TileLayer(
         tiles='https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}', attr='Google', name='Google Maps').add_to(m)
     folium.TileLayer(tiles='https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
                      attr='Google', name='Google Satellite', show=False).add_to(m)
+    image2023 = ee.Image(
+        'UMD/hansen/global_forest_change_2023_v1_11').select('lossyear').eq(1).selfMask()
+
+    # Add deforestation layer (2021-2023)
+    deforestation = image2023
+    # Fetch protected areas
+    protected_areas = ee.FeatureCollection("WCMC/WDPA/current/polygons")
 
     # Fetch data from the RESTful API endpoint.
-    response = requests.get('http://127.0.0.1:8000/api/farm/list/')
+    response = requests.get('http://127.0.0.1:8000/api/farm/map/list/') if not fileId else requests.get(
+        f'http://127.0.0.1:8000/api/farm/list/file/{fileId}/')
     if response.status_code == 200:
         farms = response.json()
-
-        # Add deforestation layer (2021-2023)
-        deforestation = ee.Image(
-            'UMD/hansen/global_forest_change_2023_v1_11').select('lossyear').eq(1).selfMask()
-        # Fetch protected areas
-        protected_areas = ee.FeatureCollection("WCMC/WDPA/current/polygons")
-
-        shapely_polygons = []
+        color = 'green'
         for farm in farms:
             # Assuming farm data has 'farmer_name', 'latitude', 'longitude', 'farm_size', and 'polygon' fields
             if 'polygon' in farm:
                 polygon = farm['polygon']
                 if polygon:
-                    farm_feature = ee.Feature(ee.Geometry.Polygon(polygon))
-                    intersecting_areas = protected_areas.filterBounds(
-                        farm_feature.geometry())
-                    # Check if the farm intersects with deforestation areas
-                    intersecting_deforestation = deforestation.reduceRegions(collection=ee.FeatureCollection(
-                        [farm_feature]), reducer=ee.Reducer.anyNonZero(), scale=30).first().get('any').getInfo()
-
-                    # Check if the farm intersects with any protected areas
-                    if intersecting_areas.size().getInfo() > 0:
+                    if farm['analysis']['protected_areas']:
                         color = 'gray'
-                    elif intersecting_deforestation:
+                    elif farm['analysis']['deforestation']:
                         color = 'red'
                     else:
                         color = 'green'
-
-                    # if intersecting_deforestation or intersecting_areas.size().getInfo() > 0, update farm analysis
-                    try:
-                        if intersecting_deforestation or intersecting_areas.size().getInfo() > 0:
-                            farm['analysis'] = {
-                                'deforestation':
-                                    True if intersecting_deforestation else False,
-                                'protected_areas': intersecting_areas.size().getInfo() > 0 or False
-                            }
-                        else:
-                            farm['analysis'] = {
-                                'deforestation': False,
-                                'protected_areas': False
-                            }
-                        # Update farm analysis in the API
-                        requests.put(
-                            f'http://localhost:8000/api/farm/update/{farm["id"]}/', json=farm)
-                    except Exception as e:
-                        print(f"Failed to update farm analysis: {e}")
-
-                    shapely_polygon = Polygon(polygon)
-
-                    # Check for overlap with existing polygons
-                    overlap = any(shapely_polygon.intersects(existing_polygon)
-                                  for existing_polygon in shapely_polygons)
-                    shapely_polygons.append(shapely_polygon)
                     folium.Polygon(
                         locations=[reverse_polygon_points(polygon)],
                         tooltip=f"""<b>Farmer Name:</b> {farm['farmer_name']}<br>
@@ -155,21 +123,15 @@ def map_view(request):
           <b>Agent Name:</b> {farm['agent_name']}<br>
           <b>Farm Village:</b> {farm['farm_village']}<br>
           <b>District:</b> {farm['farm_district']}<br>
-          <b>Overlapping?:</b> {'Yes' if overlap else 'No'}<br>
+          <b>Overlapping?:</b> {'Yes' if farm['analysis']['overlaps'] else 'No'}<br>
           <b>Is in Deforested Area:</b> {'Yes' if farm['analysis']['deforestation'] else 'No'}<br/>
           <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['protected_areas'] else 'No'}<br/>
           """,
                         color=color,
                         fill=True,
-                        fill_color=color
+                        fill_color=color,
                     ).add_to(m)
             else:
-                shapely_polygon = Point([farm['longitude'], farm['latitude']])
-
-                # Check for overlap with existing polygons
-                overlap = any(shapely_polygon.intersects(existing_polygon)
-                              for existing_polygon in shapely_polygons)
-                shapely_polygons.append(shapely_polygon)
                 folium.Marker(
                     location=[farm['latitude'], farm['longitude']],
                     tooltip=f"""<b>Farmer Name:</b> {farm['farmer_name']}<br>
@@ -178,12 +140,19 @@ def map_view(request):
           <b>Agent Name:</b> {farm['agent_name']}<br>
           <b>Farm Village:</b> {farm['farm_village']}<br>
           <b>District:</b> {farm['farm_district']}<br>
-          <b>Overlapping?:</b> {'Yes' if overlap else 'No'}<br>
+          <b>Overlapping?:</b> {'Yes' if farm['analysis']['overlaps'] else 'No'}<br>
           <b>Is in Deforested Area:</b> {'Yes' if farm['analysis']['deforestation'] else 'No'}<br/>
           <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['protected_areas'] else 'No'}<br/>
           """,
                     icon=folium.Icon(color='green', icon='leaf')
                 ).add_to(m)
+
+        # zoom to the extent of the map to the first polygon
+        has_polygon = next(
+            (farm['polygon'] for farm in farms if farm['id'] == farmId), farms[0]['polygon'])
+        if has_polygon:
+            m.fit_bounds([reverse_polygon_points(has_polygon)],
+                         max_zoom=12 if not farmId else 16)
     else:
         print("Failed to fetch data from the API")
 

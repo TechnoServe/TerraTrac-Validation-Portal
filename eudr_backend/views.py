@@ -9,6 +9,7 @@ import requests
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from shapely.geometry import Polygon, Point
 from asgiref.sync import async_to_sync, sync_to_async
 
 from eudr_backend.models import EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
@@ -68,6 +69,7 @@ def delete_user(request, pk):
 async def async_create_farm_data(data, serializer, file_id, format, isSyncing=False):
     errors = []
     created_data = []
+    initialize_earth_engine()
 
     if isSyncing:
         serializer = EUDRFarmModelSerializer(data=data)
@@ -132,8 +134,57 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
                 created_data.append(serializer.data)
     else:
         farm_data = data[0]["data"]["features"] if format == "json" else data[0]["data"]
+        image2023 = ee.Image(
+            'UMD/hansen/global_forest_change_2023_v1_11').select('lossyear').eq(1).selfMask()
+        shapely_polygons = []
 
         for item in farm_data:
+            # Add deforestation layer (2021-2023)
+            deforestation = image2023
+            # Fetch protected areas
+            protected_areas = ee.FeatureCollection(
+                "WCMC/WDPA/current/polygons")
+            response_data = None
+
+            # loop through the data and update the analysis field with the external analysis result
+            polygon = item["geometry"]["coordinates"][0]
+            if polygon:
+                shapely_polygon = Polygon(polygon)
+
+                # Check for overlap with existing polygons
+                overlap = any(shapely_polygon.intersects(existing_polygon)
+                              for existing_polygon in shapely_polygons)
+                farm_feature = ee.Feature(
+                    ee.Geometry.Polygon(polygon))
+                intersecting_areas = protected_areas.filterBounds(
+                    farm_feature.geometry())
+                # Check if the farm intersects with deforestation areas
+                intersecting_deforestation = deforestation.reduceRegions(collection=ee.FeatureCollection(
+                    [farm_feature]), reducer=ee.Reducer.anyNonZero(), scale=30).first().get('any').getInfo()
+
+                if intersecting_deforestation or intersecting_areas.size().getInfo() > 0:
+                    response_data = {
+                        'deforestation':
+                            True if intersecting_deforestation else False,
+                        'protected_areas': intersecting_areas.size().getInfo() > 0 or False,
+                        'overlaps': overlap
+                    }
+                else:
+                    response_data = {
+                        'deforestation': False,
+                        'protected_areas': False,
+                        'overlaps': overlap
+                    }
+
+                shapely_polygons.append(shapely_polygon)
+            else:
+                shapely_polygon = Point(
+                    [item["properties"]['longitude'], item["properties"]['latitude']])
+
+                # Check for overlap with existing polygons
+                overlap = any(shapely_polygon.intersects(existing_polygon)
+                              for existing_polygon in shapely_polygons)
+                shapely_polygons.append(shapely_polygon)
             serializer = EUDRFarmModelSerializer(
                 data=(
                     {
@@ -146,6 +197,7 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
                         "latitude": item["properties"]["latitude"],
                         "longitude": item["properties"]["longitude"],
                         "polygon": item["geometry"]["coordinates"][0],
+                        "analysis": response_data if response_data else None,
                     }
                     if format == "json"
                     else item
@@ -167,12 +219,7 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
                     else item["farmer_name"]
                 ),
             ).aexists():
-                errors.append(
-                    {
-                        "error": "Duplicate entry. This combination already exists.",
-                        "data": item,
-                    }
-                )
+                continue
             elif serializer.is_valid():
                 # add the file_id to the serializer data
                 serializer.validated_data["file_id"] = file_id
@@ -216,11 +263,6 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
                     # if response_data["status"] == "success":
                     #     response_data["data"]["tree_cover_loss_after_2020"] = tcl_response_data["data"][0]["area__ha"]
 
-                    item["analysis"] = response_data
-
-                # add the analysis result to the serializer data
-                serializer.validated_data["analysis"] = item["analysis"]
-
                 # Save the serializer data with the external analysis result
                 await sync_to_async(serializer.save)()
                 created_data.append(serializer.data)
@@ -241,7 +283,7 @@ def create_farm_data(request):
     # combine file_name and format to save in the database with dummy uploaded_by. then retrieve the file_id
     file_data = {
         "file_name": f"{request.data.get('file_name')}.{request.data.get('format')}",
-        "uploaded_by": "admin",
+        "uploaded_by": request.user.username if request.user.is_authenticated else "admin",
     }
     file_serializer = EUDRUploadedFilesModelSerializer(data=file_data)
 
@@ -261,7 +303,6 @@ def create_farm_data(request):
     errors, created_data = async_to_sync(async_create_farm_data)(
         data, serializer, file_id, request.data.get("format")
     )
-
     if errors:
         # delete the file if there are errors
         EUDRUploadedFilesModel.objects.get(id=file_id).delete()
@@ -290,7 +331,7 @@ def sync_farm_data(request):
     file_data = {
         "file_name": f"{request.data[0].get('collection_site')}_{request.data[0].get("device_id")}.json",
         "device_id": request.data[0].get("device_id"),
-        "uploaded_by": "admin",
+        "uploaded_by": request.user.username if request.user.is_authenticated else "admin",
     }
     file_serializer = EUDRUploadedFilesModelSerializer(data=file_data)
 
@@ -341,45 +382,28 @@ def sync_farm_data(request):
 
 @api_view(["GET"])
 def retrieve_farm_data(request):
-    initialize_earth_engine()
-    data = EUDRFarmModel.objects.all().order_by("-updated_at")
+    files = EUDRUploadedFilesModel.objects.filter(
+        uploaded_by=request.user.username if request.user.is_authenticated else "admin"
+    )
+    filesSerializer = EUDRUploadedFilesModelSerializer(files, many=True)
 
-    # Add deforestation layer (2021-2023)
-    deforestation = ee.Image(
-        'UMD/hansen/global_forest_change_2023_v1_11').select('lossyear').eq(1).selfMask()
-    # Fetch protected areas
-    protected_areas = ee.FeatureCollection("WCMC/WDPA/current/polygons")
+    data = EUDRFarmModel.objects.filter(
+        file_id__in=[file["id"] for file in filesSerializer.data]
+    ).order_by("-updated_at")
 
     serializer = EUDRFarmModelSerializer(data, many=True)
 
-    # loop through the data and update the analysis field with the external analysis result
-    try:
-        for item in serializer.data:
-            polygon = item['polygon']
-            if polygon:
-                farm_feature = ee.Feature(ee.Geometry.Polygon(polygon))
-                intersecting_areas = protected_areas.filterBounds(
-                    farm_feature.geometry())
-                # Check if the farm intersects with deforestation areas
-                intersecting_deforestation = deforestation.reduceRegions(collection=ee.FeatureCollection(
-                    [farm_feature]), reducer=ee.Reducer.anyNonZero(), scale=30).first().get('any').getInfo()
+    return Response(serializer.data)
 
-                if intersecting_deforestation or intersecting_areas.size().getInfo() > 0:
-                    item['analysis'] = {
-                        'deforestation':
-                            True if intersecting_deforestation else False,
-                        'protected_areas': intersecting_areas.size().getInfo() > 0 or False
-                    }
-                else:
-                    item['analysis'] = {
-                        'deforestation': False,
-                        'protected_areas': False
-                    }
 
-                    requests.put(
-                        f'http://localhost:8000/api/farm/update/{item["id"]}/', json=item)
-    except Exception as e:
-        print(f"Failed to update farm analysis: {e}")
+@api_view(["GET"])
+def retrieve_map_data(request):
+    files = EUDRUploadedFilesModel.objects.all()
+    filesSerializer = EUDRUploadedFilesModelSerializer(files, many=True)
+
+    data = EUDRFarmModel.objects.all().order_by("-updated_at")
+
+    serializer = EUDRFarmModelSerializer(data, many=True)
 
     return Response(serializer.data)
 
@@ -400,8 +424,17 @@ def retrieve_farm_data_from_file_id(request, pk):
 
 @api_view(["GET"])
 def retrieve_files(request):
-    data = EUDRUploadedFilesModel.objects.all().order_by("-updated_at")
+    data = EUDRUploadedFilesModel.objects.filter(
+        uploaded_by=request.user.username if request.user.is_authenticated else "admin"
+    ).order_by("-updated_at")
     serializer = EUDRUploadedFilesModelSerializer(data, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
+def retrieve_file(request, pk):
+    data = EUDRUploadedFilesModel.objects.get(id=pk)
+    serializer = EUDRUploadedFilesModelSerializer(data, many=False)
     return Response(serializer.data)
 
 

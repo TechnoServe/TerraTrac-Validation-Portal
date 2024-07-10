@@ -164,7 +164,7 @@
               <span class="nav-link-text ms-1">Map</span>
             </a>
           </li>
-          <li class="nav-item">
+          <!-- <li class="nav-item">
             <a
               class="nav-link {% if active_page == 'users' %}active{% endif %}"
               href="{% url 'users' %}"
@@ -176,7 +176,7 @@
               </div>
               <span class="nav-link-text ms-1">Users</span>
             </a>
-          </li>
+          </li> -->
           <li class="nav-item">
             <a class="nav-link" href="{% url 'logout' %}" id="logout">
               <div
@@ -304,7 +304,9 @@
                 class="nav-item d-flex align-items-center"
                 title="{{user.username}}"
               >
-                <span class="avatar rounded-circle"><i class="fas fa-user"></i></span>
+                <span class="avatar rounded-circle"
+                  ><i class="fas fa-user"></i
+                ></span>
               </li>
             </ul>
           </div>
@@ -529,6 +531,24 @@
     </script>
 
     <script>
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+          const cookies = document.cookie.split(";");
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === name + "=") {
+              cookieValue = decodeURIComponent(
+                cookie.substring(name.length + 1)
+              );
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+
       function uploadData() {
         const fileInput = document.getElementById("uploadFile");
         const file = fileInput.files[0];
@@ -570,6 +590,7 @@
       }
 
       function sendDataToAPI(data, file_name, format) {
+        const csrftoken = getCookie("csrftoken");
         document.querySelector("#saveBtn").innerHTML = "Processing...";
         document.querySelector("#saveBtn").setAttribute("disabled", true);
         document.querySelector("#closeBtn").setAttribute("disabled", true);
@@ -577,6 +598,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken,
           },
           body: JSON.stringify({
             data: data,
@@ -688,7 +710,9 @@
       });
     </script>
     <script>
+      const farmsListTitle = document.getElementById("farms_list_title");
       const farmsContainer = document.getElementById("farmsBodyContainer");
+      const fileId = new URLSearchParams(window.location.search).get("file-id");
       let farmData = [];
 
       const colorClasses = {
@@ -697,29 +721,55 @@
         high: "high",
       };
 
-      fetch("/api/farm/list/")
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error("Network response was not ok");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          let i = 0;
+      let response = null;
+      if (fileId) {
+        fetch(`/api/files/list/${fileId}`)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            farmsListTitle.innerText = `Farms List for ${
+              data.file_name.split(".")[0]
+            }`;
+          })
+          .catch((error) => {
+            console.error(
+              "There was a problem with the fetch operation:",
+              error
+            );
+          });
+        response = fetch(`/api/farm/list/file/${fileId}`);
+      } else {
+        response = fetch("/api/farm/list/");
+      }
 
-          farmData = data;
+      if (response) {
+        response
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            let i = 0;
 
-          if (document.querySelector("#total_farms")) {
-            document.querySelector("#total_farms").innerText = data.length;
-          }
+            farmData = data;
 
-          if (data.length > 0) {
-            document.querySelector("#export-btn").removeAttribute("disabled");
-          }
+            if (document.querySelector("#total_farms")) {
+              document.querySelector("#total_farms").innerText = data.length;
+            }
 
-          while (i < data.length) {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
+            if (data.length > 0) {
+              document.querySelector("#export-btn").removeAttribute("disabled");
+            }
+
+            while (i < data.length) {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
                   <td>
                     <p class="text-xs text-center font-weight-bold mb-0">${
                       i + 1
@@ -747,29 +797,41 @@
                       data[i].farm_district
                     }</p>
                   </td>
-                  <td>
-                    ${
-                      !data[i].analysis || data[i].analysis?.error
-                        ? '<p class="text-xs font-weight-bold mb-0"> - </p>'
-                        : `<i class="bi bi-eye mt-5 text-primary text-lg" data-toggle="modal" data-target="#whispDataModal"
-                      id="viewAnalysisBtn" role="button" onclick="viewAnalysis(${data[i].id})" title="View Analysis"></i>`
-                    }
-                  </td>
                   <td class="align-middle text-center text-sm">
                     <span class="badge badge-sm ${
-                      data[i].is_validated
+                      data[i]?.analysis?.["deforestation"]
                         ? "bg-gradient-success"
                         : "bg-gradient-faded-dark"
                     }"
-                      >${data[i].is_validated ? "Validated" : "Not Yet"}</span
+                      >${
+                        data[i]?.analysis?.["deforestation"] ? "Yes" : "No"
+                      }</span
+                    >
+                  </td>
+                  <td class="align-middle text-center text-sm">
+                    <span class="badge badge-sm ${
+                      data[i]?.analysis?.["protected_areas"]
+                        ? "bg-gradient-success"
+                        : "bg-gradient-faded-dark"
+                    }"
+                      >${
+                        data[i]?.analysis?.["protected_areas"] ? "Yes" : "No"
+                      }</span
+                    >
+                  </td>
+                  <td class="align-middle text-center text-sm">
+                    <span class="badge badge-sm ${
+                      data[i]?.analysis?.["overlaps"]
+                        ? "bg-gradient-success"
+                        : "bg-gradient-faded-dark"
+                    }"
+                      >${data[i]?.analysis?.["overlaps"] ? "Yes" : "No"}</span
                     >
                   </td>
                   <td>
-                    <p class="text-xs font-weight-bold mb-0">${
-                      data[i].validated_at
-                        ? new Date(data[i].validated_at).toDateString()
-                        : "-"
-                    }</p>
+                    <p class="text-xs font-weight-bold mb-0">${new Date(
+                      data[i].updated_at
+                    ).toDateString()}</p>
                   </td>
                   <td class="align-middle text-center">
                     <a
@@ -780,39 +842,41 @@
                     >
                   </td>
               `;
-            farmsContainer.appendChild(tr);
-            i++;
-          }
+              farmsContainer.appendChild(tr);
+              i++;
+            }
 
-          $("#farms").DataTable({
-            // add loading spinner while table is being loaded
-            processing: true,
-            // enable responsive design
-            responsive: true,
-            //disable sorting on last column
-            columnDefs: [{ orderable: false, targets: 5 }],
-            language: {
-              //customize pagination prev and next buttons: use arrows instead of words
-              paginate: {
-                previous: '<span class="fa fa-chevron-left"></span>',
-                next: '<span class="fa fa-chevron-right"></span>',
+            $("#farms").DataTable({
+              // add loading spinner while table is being loaded
+              processing: true,
+              //disable sorting on last column
+              columnDefs: [{ orderable: false, targets: 5 }],
+              language: {
+                //customize pagination prev and next buttons: use arrows instead of words
+                paginate: {
+                  previous: '<span class="fa fa-chevron-left"></span>',
+                  next: '<span class="fa fa-chevron-right"></span>',
+                },
+                //customize number of elements to be displayed
+                lengthMenu:
+                  'Display <select class="form-control input-sm">' +
+                  '<option value="10">10</option>' +
+                  '<option value="20">20</option>' +
+                  '<option value="30">30</option>' +
+                  '<option value="40">40</option>' +
+                  '<option value="50">50</option>' +
+                  '<option value="-1">All</option>' +
+                  "</select> results",
               },
-              //customize number of elements to be displayed
-              lengthMenu:
-                'Display <select class="form-control input-sm">' +
-                '<option value="10">10</option>' +
-                '<option value="20">20</option>' +
-                '<option value="30">30</option>' +
-                '<option value="40">40</option>' +
-                '<option value="50">50</option>' +
-                '<option value="-1">All</option>' +
-                "</select> results",
-            },
+            });
+          })
+          .catch((error) => {
+            console.error(
+              "There was a problem with the fetch operation:",
+              error
+            );
           });
-        })
-        .catch((error) => {
-          console.error("There was a problem with the fetch operation:", error);
-        });
+      }
 
       function viewAnalysis(id) {
         const container = document.getElementById("whispCardsContainer");
@@ -872,6 +936,11 @@
             "Farm Size": farm.farm_size,
             Village: farm.farm_village,
             District: farm.farm_district,
+            "Overlaps?": farm.analysis
+              ? farm.analysis["overlaps"]
+                ? "Yes"
+                : "No"
+              : "N/A",
             "Is in Protected Area": farm.analysis
               ? farm.analysis["protected_area"]
                 ? "Yes"
@@ -956,7 +1025,13 @@
                       data[i].updated_at
                     ).toLocaleString()}</p>
                   </td>
-                  <td class="align-middle text-center">
+                  <td>
+                    <a
+                      href="{% url 'validator' %}?file-id=${data[i].id}"
+                      class="text-primary font-weight-bold text-lg me-3"
+                      title="View List of Farms"
+                      ><i class="bi bi-list"></i></a
+                    >
                     <a
                       href="{% url 'map' %}?file-id=${data[i].id}"
                       class="text-primary font-weight-bold text-lg"

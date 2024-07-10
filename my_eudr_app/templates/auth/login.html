@@ -81,7 +81,7 @@
           <h2 class="text-center my-3">EUDR Login</h2>
           <form method="POST">
             <div class="d-flex flex-column align-items-center">
-              {{ form.as_p }} {% csrf_token %}
+              {% csrf_token %} {{ form.as_p }}
               <button
                 type="submit"
                 class="btn btn-primary d-flex justify-content-center"

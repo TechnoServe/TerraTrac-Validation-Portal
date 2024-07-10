@@ -49,7 +49,7 @@ Validator
     <div class="col-12">
       <div class="card mb-4">
         <div class="d-flex card-header pb-0">
-          <h6>Farms List</h6>
+          <h6 id="farms_list_title">Farms List</h6>
           <div class="ms-auto">
             <button class="btn btn-primary btn-sm ms-auto text-white" disabled>
               <i class="fas fa-redo me-2"></i>
@@ -70,7 +70,7 @@ Validator
             <table
               id="farms"
               class="table table-striped align-items-center mb-0"
-              style="width: 100%"
+              style="min-width: 100%"
             >
               <thead>
                 <tr>
@@ -99,22 +99,34 @@ Validator
                   >
                     District
                   </th>
-                  <th
+                  <!-- <th
                     class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
                   >
                     Detailed Analysis
+                  </th> -->
+                  <th
+                    class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
+                  >
+                    Deforested Area
                   </th>
                   <th
                     class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
                   >
-                    Is Validated
+                    Protected Area
                   </th>
                   <th
                     class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
                   >
-                    Latest Validation Time
+                    Overlapping?
                   </th>
-                  <th class="text-secondary opacity-7"></th>
+                  <th
+                    class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
+                  >
+                    Updated At
+                  </th>
+                  <th
+                    class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
+                  >Actions</th>
                 </tr>
               </thead>
               <tbody id="farmsBodyContainer"></tbody>
