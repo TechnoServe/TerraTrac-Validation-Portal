@@ -213,7 +213,7 @@
         </div>
       </div>
     </aside>
-    <main class="main-content position-relative border-radius-lg">
+    <main class="main-content position-relative border-radius-lg vh-100">
       <!-- Navbar -->
       <nav
         class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl"
@@ -252,6 +252,7 @@
                     <a
                       class="dropdown-item border-radius-md"
                       href="javascript:;"
+                      id="en"
                     >
                       English
                     </a>
@@ -260,8 +261,36 @@
                     <a
                       class="dropdown-item border-radius-md"
                       href="javascript:;"
+                      id="fr"
                     >
                       French
+                    </a>
+                  </li>
+                  <li class="mb-2">
+                    <a
+                      class="dropdown-item border-radius-md"
+                      href="javascript:;"
+                      id="rw"
+                    >
+                      Kinyarwanda
+                    </a>
+                  </li>
+                  <li class="mb-2">
+                    <a
+                      class="dropdown-item border-radius-md"
+                      href="javascript:;"
+                      id="es"
+                    >
+                      Spanish
+                    </a>
+                  </li>
+                  <li class="mb-2">
+                    <a
+                      class="dropdown-item border-radius-md"
+                      href="javascript:;"
+                      id="sw"
+                    >
+                      Swahili
                     </a>
                   </li>
                 </ul>
@@ -338,6 +367,8 @@
         <div class="w-100">{% block content %}{% endblock %}</div>
       </div>
     </main>
+
+    <div id="google_translate_element"></div>
 
     <form
       id="logout-form"
@@ -525,6 +556,44 @@
     ></script>
     <!-- Control Center for Soft Dashboard: parallax effects, scripts for the example pages etc -->
     <script src="{% static 'assets/js/argon-dashboard.js' %}"></script>
+    <!-- google translator API cdn -->
+    <script
+      type="text/javascript"
+      src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
+    ></script>
+
+    <script type="text/javascript">
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement(
+          { pageLanguage: "en" },
+          "google_translate_element"
+        );
+      }
+
+      // Function to change the language
+      function changeLanguage(lang) {
+        var translateSelect = document.querySelector(".goog-te-combo");
+        if (translateSelect) {
+          translateSelect.value = lang;
+          translateSelect.dispatchEvent(new Event("change"));
+        }
+      }
+
+      // Event listener for language selection
+      document.querySelectorAll(".dropdown-item").forEach((item) => {
+        item.addEventListener("click", (e) => {
+          e.preventDefault();
+
+          // if id is not recognized, go up the tree to find the id
+          let id = e.target.id;
+          if (id === "") {
+            id = e.target.parentElement.parentElement.id;
+          }
+
+          changeLanguage(id);
+        });
+      });
+    </script>
 
     <script>
       // Add 'active' class to the current menu item
