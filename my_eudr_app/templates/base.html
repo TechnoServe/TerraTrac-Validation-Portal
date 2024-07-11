@@ -106,7 +106,7 @@
             class="navbar-brand-img h-100"
             alt="main_logo"
           />
-          <span class="ms-1 font-weight-bold">EUDR Mgt Portal</span>
+          <span class="ms-1 font-weight-bold">TerraTrac Validation Portal</span>
         </a>
       </div>
       <hr class="horizontal dark mt-0" />
@@ -190,6 +190,27 @@
             </a>
           </li>
         </ul>
+        <div class="fixed-bottom mb-4 pe-5">
+          <div class="container-fluid">
+            <div class="row align-items-center justify-content-lg-between">
+              <div class="col-lg-12 mb-lg-0 mb-4 text-muted">
+                <div class="copyright text-center text-sm text-lg-start">
+                  ©
+                  <script>
+                    document.write(new Date().getFullYear());
+                  </script>
+                  , crafted by
+                  <a
+                    href="https://www.technoserve.org/tns-labs"
+                    class="font-weight-bold"
+                    target="_blank"
+                    >TNS Labs</a
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </aside>
     <main class="main-content position-relative border-radius-lg">
@@ -315,27 +336,6 @@
       <!-- End Navbar -->
       <div class="w-100 py-4">
         <div class="w-100">{% block content %}{% endblock %}</div>
-        <footer class="footer pt-3">
-          <div class="container-fluid">
-            <div class="row align-items-center justify-content-lg-between">
-              <div class="col-lg-6 mb-lg-0 mb-4 text-muted">
-                <div class="copyright text-center text-sm text-lg-start">
-                  ©
-                  <script>
-                    document.write(new Date().getFullYear());
-                  </script>
-                  , crafted by
-                  <a
-                    href="https://www.technoserve.org/tns-labs"
-                    class="font-weight-bold"
-                    target="_blank"
-                    >TechnoServe Labs.</a
-                  >
-                </div>
-              </div>
-            </div>
-          </div>
-        </footer>
       </div>
     </main>
 
@@ -356,6 +356,24 @@
     <script src="{% static 'assets/js/plugins/perfect-scrollbar.min.js' %}"></script>
     <script src="{% static 'assets/js/plugins/smooth-scrollbar.min.js' %}"></script>
     <script src="{% static 'assets/js/plugins/chartjs.min.js' %}"></script>
+    <script>
+      // if mapMonde is loaded, ask for user's location and embed it in url
+      const mapMonde = document.querySelector("#mapMonde");
+      if (mapMonde) {
+        // if user allows location, get it and embed it in the url, otherwise, use default location
+        if (navigator.geolocation && !window.location.search) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              window.location.href = `http://127.0.0.1:8000/map/?lat=${latitude}&lon=${longitude}`;
+            },
+            (error) => {
+              window.location.href = `http://127.0.0.1:8000/map/?lat=0.0&lon=0.0`;
+            }
+          );
+        }
+      }
+    </script>
     <script>
       document
         .getElementById("logout")
@@ -608,39 +626,44 @@
         })
           .then((response) => {
             if (!response.ok) {
-              throw new Error("Network response was not ok");
-              Toastify({
-                text: "Network response was not ok",
-                duration: 3000,
-                close: true,
-                gravity: "top",
-                position: "right",
-                backgroundColor: "red",
-              }).showToast();
-              document.querySelector("#saveBtn").innerHTML = "Save";
-              document.querySelector("#saveBtn").removeAttribute("disabled");
-              document.querySelector("#closeBtn").removeAttribute("disabled");
+              if (response.status === 400) {
+                return response.json().then((errorData) => {
+                  Toastify({
+                    text: JSON.stringify(errorData?.errors) || errorData.error,
+                    duration: 3000,
+                    close: true,
+                    gravity: "top",
+                    position: "right",
+                    backgroundColor: "red",
+                  }).showToast();
+                });
+              }
+              throw new Error("Network response was not ok.");
             }
             return response.json();
           })
           .then((data) => {
-            Toastify({
-              text: "Data uploaded successfully!!!",
-              duration: 3000,
-              close: true,
-              gravity: "top",
-              position: "right",
-              backgroundColor: "green",
-            }).showToast();
+            if (data) {
+              Toastify({
+                text: "Data uploaded successfully!!!",
+                duration: 3000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                backgroundColor: "green",
+              }).showToast();
 
-            setTimeout(function () {
-              document.querySelector("#saveBtn").innerHTML = "Save";
-              document.querySelector("#saveBtn").removeAttribute("disabled");
-              document.querySelector("#closeBtn").removeAttribute("disabled");
-              window.location.href = "/validated_files";
-            }, 2000);
+              setTimeout(function () {
+                window.location.href = "/validated_files";
+              }, 2000);
+            }
+
+            document.querySelector("#saveBtn").innerHTML = "Save";
+            document.querySelector("#saveBtn").removeAttribute("disabled");
+            document.querySelector("#closeBtn").removeAttribute("disabled");
           })
           .catch((error) => {
+            console.log(error);
             Toastify({
               text: "Error while uploading data. please try again",
               duration: 3000,

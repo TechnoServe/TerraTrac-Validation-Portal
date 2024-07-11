@@ -75,14 +75,17 @@ def logout_view(request):
         return redirect('login')
 
 
+@login_required
 def map_view(request):
     initialize_earth_engine()
     fileId = request.GET.get('file-id')
     farmId = request.GET.get('farm-id')
+    userLat = request.GET.get('lat') or 0.0
+    userLon = request.GET.get('lon') or 0.0
     farmId = int(farmId) if farmId else None
 
     # Create a Folium map object.
-    m = folium.Map(location=[-1.964959990770339, 30.06470165146533],
+    m = folium.Map(location=[userLat, userLon],
                    zoom_start=12, control_scale=True, tiles=None)
 
     # Add base layers.
@@ -104,55 +107,56 @@ def map_view(request):
     if response.status_code == 200:
         farms = response.json()
         color = 'green'
-        for farm in farms:
-            # Assuming farm data has 'farmer_name', 'latitude', 'longitude', 'farm_size', and 'polygon' fields
-            if 'polygon' in farm:
-                polygon = farm['polygon']
-                if polygon:
-                    if farm['analysis']['protected_areas']:
-                        color = 'gray'
-                    elif farm['analysis']['deforestation']:
-                        color = 'red'
-                    else:
-                        color = 'green'
-                    folium.Polygon(
-                        locations=[reverse_polygon_points(polygon)],
+        if len(farms) > 0:
+            for farm in farms:
+                # Assuming farm data has 'farmer_name', 'latitude', 'longitude', 'farm_size', and 'polygon' fields
+                if 'polygon' in farm:
+                    polygon = farm['polygon']
+                    if polygon:
+                        if farm['analysis']['protected_areas']:
+                            color = 'gray'
+                        elif farm['analysis']['deforestation']:
+                            color = 'red'
+                        else:
+                            color = 'green'
+                        folium.Polygon(
+                            locations=[reverse_polygon_points(polygon)],
+                            tooltip=f"""<b>Farmer Name:</b> {farm['farmer_name']}<br>
+            <b>Farm Size:</b> {farm['farm_size']}<br>
+            <b>Collection Site:</b> {farm['collection_site']}<br>
+            <b>Agent Name:</b> {farm['agent_name']}<br>
+            <b>Farm Village:</b> {farm['farm_village']}<br>
+            <b>District:</b> {farm['farm_district']}<br>
+            <b>Overlapping?:</b> {'Yes' if farm['analysis']['overlaps'] else 'No'}<br>
+            <b>Is in Deforested Area:</b> {'Yes' if farm['analysis']['deforestation'] else 'No'}<br/>
+            <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['protected_areas'] else 'No'}<br/>
+            """,
+                            color=color,
+                            fill=True,
+                            fill_color=color
+                        ).add_to(m)
+                else:
+                    folium.Marker(
+                        location=[farm['latitude'], farm['longitude']],
                         tooltip=f"""<b>Farmer Name:</b> {farm['farmer_name']}<br>
-          <b>Farm Size:</b> {farm['farm_size']}<br>
-          <b>Collection Site:</b> {farm['collection_site']}<br>
-          <b>Agent Name:</b> {farm['agent_name']}<br>
-          <b>Farm Village:</b> {farm['farm_village']}<br>
-          <b>District:</b> {farm['farm_district']}<br>
-          <b>Overlapping?:</b> {'Yes' if farm['analysis']['overlaps'] else 'No'}<br>
-          <b>Is in Deforested Area:</b> {'Yes' if farm['analysis']['deforestation'] else 'No'}<br/>
-          <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['protected_areas'] else 'No'}<br/>
-          """,
-                        color=color,
-                        fill=True,
-                        fill_color=color,
+            <b>Farm Size:</b> {farm['farm_size']}<br>
+            <b>Collection Site:</b> {farm['collection_site']}<br>
+            <b>Agent Name:</b> {farm['agent_name']}<br>
+            <b>Farm Village:</b> {farm['farm_village']}<br>
+            <b>District:</b> {farm['farm_district']}<br>
+            <b>Overlapping?:</b> {'Yes' if farm['analysis']['overlaps'] else 'No'}<br>
+            <b>Is in Deforested Area:</b> {'Yes' if farm['analysis']['deforestation'] else 'No'}<br/>
+            <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['protected_areas'] else 'No'}<br/>
+            """,
+                        icon=folium.Icon(color='green', icon='leaf')
                     ).add_to(m)
-            else:
-                folium.Marker(
-                    location=[farm['latitude'], farm['longitude']],
-                    tooltip=f"""<b>Farmer Name:</b> {farm['farmer_name']}<br>
-          <b>Farm Size:</b> {farm['farm_size']}<br>
-          <b>Collection Site:</b> {farm['collection_site']}<br>
-          <b>Agent Name:</b> {farm['agent_name']}<br>
-          <b>Farm Village:</b> {farm['farm_village']}<br>
-          <b>District:</b> {farm['farm_district']}<br>
-          <b>Overlapping?:</b> {'Yes' if farm['analysis']['overlaps'] else 'No'}<br>
-          <b>Is in Deforested Area:</b> {'Yes' if farm['analysis']['deforestation'] else 'No'}<br/>
-          <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['protected_areas'] else 'No'}<br/>
-          """,
-                    icon=folium.Icon(color='green', icon='leaf')
-                ).add_to(m)
 
-        # zoom to the extent of the map to the first polygon
-        has_polygon = next(
-            (farm['polygon'] for farm in farms if farm['id'] == farmId), farms[0]['polygon'])
-        if has_polygon:
-            m.fit_bounds([reverse_polygon_points(has_polygon)],
-                         max_zoom=12 if not farmId else 16)
+            # zoom to the extent of the map to the first polygon
+            has_polygon = next(
+                (farm['polygon'] for farm in farms if farm['id'] == farmId), farms[0]['polygon'])
+            if has_polygon:
+                m.fit_bounds([reverse_polygon_points(has_polygon)],
+                             max_zoom=14 if not farmId else 16)
     else:
         print("Failed to fetch data from the API")
 

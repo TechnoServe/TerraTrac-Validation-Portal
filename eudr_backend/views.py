@@ -1,11 +1,11 @@
 import ast
+import csv
+import io
 import json
 import ee
-import httpx
 from django.http import HttpResponse
 from django.utils import timezone
 import pandas as pd
-import requests
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -19,6 +19,81 @@ from .serializers import (
     EUDRUploadedFilesModelSerializer,
     EUDRUserModelSerializer,
 )
+
+REQUIRED_FIELDS = [
+    'collection_site',
+    'farm_size',
+    'farm_district',
+    'farm_village',
+    'latitude',
+    'longitude'
+]
+
+GEOJSON_REQUIRED_FIELDS = REQUIRED_FIELDS + ['geometry']
+
+
+def validate_geojson(data):
+    errors = []
+    if 'features' not in data or not isinstance(data['features'], list):
+        return ['Invalid data format: "features" must be a list']
+
+    for i, feature in enumerate(data['features']):
+        properties = feature.get('properties', {})
+        geometry = feature.get('geometry', {})
+
+        for field in GEOJSON_REQUIRED_FIELDS:
+            if field == 'geometry':
+                if 'coordinates' not in geometry:
+                    errors.append(
+                        f'Feature {i}: "geometry.coordinates" is required.')
+            elif properties.get(field) in [None, '']:
+                errors.append(f"""Feature {i}: "{
+                              field}" is required and cannot be empty.""")
+
+    return errors
+
+
+def validate_json(data):
+    errors = []
+
+    for i, item in enumerate(data):
+        for field in REQUIRED_FIELDS:
+            if field not in item or item[field] in [None, '']:
+                errors.append(
+                    f'Item {i}: "{field}" is required and cannot be empty.')
+
+    return errors
+
+
+def validate_csv(data):
+    errors = []
+
+    # Check if data is a list of dictionaries
+    if isinstance(data, list):
+        # Remove last row if it's empty or contains specific values
+        if data and (not data[-1] or data[-1].get('farmer_name') == '' or data[-1] == {"": ""}):
+            data.pop()
+
+        for i, row in enumerate(data):
+            for field in REQUIRED_FIELDS:
+                if field not in row or row[field] in [None, '', '0']:
+                    errors.append(
+                        f'Row {i}: "{field}" is required and cannot be empty or zero.')
+    else:
+        reader = csv.DictReader(io.StringIO(data))
+        rows = list(reader)
+
+        # Remove last row if it's empty or contains specific values
+        if rows and (not rows[-1] or rows[-1].get('farmer_name') == '' or rows[-1] == {"": ""}):
+            rows.pop()
+
+        for i, row in enumerate(rows):
+            for field in REQUIRED_FIELDS:
+                if field not in row or row[field] in [None, '', '0']:
+                    errors.append(
+                        f'Row {i}: "{field}" is required and cannot be empty or zero.')
+
+    return errors
 
 
 @api_view(["POST"])
@@ -96,7 +171,7 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
                 else:
                     # do general analysis POST request
                     response_data = None
-                    # url = "https://whisp-app-vdfqchwaca-uc.a.run.app/api/wkt"
+                    # url = "https://whisp.openforis.org/api/wkt"
                     # headers = {"Content-Type": "application/json"}
                     # body = {
                     #     "wkt": "POLYGON(("
@@ -133,7 +208,7 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
                 await sync_to_async(serializer.save)()
                 created_data.append(serializer.data)
     else:
-        farm_data = data[0]["data"]["features"] if format == "json" else data[0]["data"]
+        farm_data = data[0]["data"]["features"] if format == "geojson" else data[0]["data"]
         image2023 = ee.Image(
             'UMD/hansen/global_forest_change_2023_v1_11').select('lossyear').eq(1).selfMask()
         shapely_polygons = []
@@ -148,6 +223,7 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
 
             # loop through the data and update the analysis field with the external analysis result
             polygon = item["geometry"]["coordinates"][0]
+            print(polygon)
             if polygon:
                 shapely_polygon = Polygon(polygon)
 
@@ -199,14 +275,14 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
                         "polygon": item["geometry"]["coordinates"][0],
                         "analysis": response_data if response_data else None,
                     }
-                    if format == "json"
+                    if format == "geojson"
                     else item
                 )
             )
             # if farmer_name is empty, skip the record
             if not (
                 item["properties"]["farmer_name"]
-                if format == "json"
+                if format == "geojson"
                 else item["farmer_name"]
             ):
                 continue
@@ -215,7 +291,7 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
             if await EUDRFarmModel.objects.filter(
                 farmer_name=(
                     item["properties"]["farmer_name"]
-                    if format == "json"
+                    if format == "geojson"
                     else item["farmer_name"]
                 ),
             ).aexists():
@@ -226,7 +302,7 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
                 if (
                     len(
                         item["geometry"]["coordinates"][0][0]
-                        if format == "json"
+                        if format == "geojson"
                         else ast.literal_eval(item["polygon"])
                     )
                     <= 1
@@ -235,7 +311,7 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
                 else:
                     # do general analysis POST request
                     response_data = None
-                    # url = "https://whisp-app-vdfqchwaca-uc.a.run.app/api/wkt"
+                    # url = "https://whisp.openforis.org/api/wkt"
                     # headers = {"Content-Type": "application/json"}
                     # body = {
                     #     "wkt": "POLYGON(("
@@ -278,6 +354,25 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
 
 @api_view(["POST"])
 def create_farm_data(request):
+    data_format = request.data.get('format')
+    raw_data = request.data.get('data')
+    print(raw_data)
+
+    if not data_format or not raw_data:
+        return Response({'error': 'Format and data are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if data_format == 'geojson':
+        errors = validate_geojson(raw_data)
+    elif data_format == 'json':
+        errors = validate_json(raw_data)
+    elif data_format == 'csv':
+        errors = validate_csv(raw_data)
+    else:
+        return Response({'error': 'Unsupported format'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if errors:
+        return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
+
     serializer = EUDRFarmModelSerializer(data=request.data)
 
     # combine file_name and format to save in the database with dummy uploaded_by. then retrieve the file_id
@@ -357,7 +452,7 @@ def sync_farm_data(request):
             file_id = file_data.id
             # Call the async function from sync context
             errors, created_data = async_to_sync(async_create_farm_data)(
-                item, serializer, file_id, "json", True
+                item, serializer, file_id, "geojson", True
             )
 
             if errors:
@@ -369,7 +464,7 @@ def sync_farm_data(request):
                 # Call the async function from sync context
                 errors, created_data = async_to_sync(async_create_farm_data)(
                     item, serializer, file_serializer.data.get(
-                        "id"), "json", True
+                        "id"), "geojson", True
                 )
 
             if errors:
@@ -468,9 +563,36 @@ def download_template(request):
         response = HttpResponse(content_type="application/json")
         filename = f"eudr-upload-template-{timestamp_str}.json"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        df.to_json(response, orient="records")
+    elif format == "geojson":
+        response = HttpResponse(content_type="application/json")
+        filename = f"eudr-upload-template-{timestamp_str}.geojson"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         # GeoJSON format will depend on your specific data structure
         # This is just an example
-        geojson_data = {"type": "FeatureCollection", "features": []}
+        geojson_data = {"type": "FeatureCollection", "features": [
+            {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [41.8781, 87.6298],
+                            [41.8781, 87.6299],
+                        ]
+                    ]
+                },
+                "properties": {
+                    "farmer_name": "John Doe",
+                    "farm_size": 4,
+                    "collection_site": "Site A",
+                    "farm_village": "Village A",
+                    "farm_district": "District A",
+                    "latitude": "-1.62883139933721",
+                    "longitude": "29.9898212498949",
+                },
+            }
+        ]}
         response.write(json.dumps(geojson_data))
     else:
         return Response({"error": "Invalid format"}, status=status.HTTP_400_BAD_REQUEST)
