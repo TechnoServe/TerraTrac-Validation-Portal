@@ -5,6 +5,7 @@ import json
 import ee
 from django.http import HttpResponse
 from django.utils import timezone
+import httpx
 import pandas as pd
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -46,21 +47,9 @@ def validate_geojson(data):
                 if 'coordinates' not in geometry:
                     errors.append(
                         f'Feature {i}: "geometry.coordinates" is required.')
-            elif properties.get(field) in [None, '']:
-                errors.append(f"""Feature {i}: "{
-                              field}" is required and cannot be empty.""")
-
-    return errors
-
-
-def validate_json(data):
-    errors = []
-
-    for i, item in enumerate(data):
-        for field in REQUIRED_FIELDS:
-            if field not in item or item[field] in [None, '']:
-                errors.append(
-                    f'Item {i}: "{field}" is required and cannot be empty.')
+            # elif properties.get(field) in [None, '']:
+            #     errors.append(f"""Feature {i}: "{
+            #                   field}" is required and cannot be empty.""")
 
     return errors
 
@@ -141,10 +130,9 @@ def delete_user(request, pk):
 
 
 # Define an async function
-async def async_create_farm_data(data, serializer, file_id, format, isSyncing=False):
+async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
     errors = []
     created_data = []
-    initialize_earth_engine()
 
     if isSyncing:
         serializer = EUDRFarmModelSerializer(data=data)
@@ -171,33 +159,12 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
                 else:
                     # do general analysis POST request
                     response_data = None
-                    # url = "https://whisp.openforis.org/api/wkt"
-                    # headers = {"Content-Type": "application/json"}
-                    # body = {
-                    #     "wkt": "POLYGON(("
-                    #     + ",".join(f"{lon} {lat}" for lon, lat in coordinates)
-                    #     + "))",
-                    # }
-                    # async with httpx.AsyncClient(timeout=60.0) as client:
-                    #     response = await client.post(url, headers=headers, json=body)
-                    #     response_data = response.json()
-
-                    # tree cover loss after 2020
-                    # tcl_url = "https://data-api.globalforestwatch.org/dataset/umd_tree_cover_loss/latest/query"
-                    # tcl_headers = {"Content-Type": "application/json"}
-                    # tcl_body = {
-                    #     "geometry": {
-                    #         "type": "Polygon",
-                    #         "coordinates": [coordinates],
-                    #     },
-                    #     "sql": "SELECT SUM(area__ha) FROM results WHERE umd_tree_cover_loss__year > 2020"
-                    # }
-                    # async with httpx.AsyncClient(timeout=60.0) as client:
-                    #     tcl_response = await client.post(tcl_url, json=tcl_body)
-                    #     tcl_response_data = tcl_response.json()
-
-                    # if response_data["status"] == "success":
-                    #     response_data["data"]["tree_cover_loss_after_2020"] = tcl_response_data["data"][0]["area__ha"]
+                    url = "https://whisp.openforis.org/api/geojson"
+                    headers = {"Content-Type": "application/json"}
+                    body = data
+                    async with httpx.AsyncClient(timeout=600.0) as client:
+                        response = await client.post(url, headers=headers, json=body)
+                        response_data = response.json()
 
                     data["analysis"] = response_data
 
@@ -208,165 +175,95 @@ async def async_create_farm_data(data, serializer, file_id, format, isSyncing=Fa
                 await sync_to_async(serializer.save)()
                 created_data.append(serializer.data)
     else:
-        farm_data = data[0]["data"]["features"] if format == "geojson" else data[0]["data"]
-        image2023 = ee.Image(
-            'UMD/hansen/global_forest_change_2023_v1_11').select('lossyear').eq(1).selfMask()
-        shapely_polygons = []
+        # do general analysis POST request
+        response_data = None
+        status_code = None
+        url = "https://whisp.openforis.org/api/geojson"
+        headers = {"Content-Type": "application/json"}
+        body = data
+        async with httpx.AsyncClient(timeout=600.0) as client:
+            response = await client.post(url, headers=headers, json=body)
+            response_data = response.json()
+            status_code = response.status_code
 
-        for item in farm_data:
-            # Add deforestation layer (2021-2023)
-            deforestation = image2023
-            # Fetch protected areas
-            protected_areas = ee.FeatureCollection(
-                "WCMC/WDPA/current/polygons")
-            response_data = None
-
-            # loop through the data and update the analysis field with the external analysis result
-            polygon = item["geometry"]["coordinates"][0]
-            print(polygon)
-            if polygon:
-                shapely_polygon = Polygon(polygon)
-
-                # Check for overlap with existing polygons
-                overlap = any(shapely_polygon.intersects(existing_polygon)
-                              for existing_polygon in shapely_polygons)
-                farm_feature = ee.Feature(
-                    ee.Geometry.Polygon(polygon))
-                intersecting_areas = protected_areas.filterBounds(
-                    farm_feature.geometry())
-                # Check if the farm intersects with deforestation areas
-                intersecting_deforestation = deforestation.reduceRegions(collection=ee.FeatureCollection(
-                    [farm_feature]), reducer=ee.Reducer.anyNonZero(), scale=30).first().get('any').getInfo()
-
-                if intersecting_deforestation or intersecting_areas.size().getInfo() > 0:
-                    response_data = {
-                        'deforestation':
-                            True if intersecting_deforestation else False,
-                        'protected_areas': intersecting_areas.size().getInfo() > 0 or False,
-                        'overlaps': overlap
-                    }
-                else:
-                    response_data = {
-                        'deforestation': False,
-                        'protected_areas': False,
-                        'overlaps': overlap
-                    }
-
-                shapely_polygons.append(shapely_polygon)
-            else:
-                shapely_polygon = Point(
-                    [item["properties"]['longitude'], item["properties"]['latitude']])
-
-                # Check for overlap with existing polygons
-                overlap = any(shapely_polygon.intersects(existing_polygon)
-                              for existing_polygon in shapely_polygons)
-                shapely_polygons.append(shapely_polygon)
-            serializer = EUDRFarmModelSerializer(
-                data=(
-                    {
-                        "farmer_name": item["properties"]["farmer_name"],
-                        "farm_size": item["properties"]["farm_size"],
-                        "collection_site": item["properties"]["collection_site"],
-                        "agent_name": item["properties"]["agent_name"],
-                        "farm_village": item["properties"]["farm_village"],
-                        "farm_district": item["properties"]["farm_district"],
-                        "latitude": item["properties"]["latitude"],
-                        "longitude": item["properties"]["longitude"],
-                        "polygon": item["geometry"]["coordinates"][0],
-                        "analysis": response_data if response_data else None,
-                    }
-                    if format == "geojson"
-                    else item
-                )
-            )
-            # if farmer_name is empty, skip the record
-            if not (
-                item["properties"]["farmer_name"]
-                if format == "geojson"
-                else item["farmer_name"]
-            ):
-                continue
-
-            # Check if a similar record already exists for each item
-            if await EUDRFarmModel.objects.filter(
-                farmer_name=(
-                    item["properties"]["farmer_name"]
-                    if format == "geojson"
-                    else item["farmer_name"]
-                ),
-            ).aexists():
-                continue
-            elif serializer.is_valid():
-                # add the file_id to the serializer data
-                serializer.validated_data["file_id"] = file_id
-                if (
-                    len(
-                        item["geometry"]["coordinates"][0][0]
-                        if format == "geojson"
-                        else ast.literal_eval(item["polygon"])
+        if status_code == 200:
+            data = data['features']
+            # Save the serializer data with the external analysis result
+            for i, item in enumerate(response_data['data']):
+                # check if geometry type is Polygon
+                is_polygon = item['geometry']['type'] == 'Polygon' if 'geometry' in item else False
+                serializer = EUDRFarmModelSerializer(
+                    data=(
+                        {
+                            "farmer_name": data[i]["properties"].get("farmer_name", None),
+                            "farm_size": data[i]["properties"].get("farm_size", item['Plot_area_ha']),
+                            "collection_site": data[i]["properties"].get("collection_site", None),
+                            "agent_name": data[i]["properties"].get("agent_name", None),
+                            "farm_village": data[i]["properties"].get("farm_village", None),
+                            "farm_district": data[i]["properties"].get("farm_district", item['Admin_Level_1']),
+                            "latitude": data[i]["properties"].get("latitude", None) if not is_polygon else item['Centroid_lat'],
+                            "longitude": data[i]["properties"].get("longitude", None) if not is_polygon else item['Centroid_lon'],
+                            "polygon": data[i]["geometry"].get("coordinates", None),
+                            "analysis":
+                                {
+                                    "is_in_protected_areas": item['WDPA'],
+                                    "is_in_water_body": item['In_waterbody'],
+                                    "forest_change_loss_after_2020": item['GFC_loss_after_2020'],
+                                    "fire_after_2020": item['MODIS_fire_after_2020'],
+                                    "radd_after_2020": item['RADD_after_2020'],
+                                    "tmf_deforestation_after_2020": item['TMF_def_after_2020'],
+                                    "tmf_degradation_after_2020": item['TMF_deg_after_2020'],
+                                    "tmf_disturbed": item['TMF_disturbed'],
+                                    "tree_colver_loss": item['Indicator_1_treecover'],
+                                    "commodities": item['Indicator_2_commodities'],
+                                    "disturbance_after_2020": item['Indicator_4_disturbance_after_2020'],
+                                    "eudr_risk_level": item['EUDR_risk']
+                            }
+                        }
                     )
-                    <= 1
-                ):
-                    item["analysis"] = None
-                else:
-                    # do general analysis POST request
-                    response_data = None
-                    # url = "https://whisp.openforis.org/api/wkt"
-                    # headers = {"Content-Type": "application/json"}
-                    # body = {
-                    #     "wkt": "POLYGON(("
-                    #     + ",".join(f"{lon} {lat}" for lon, lat in coordinates)
-                    #     + "))",
-                    # }
-                    # async with httpx.AsyncClient(timeout=60.0) as client:
-                    #     response = await client.post(url, headers=headers, json=body)
-                    #     response_data = response.json()
-
-                    # tree cover loss after 2020
-                    # tcl_url = "https://data-api.globalforestwatch.org/dataset/umd_tree_cover_loss/latest/query"
-                    # tcl_headers = {"Content-Type": "application/json"}
-                    # tcl_body = {
-                    #     "geometry": {
-                    #         "type": "Polygon",
-                    #         "coordinates": [coordinates],
-                    #     },
-                    #     "sql": "SELECT SUM(area__ha) FROM results WHERE umd_tree_cover_loss__year > 2020"
-                    # }
-                    # async with httpx.AsyncClient(timeout=60.0) as client:
-                    #     tcl_response = await client.post(tcl_url, json=tcl_body)
-                    #     tcl_response_data = tcl_response.json()
-
-                    # if response_data["status"] == "success":
-                    #     response_data["data"]["tree_cover_loss_after_2020"] = tcl_response_data["data"][0]["area__ha"]
-
-                # Save the serializer data with the external analysis result
-                await sync_to_async(serializer.save)()
-                created_data.append(serializer.data)
-            else:
-                # delete the file if the serializer is not valid
-                # if file_id:
-                #     EUDRUploadedFilesModel.objects.get(id=file_id).delete()
-
-                errors.append({"error": serializer.errors, "data": item})
+                )
+                if serializer.is_valid():
+                    await sync_to_async(serializer.save)()
+                    created_data.append(serializer.data)
+        else:
+            errors.append({"error": serializer.errors})
 
     return errors, created_data
+
+
+def transform_csv_to_json(data):
+    features = []
+    for record in data:
+        if 'latitude' in record and 'longitude' in record and record['latitude'] and record['longitude']:
+            feature = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [float(record['longitude']), float(record['latitude'])]
+                },
+                "properties": {k: v for k, v in record.items() if k not in ['latitude', 'longitude', 'polygon']}
+            }
+            features.append(feature)
+
+    geojson = {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
+    return geojson
 
 
 @api_view(["POST"])
 def create_farm_data(request):
     data_format = request.data.get('format')
-    raw_data = request.data.get('data')
-    print(raw_data)
+    raw_data = request.data.get(
+        'data') if data_format == 'geojson' else transform_csv_to_json(request.data.get('data'))
 
     if not data_format or not raw_data:
         return Response({'error': 'Format and data are required'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if data_format == 'geojson':
+    if data_format == 'geojson' or data_format == 'csv':
         errors = validate_geojson(raw_data)
-    elif data_format == 'json':
-        errors = validate_json(raw_data)
-    elif data_format == 'csv':
-        errors = validate_csv(raw_data)
     else:
         return Response({'error': 'Unsupported format'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -383,21 +280,18 @@ def create_farm_data(request):
     file_serializer = EUDRUploadedFilesModelSerializer(data=file_data)
 
     if file_serializer.is_valid():
-        file_serializer.save()
-        file_id = file_serializer.data.get("id")
+        if not EUDRUploadedFilesModel.objects.filter(file_name=file_data["file_name"]).exists():
+            file_serializer.save()
+        file_id = EUDRUploadedFilesModel.objects.get(
+            file_name=file_data["file_name"]).id
     else:
         EUDRUploadedFilesModel.objects.get(
             id=file_serializer.data.get("id")).delete()
         return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    data = request.data
-
-    if not isinstance(data, list):
-        data = [data]
     # Call the async function from sync context
     errors, created_data = async_to_sync(async_create_farm_data)(
-        data, serializer, file_id, request.data.get("format")
-    )
+        raw_data, serializer, file_id)
     if errors:
         # delete the file if there are errors
         EUDRUploadedFilesModel.objects.get(id=file_id).delete()
@@ -452,7 +346,7 @@ def sync_farm_data(request):
             file_id = file_data.id
             # Call the async function from sync context
             errors, created_data = async_to_sync(async_create_farm_data)(
-                item, serializer, file_id, "geojson", True
+                item, serializer, file_id, True
             )
 
             if errors:
@@ -464,7 +358,7 @@ def sync_farm_data(request):
                 # Call the async function from sync context
                 errors, created_data = async_to_sync(async_create_farm_data)(
                     item, serializer, file_serializer.data.get(
-                        "id"), "geojson", True
+                        "id"), True
                 )
 
             if errors:
@@ -554,26 +448,12 @@ def download_template(request):
 
     timestamp_str = timezone.now().strftime("%Y-%m-%d-%H-%M-%S")
 
-    if format == "csv":
-        response = HttpResponse(content_type="text/csv")
-        filename = f"eudr-upload-template-{timestamp_str}.csv"
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        df.to_csv(response, index=True)
-    elif format == "json":
-        response = HttpResponse(content_type="application/json")
-        filename = f"eudr-upload-template-{timestamp_str}.json"
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        df.to_json(response, orient="records")
-    elif format == "geojson":
-        response = HttpResponse(content_type="application/json")
-        filename = f"eudr-upload-template-{timestamp_str}.geojson"
-        response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        # GeoJSON format will depend on your specific data structure
-        # This is just an example
-        geojson_data = {"type": "FeatureCollection", "features": [
-            {
-                "type": "Feature",
-                "geometry": {
+    # GeoJSON format will depend on your specific data structure
+    # This is just an example
+    geojson_data = {"type": "FeatureCollection", "features": [
+        {
+            "type": "Feature",
+            "geometry": {
                     "type": "Polygon",
                     "coordinates": [
                         [
@@ -581,18 +461,28 @@ def download_template(request):
                             [41.8781, 87.6299],
                         ]
                     ]
-                },
-                "properties": {
-                    "farmer_name": "John Doe",
-                    "farm_size": 4,
-                    "collection_site": "Site A",
-                    "farm_village": "Village A",
-                    "farm_district": "District A",
-                    "latitude": "-1.62883139933721",
-                    "longitude": "29.9898212498949",
-                },
-            }
-        ]}
+            },
+            "properties": {
+                "farmer_name": "John Doe",
+                "farm_size": 4,
+                "collection_site": "Site A",
+                "farm_village": "Village A",
+                "farm_district": "District A",
+                "latitude": "-1.62883139933721",
+                "longitude": "29.9898212498949",
+            },
+        }
+    ]}
+
+    if format == "csv":
+        response = HttpResponse(content_type="text/csv")
+        filename = f"eudr-upload-template-{timestamp_str}.csv"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        df.to_csv(response, index=True)
+    elif format == "geojson":
+        response = HttpResponse(content_type="application/json")
+        filename = f"eudr-upload-template-{timestamp_str}.geojson"
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
         response.write(json.dumps(geojson_data))
     else:
         return Response({"error": "Invalid format"}, status=status.HTTP_400_BAD_REQUEST)

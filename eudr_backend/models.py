@@ -36,7 +36,6 @@ class EUDRFarmModel(models.models.Model):
     longitude = models.models.FloatField(default=0.0)
     polygon = models.models.JSONField()
     is_validated = models.models.BooleanField(default=False)
-    is_eudr_compliant = models.models.BooleanField(default=False)
     analysis = models.models.JSONField(null=True, blank=True)
     validated_at = models.models.DateTimeField(null=True, blank=True)
     file_id = models.models.CharField(max_length=255, null=True, blank=True)

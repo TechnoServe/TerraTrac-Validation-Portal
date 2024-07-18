@@ -642,37 +642,41 @@
         const format = file.name.split(".").pop().toLowerCase();
         const file_name = file.name.split(".")[0];
 
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          let data;
-          if (format === "csv") {
-            // Parse CSV data
-            data = Papa.parse(e.target.result, { header: true }).data;
-          } else if (format === "xlsx" || format === "xls") {
-            // Parse Excel data
-            const workbook = XLSX.read(e.target.result, { type: "binary" });
-            const sheetName = workbook.SheetNames[0];
-            data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
-              header: 1,
-            });
-          } else if (format === "json" || format === "geojson") {
-            // Parse JSON data
-            data = JSON.parse(e.target.result);
-          }
+        try {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            let data;
+            if (format === "csv") {
+              // Parse CSV data
+              data = Papa.parse(e.target.result, { header: true }).data;
+            } else if (format === "xlsx" || format === "xls") {
+              // Parse Excel data
+              const workbook = XLSX.read(e.target.result, { type: "binary" });
+              const sheetName = workbook.SheetNames[0];
+              data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
+                header: 1,
+              });
+            } else if (format === "geojson") {
+              // Parse JSON data
+              data = JSON.parse(e.target.result);
+            }
 
-          if (data) {
-            // Now we have the formatted data
-            // Send it to the API
-            sendDataToAPI(data, file_name, format);
+            if (data) {
+              // Now we have the formatted data
+              // Send it to the API
+              sendDataToAPI(data, file_name, format);
+            } else {
+              alert("Invalid file format or file is empty.");
+            }
+          };
+
+          if (file) {
+            reader.readAsText(file);
           } else {
-            alert("Invalid file format or file is empty.");
+            alert("No file selected.");
           }
-        };
-
-        if (file) {
-          reader.readAsText(file);
-        } else {
-          alert("No file selected.");
+        } catch (error) {
+          alert("Invalid file format or file is empty.");
         }
       }
 
@@ -732,7 +736,6 @@
             document.querySelector("#closeBtn").removeAttribute("disabled");
           })
           .catch((error) => {
-            console.log(error);
             Toastify({
               text: "Error while uploading data. please try again",
               duration: 3000,
@@ -840,11 +843,11 @@
 
       if (response) {
         response
-          .then((response) => {
-            if (!response.ok) {
+          .then((resp) => {
+            if (!resp.ok) {
               throw new Error("Network response was not ok");
             }
-            return response.json();
+            return resp.json();
           })
           .then((data) => {
             let i = 0;
@@ -854,14 +857,19 @@
             if (document.querySelector("#total_farms")) {
               document.querySelector("#total_farms").innerText = data.length;
             }
+            if (farmsContainer) {
+              if (data.length > 0) {
+                document
+                  .querySelector("#export-btn")
+                  .removeAttribute("disabled");
+              }
 
-            if (data.length > 0) {
-              document.querySelector("#export-btn").removeAttribute("disabled");
-            }
+              // remove loading spinner
+              farmsContainer.innerHTML = "";
 
-            while (i < data.length) {
-              const tr = document.createElement("tr");
-              tr.innerHTML = `
+              while (i < data.length) {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
                   <td>
                     <p class="text-xs text-center font-weight-bold mb-0">${
                       i + 1
@@ -934,33 +942,34 @@
                     >
                   </td>
               `;
-              farmsContainer.appendChild(tr);
-              i++;
-            }
+                farmsContainer.appendChild(tr);
+                i++;
+              }
 
-            $("#farms").DataTable({
-              // add loading spinner while table is being loaded
-              processing: true,
-              //disable sorting on last column
-              columnDefs: [{ orderable: false, targets: 5 }],
-              language: {
-                //customize pagination prev and next buttons: use arrows instead of words
-                paginate: {
-                  previous: '<span class="fa fa-chevron-left"></span>',
-                  next: '<span class="fa fa-chevron-right"></span>',
+              $("#farms").DataTable({
+                // add loading spinner while table is being loaded
+                processing: true,
+                //disable sorting on last column
+                columnDefs: [{ orderable: false, targets: 5 }],
+                language: {
+                  //customize pagination prev and next buttons: use arrows instead of words
+                  paginate: {
+                    previous: '<span class="fa fa-chevron-left"></span>',
+                    next: '<span class="fa fa-chevron-right"></span>',
+                  },
+                  //customize number of elements to be displayed
+                  lengthMenu:
+                    'Display <select class="form-control input-sm">' +
+                    '<option value="10">10</option>' +
+                    '<option value="20">20</option>' +
+                    '<option value="30">30</option>' +
+                    '<option value="40">40</option>' +
+                    '<option value="50">50</option>' +
+                    '<option value="-1">All</option>' +
+                    "</select> results",
                 },
-                //customize number of elements to be displayed
-                lengthMenu:
-                  'Display <select class="form-control input-sm">' +
-                  '<option value="10">10</option>' +
-                  '<option value="20">20</option>' +
-                  '<option value="30">30</option>' +
-                  '<option value="40">40</option>' +
-                  '<option value="50">50</option>' +
-                  '<option value="-1">All</option>' +
-                  "</select> results",
-              },
-            });
+              });
+            }
           })
           .catch((error) => {
             console.error(
@@ -1093,9 +1102,13 @@
               data.length;
           }
 
-          while (i < data.length) {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
+          if (filesContainer) {
+            // remove loading spinner
+            filesContainer.innerHTML = "";
+
+            while (i < data.length) {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
                   <td>
                     <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
                   </td>
@@ -1133,29 +1146,30 @@
                   </td>
               `;
 
-            filesContainer.appendChild(tr);
-            i++;
-          }
+              filesContainer.appendChild(tr);
+              i++;
+            }
 
-          $("#files").DataTable({
-            language: {
-              //customize pagination prev and next buttons: use arrows instead of words
-              paginate: {
-                previous: '<span class="fa fa-chevron-left"></span>',
-                next: '<span class="fa fa-chevron-right"></span>',
+            $("#files").DataTable({
+              language: {
+                //customize pagination prev and next buttons: use arrows instead of words
+                paginate: {
+                  previous: '<span class="fa fa-chevron-left"></span>',
+                  next: '<span class="fa fa-chevron-right"></span>',
+                },
+                //customize number of elements to be displayed
+                lengthMenu:
+                  'Display <select class="form-control input-sm">' +
+                  '<option value="10">10</option>' +
+                  '<option value="20">20</option>' +
+                  '<option value="30">30</option>' +
+                  '<option value="40">40</option>' +
+                  '<option value="50">50</option>' +
+                  '<option value="-1">All</option>' +
+                  "</select> results",
               },
-              //customize number of elements to be displayed
-              lengthMenu:
-                'Display <select class="form-control input-sm">' +
-                '<option value="10">10</option>' +
-                '<option value="20">20</option>' +
-                '<option value="30">30</option>' +
-                '<option value="40">40</option>' +
-                '<option value="50">50</option>' +
-                '<option value="-1">All</option>' +
-                "</select> results",
-            },
-          });
+            });
+          }
         })
         .catch((error) => {
           console.error("There was a problem with the fetch operation:", error);

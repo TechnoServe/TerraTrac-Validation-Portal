@@ -138,7 +138,7 @@ def map_view(request):
                 else:
                     folium.Marker(
                         location=[farm['latitude'], farm['longitude']],
-                        tooltip=f"""<b>Farmer Name:</b> {farm['farmer_name']}<br>
+                        popup=folium.Popup(html=f"""<b>Farmer Name:</b> {farm['farmer_name']}<br>
             <b>Farm Size:</b> {farm['farm_size']}<br>
             <b>Collection Site:</b> {farm['collection_site']}<br>
             <b>Agent Name:</b> {farm['agent_name']}<br>
@@ -147,8 +147,8 @@ def map_view(request):
             <b>Overlapping?:</b> {'Yes' if farm['analysis']['overlaps'] else 'No'}<br>
             <b>Is in Deforested Area:</b> {'Yes' if farm['analysis']['deforestation'] else 'No'}<br/>
             <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['protected_areas'] else 'No'}<br/>
-            """,
-                        icon=folium.Icon(color='green', icon='leaf')
+            """, show=True),
+                        icon=folium.Icon(color='green', icon='leaf'),
                     ).add_to(m)
 
             # zoom to the extent of the map to the first polygon
