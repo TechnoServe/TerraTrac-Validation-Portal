@@ -25,9 +25,7 @@ REQUIRED_FIELDS = [
     'collection_site',
     'farm_size',
     'farm_district',
-    'farm_village',
-    'latitude',
-    'longitude'
+    'farm_village'
 ]
 
 GEOJSON_REQUIRED_FIELDS = REQUIRED_FIELDS + ['geometry']
@@ -42,45 +40,24 @@ def validate_geojson(data):
         properties = feature.get('properties', {})
         geometry = feature.get('geometry', {})
 
+        # Check if properties and geometry are dictionaries
+        if not isinstance(properties, dict) or not isinstance(geometry, dict):
+            errors.append(
+                f'Feature {i}: "properties" and "geometry" must be objects.')
+            continue
+        # check if properties and geometry are not empty
+        if not properties or not geometry:
+            errors.append(
+                f'Feature {i}: "properties" and "geometry" cannot be empty.')
+            continue
         for field in GEOJSON_REQUIRED_FIELDS:
             if field == 'geometry':
                 if 'coordinates' not in geometry:
                     errors.append(
                         f'Feature {i}: "geometry.coordinates" is required.')
-            # elif properties.get(field) in [None, '']:
-            #     errors.append(f"""Feature {i}: "{
-            #                   field}" is required and cannot be empty.""")
-
-    return errors
-
-
-def validate_csv(data):
-    errors = []
-
-    # Check if data is a list of dictionaries
-    if isinstance(data, list):
-        # Remove last row if it's empty or contains specific values
-        if data and (not data[-1] or data[-1].get('farmer_name') == '' or data[-1] == {"": ""}):
-            data.pop()
-
-        for i, row in enumerate(data):
-            for field in REQUIRED_FIELDS:
-                if field not in row or row[field] in [None, '', '0']:
-                    errors.append(
-                        f'Row {i}: "{field}" is required and cannot be empty or zero.')
-    else:
-        reader = csv.DictReader(io.StringIO(data))
-        rows = list(reader)
-
-        # Remove last row if it's empty or contains specific values
-        if rows and (not rows[-1] or rows[-1].get('farmer_name') == '' or rows[-1] == {"": ""}):
-            rows.pop()
-
-        for i, row in enumerate(rows):
-            for field in REQUIRED_FIELDS:
-                if field not in row or row[field] in [None, '', '0']:
-                    errors.append(
-                        f'Row {i}: "{field}" is required and cannot be empty or zero.')
+            elif properties.get(field) in [None, '']:
+                errors.append(f"""Feature {i}: "{
+                              field}" is required and cannot be empty.""")
 
     return errors
 
@@ -196,14 +173,16 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
                     data=(
                         {
                             "farmer_name": data[i]["properties"].get("farmer_name", None),
-                            "farm_size": data[i]["properties"].get("farm_size", item['Plot_area_ha']),
+                            "farm_size": float(data[i]["properties"].get("farm_size", item['Plot_area_ha'])),
                             "collection_site": data[i]["properties"].get("collection_site", None),
                             "agent_name": data[i]["properties"].get("agent_name", None),
                             "farm_village": data[i]["properties"].get("farm_village", None),
                             "farm_district": data[i]["properties"].get("farm_district", item['Admin_Level_1']),
-                            "latitude": data[i]["properties"].get("latitude", None) if not is_polygon else item['Centroid_lat'],
-                            "longitude": data[i]["properties"].get("longitude", None) if not is_polygon else item['Centroid_lon'],
+                            "file_id": file_id,
+                            "latitude": data[i]["geometry"]['coordinates'][1] if not is_polygon else item['Centroid_lat'],
+                            "longitude": data[i]["geometry"]['coordinates'][1] if not is_polygon else item['Centroid_lon'],
                             "polygon": data[i]["geometry"].get("coordinates", None),
+                            "geoid": item.get("geoid", None),
                             "analysis":
                                 {
                                     "is_in_protected_areas": item['WDPA'],
@@ -214,7 +193,7 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
                                     "tmf_deforestation_after_2020": item['TMF_def_after_2020'],
                                     "tmf_degradation_after_2020": item['TMF_deg_after_2020'],
                                     "tmf_disturbed": item['TMF_disturbed'],
-                                    "tree_colver_loss": item['Indicator_1_treecover'],
+                                    "tree_cover_loss": item['Indicator_1_treecover'],
                                     "commodities": item['Indicator_2_commodities'],
                                     "disturbance_after_2020": item['Indicator_4_disturbance_after_2020'],
                                     "eudr_risk_level": item['EUDR_risk']
@@ -225,6 +204,8 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
                 if serializer.is_valid():
                     await sync_to_async(serializer.save)()
                     created_data.append(serializer.data)
+                else:
+                    errors.append({"error": serializer.errors})
         else:
             errors.append({"error": serializer.errors})
 
@@ -234,12 +215,26 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
 def transform_csv_to_json(data):
     features = []
     for record in data:
-        if 'latitude' in record and 'longitude' in record and record['latitude'] and record['longitude']:
+        # check if latitude, longitude, and polygon fields are not found in the record, skip the record
+        if 'latitude' not in record or 'longitude' not in record:
+            continue
+        # check if polygon field is empty array or empty string
+        if record.get('polygon') in ['[]', '']:
             feature = {
                 "type": "Feature",
                 "geometry": {
                     "type": "Point",
                     "coordinates": [float(record['longitude']), float(record['latitude'])]
+                },
+                "properties": {k: v for k, v in record.items() if k not in ['latitude', 'longitude', 'polygon']}
+            }
+            features.append(feature)
+        else:
+            feature = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [ast.literal_eval(record.get('polygon', '[]'))]
                 },
                 "properties": {k: v for k, v in record.items() if k not in ['latitude', 'longitude', 'polygon']}
             }

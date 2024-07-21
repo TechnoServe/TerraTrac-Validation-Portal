@@ -113,9 +113,9 @@ def map_view(request):
                 if 'polygon' in farm:
                     polygon = farm['polygon']
                     if polygon:
-                        if farm['analysis']['protected_areas']:
+                        if farm['analysis']['is_in_protected_areas'] != '-':
                             color = 'gray'
-                        elif farm['analysis']['deforestation']:
+                        elif farm['analysis']['tree_cover_loss'] == 'yes':
                             color = 'red'
                         else:
                             color = 'green'
@@ -127,9 +127,8 @@ def map_view(request):
             <b>Agent Name:</b> {farm['agent_name']}<br>
             <b>Farm Village:</b> {farm['farm_village']}<br>
             <b>District:</b> {farm['farm_district']}<br>
-            <b>Overlapping?:</b> {'Yes' if farm['analysis']['overlaps'] else 'No'}<br>
-            <b>Is in Deforested Area:</b> {'Yes' if farm['analysis']['deforestation'] else 'No'}<br/>
-            <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['protected_areas'] else 'No'}<br/>
+            <b>Is in Deforested Area:</b> {farm['analysis']['tree_cover_loss']}<br/>
+            <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['is_in_protected_areas'] != '-' else 'No'}<br/>
             """,
                             color=color,
                             fill=True,
@@ -144,9 +143,8 @@ def map_view(request):
             <b>Agent Name:</b> {farm['agent_name']}<br>
             <b>Farm Village:</b> {farm['farm_village']}<br>
             <b>District:</b> {farm['farm_district']}<br>
-            <b>Overlapping?:</b> {'Yes' if farm['analysis']['overlaps'] else 'No'}<br>
-            <b>Is in Deforested Area:</b> {'Yes' if farm['analysis']['deforestation'] else 'No'}<br/>
-            <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['protected_areas'] else 'No'}<br/>
+            <b>Is in Deforested Area:</b> {farm['analysis']['tree_cover_loss']}<br/>
+            <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['is_in_protected_areas'] != '-' else 'No'}<br/>
             """, show=True),
                         icon=folium.Icon(color='green', icon='leaf'),
                     ).add_to(m)
@@ -195,5 +193,5 @@ def map_view(request):
 
 
 def reverse_polygon_points(polygon):
-    reversed_polygon = [[lon, lat] for lat, lon in polygon]
+    reversed_polygon = [[lon, lat] for lat, lon in polygon[0]]
     return reversed_polygon

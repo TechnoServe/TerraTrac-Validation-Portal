@@ -727,7 +727,7 @@
               }).showToast();
 
               setTimeout(function () {
-                window.location.href = "/validated_files";
+                window.location.href = `/validator/?file-id=${data[0].file_id}`;
               }, 2000);
             }
 
@@ -826,9 +826,9 @@
             return response.json();
           })
           .then((data) => {
-            farmsListTitle.innerText = `Farms List for ${
+            farmsListTitle.innerHTML = `Farms List for ${
               data.file_name.split(".")[0]
-            }`;
+            } <i class="fa fa-close bg bg-light p-1 ms-2 rounded-1 cursor-pointer" onclick="window.location.href = '/validator/'"></i>`;
           })
           .catch((error) => {
             console.error(
