@@ -318,43 +318,13 @@
                 >
                   <i class="fa fa-bell cursor-pointer"></i>
                 </a>
-                <ul
-                  class="dropdown-menu dropdown-menu-end px-2 py-3 me-sm-n4"
-                  aria-labelledby="dropdownMenuButton"
-                >
-                  <li class="mb-2">
-                    <a
-                      class="dropdown-item border-radius-md"
-                      href="javascript:;"
-                    >
-                      <div class="d-flex py-1">
-                        <div class="my-auto">
-                          <img
-                            src="{% static 'assets/img/team-2.jpg' %}"
-                            class="avatar avatar-sm me-3"
-                          />
-                        </div>
-                        <div class="d-flex flex-column justify-content-center">
-                          <h6 class="text-sm font-weight-normal mb-1">
-                            <span class="font-weight-bold">New message</span>
-                            from Laur
-                          </h6>
-                          <p class="text-xs text-secondary mb-0">
-                            <i class="fa fa-clock me-1"></i>
-                            13 minutes ago
-                          </p>
-                        </div>
-                      </div>
-                    </a>
-                  </li>
-                </ul>
               </li>
               <!-- add circled div with logged in username first letter -->
               <li
                 class="nav-item d-flex align-items-center"
                 title="{{user.username}}"
               >
-                <span class="avatar rounded-circle"
+                <span class="avatar rounded-circle cursor-pointer"
                   ><i class="fas fa-user"></i
                 ></span>
               </li>
@@ -876,6 +846,11 @@
                     }.</p>
                   </td>
                   <td>
+                    <p class="text-xs font-weight-bold mb-0">${
+                      data[i].geoid || "N/A"
+                    }</p>
+                  </td>
+                  <td>
                     <div class="d-flex px-2 py-1">
                       <div class="d-flex flex-column justify-content-center">
                         <h6 class="mb-0 text-sm">${data[i].farmer_name}</h6>
@@ -898,35 +873,10 @@
                     }</p>
                   </td>
                   <td class="align-middle text-center text-sm">
-                    <span class="badge badge-sm ${
-                      data[i]?.analysis?.["deforestation"]
-                        ? "bg-gradient-success"
-                        : "bg-gradient-faded-dark"
-                    }"
-                      >${
-                        data[i]?.analysis?.["deforestation"] ? "Yes" : "No"
-                      }</span
-                    >
-                  </td>
-                  <td class="align-middle text-center text-sm">
-                    <span class="badge badge-sm ${
-                      data[i]?.analysis?.["protected_areas"]
-                        ? "bg-gradient-success"
-                        : "bg-gradient-faded-dark"
-                    }"
-                      >${
-                        data[i]?.analysis?.["protected_areas"] ? "Yes" : "No"
-                      }</span
-                    >
-                  </td>
-                  <td class="align-middle text-center text-sm">
-                    <span class="badge badge-sm ${
-                      data[i]?.analysis?.["overlaps"]
-                        ? "bg-gradient-success"
-                        : "bg-gradient-faded-dark"
-                    }"
-                      >${data[i]?.analysis?.["overlaps"] ? "Yes" : "No"}</span
-                    >
+                    <i class="bi bi-eye mt-5 text-primary text-lg" data-toggle="modal" data-target="#whispDataModal"
+                      id="viewAnalysisBtn" role="button" onclick="viewAnalysis(${
+                        data[i].id
+                      })" title="View Analysis"></i>
                   </td>
                   <td>
                     <p class="text-xs font-weight-bold mb-0">${new Date(
@@ -985,32 +935,24 @@
 
         const obj = farmData.find((farm) => farm.id === id);
 
-        Object.keys(obj?.analysis?.data?.[0]).forEach((key) => {
-          if (key === "geometry") return; // Skip the geometry field
-
-          const value = obj.analysis.data[0][key];
-          const colorClass =
-            value < 33
-              ? colorClasses.low
-              : value < 66
-              ? colorClasses.medium
-              : colorClasses.high;
+        Object.keys(obj?.analysis).forEach((key) => {
+          const value = obj.analysis[key];
 
           const card = document.createElement("div");
-          card.className = "card card-custom whisp-item-card " + colorClass;
+          card.className = "whisp-item-card";
           card.innerHTML = `
-            <div class="card-body">
-                <h5 class="card-title">${
-                  key === "gaul0"
-                    ? "Country"
-                    : key === "gaul1"
-                    ? "District"
-                    : key === "gaul2"
-                    ? "Village"
-                    : key
-                }</h5>
-                <p class="card-text">${value}</p>
-            </div>
+                <h6>${key
+                  .replace(/_/g, " ")
+                  .replace(/\b\w/g, (char) => char.toUpperCase())}</h6>
+                <p class="${
+                  key === "eudr_risk_level" && value === "high"
+                    ? "bg-gradient bg-success rounded-1 px-2 text-white"
+                    : value === "medium"
+                    ? "bg-gradient bg-warning rounded-1 px-2 text-white"
+                    : value === "low"
+                    ? "bg-gradient bg-danger rounded-1 px-2 text-white"
+                    : value
+                }">${value}</p>
         `;
           container.appendChild(card);
         });
@@ -1033,7 +975,7 @@
             "Farm Size": farm.farm_size,
             Village: farm.farm_village,
             District: farm.farm_district,
-            // spread the analysis data and remove undescore from the keys and capitalize the first letter
+            // spread the analysis data and remove underscore from the keys and capitalize the first letter
             ...Object.keys(farm.analysis).reduce((acc, key) => {
               acc[
                 key

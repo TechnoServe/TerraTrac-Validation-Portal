@@ -5243,13 +5243,23 @@ fieldset:disabled .btn {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  margin: 10px 20px;
 }
 
 .whisp-item-card {
-  width: 50% !important;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e9ecef;
 }
-.whisp-item-card .card-body {
-  padding: 1rem 0.7rem !important;
+
+.whisp-item-card * {
+  margin: 5px 0;
+}
+
+.whisp-item-card p {
+  color: #111;
+  font-style: italic;
 }
 
 .card-title {

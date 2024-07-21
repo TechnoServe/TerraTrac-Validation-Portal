@@ -127,8 +127,6 @@ def map_view(request):
             <b>Agent Name:</b> {farm['agent_name']}<br>
             <b>Farm Village:</b> {farm['farm_village']}<br>
             <b>District:</b> {farm['farm_district']}<br>
-            <b>Is in Deforested Area:</b> {farm['analysis']['tree_cover_loss']}<br/>
-            <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['is_in_protected_areas'] != '-' else 'No'}<br/>
             """,
                             color=color,
                             fill=True,
@@ -143,8 +141,6 @@ def map_view(request):
             <b>Agent Name:</b> {farm['agent_name']}<br>
             <b>Farm Village:</b> {farm['farm_village']}<br>
             <b>District:</b> {farm['farm_district']}<br>
-            <b>Is in Deforested Area:</b> {farm['analysis']['tree_cover_loss']}<br/>
-            <b>Is in Protected Area:</b> {'Yes' if farm['analysis']['is_in_protected_areas'] != '-' else 'No'}<br/>
             """, show=True),
                         icon=folium.Icon(color='green', icon='leaf'),
                     ).add_to(m)
