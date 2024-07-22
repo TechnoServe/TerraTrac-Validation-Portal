@@ -22,42 +22,148 @@ from .serializers import (
 )
 
 REQUIRED_FIELDS = [
-    'collection_site',
+    'farmer_name',
     'farm_size',
+    'collection_site',
     'farm_district',
-    'farm_village'
+    'farm_village',
+    'latitude',
+    'longitude',
+    'polygon',
 ]
 
-GEOJSON_REQUIRED_FIELDS = REQUIRED_FIELDS + ['geometry']
+OPTIONAL_FIELDS = [
+    'remote_id',
+    'member_id',
+    'agent_name',
+    'created_at',
+    'updated_at',
+]
+
+GEOJSON_REQUIRED_FIELDS = ['geometry',
+                           'farmer_name',
+                           'farm_size',
+                           'collection_site',
+                           'farm_district',
+                           'farm_village',
+                           'latitude',
+                           'longitude',
+                           ]
 
 
-def validate_geojson(data):
+def validate_csv(data):
     errors = []
-    if 'features' not in data or not isinstance(data['features'], list):
-        return ['Invalid data format: "features" must be a list']
 
-    for i, feature in enumerate(data['features']):
-        properties = feature.get('properties', {})
-        geometry = feature.get('geometry', {})
+    # Check if required fields are present
+    for field in REQUIRED_FIELDS:
+        if field not in data[0]:
+            errors.append(f'"{field}" is required.')
+    if len(errors) > 0:
+        return errors
 
-        # Check if properties and geometry are dictionaries
-        if not isinstance(properties, dict) or not isinstance(geometry, dict):
-            errors.append(
-                f'Feature {i}: "properties" and "geometry" must be objects.')
+    # Check if optional fields are present
+    for field in data[0]:
+        if field not in REQUIRED_FIELDS and field not in OPTIONAL_FIELDS:
+            errors.append(f'"{field}" is not a valid field.')
+    if len(errors) > 0:
+        return errors
+
+    # Check if farm_size, latitude, and longitude are numbers and polygon is a list
+    for i, record in enumerate(
+        data[:-1] if (
+            len(data[-1]) < len(REQUIRED_FIELDS)
+        ) else data
+    ):
+        try:
+            float(record['farm_size'])
+        except ValueError:
+            errors.append(f'Row {i}: "farm_size" must be a number.')
+        try:
+            float(record['latitude'])
+        except ValueError:
+            errors.append(f'Row {i}: "latitude" must be a number.')
+        try:
+            float(record['longitude'])
+        except ValueError:
+            errors.append(f'Row {i}: "longitude" must be a number.')
+        try:
+            ast.literal_eval(record['polygon'])
+        except ValueError:
+            errors.append(f'Row {i}: "polygon" must be a list.')
+        except SyntaxError:
+            errors.append(f'Row {i}: "polygon" must be a list.')
+
+    return errors
+
+
+def validate_geojson(data: dict) -> bool:
+    errors = []
+
+    if data.get('type') != 'FeatureCollection':
+        errors.append('Invalid GeoJSON type. Must be FeatureCollection')
+    if not isinstance(data.get('features'), list):
+        errors.append('Invalid GeoJSON features. Must be a list')
+
+    if len(errors) > 0:
+        return errors
+
+    for feature in data['features']:
+        if feature.get('type') != 'Feature':
+            errors.append('Invalid GeoJSON feature. Must be Feature')
             continue
-        # check if properties and geometry are not empty
-        if not properties or not geometry:
-            errors.append(
-                f'Feature {i}: "properties" and "geometry" cannot be empty.')
+        properties = feature.get('properties')
+        if not isinstance(properties, dict):
+            errors.append('Invalid GeoJSON properties. Must be a dictionary')
             continue
-        for field in GEOJSON_REQUIRED_FIELDS:
-            if field == 'geometry':
-                if 'coordinates' not in geometry:
+
+        # Check for required properties
+        required_properties = {
+            'farmer_name': str,
+            'farm_village': str,
+            'farm_district': str,
+            'farm_size': (int, float),
+            'latitude': (int, float),
+            'longitude': (int, float),
+        }
+        for prop, prop_type in required_properties.items():
+            if not isinstance(properties.get(prop), prop_type):
+                errors.append(
+                    f'Invalid GeoJSON properties. Missing or invalid "{prop}"')
+        if len(errors) > 0:
+            return errors
+
+        # Check for valid geometry
+        geometry = feature.get('geometry')
+        if not isinstance(geometry, dict):
+            errors.append('Invalid GeoJSON geometry. Must be a dictionary')
+            continue
+        geometry_type = geometry.get('type')
+        coordinates = geometry.get('coordinates')
+
+        if geometry_type == 'Polygon':
+            if not (isinstance(coordinates, list) and len(coordinates) >= 1):
+                errors.append(
+                    'Invalid GeoJSON coordinates. Must be a list of lists')
+            if not (isinstance(coordinates[0], list) and len(coordinates[0]) >= 4):
+                errors.append(
+                    'Invalid GeoJSON coordinates. Must be a list of lists with at least 4 coordinates')
+            for coord in coordinates[0]:
+                if not (isinstance(coord, list) and len(coord) == 2):
                     errors.append(
-                        f'Feature {i}: "geometry.coordinates" is required.')
-            elif properties.get(field) in [None, '']:
-                errors.append(f"""Feature {i}: "{
-                              field}" is required and cannot be empty.""")
+                        'Invalid GeoJSON coordinates. Must be a list of lists with 2 coordinates')
+                if not all(isinstance(c, (int, float)) for c in coord):
+                    errors.append(
+                        'Invalid GeoJSON coordinates. Must be a list of lists with numbers')
+        elif geometry_type == 'Point':
+            if not (isinstance(coordinates, list) and len(coordinates) == 2):
+                errors.append(
+                    'Invalid GeoJSON coordinates. Must be a list of 2 numbers')
+            if not all(isinstance(c, (int, float)) for c in coordinates):
+                errors.append(
+                    'Invalid GeoJSON coordinates. Must be a list of numbers')
+        else:
+            errors.append(
+                'Invalid GeoJSON geometry type. Must be Point or Polygon')
 
     return errors
 
@@ -207,8 +313,7 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
                 else:
                     errors.append({"error": serializer.errors})
         else:
-            errors.append({"error": serializer.errors})
-
+            errors.append({"error": "Global analysis failed"})
     return errors, created_data
 
 
@@ -251,19 +356,22 @@ def transform_csv_to_json(data):
 @api_view(["POST"])
 def create_farm_data(request):
     data_format = request.data.get('format')
-    raw_data = request.data.get(
-        'data') if data_format == 'geojson' else transform_csv_to_json(request.data.get('data'))
+    raw_data = request.data.get('data')
 
     if not data_format or not raw_data:
         return Response({'error': 'Format and data are required'}, status=status.HTTP_400_BAD_REQUEST)
-
-    if data_format == 'geojson' or data_format == 'csv':
+    elif data_format == 'geojson':
         errors = validate_geojson(raw_data)
+    elif data_format == 'csv':
+        errors = validate_csv(raw_data)
     else:
         return Response({'error': 'Unsupported format'}, status=status.HTTP_400_BAD_REQUEST)
 
     if errors:
         return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
+
+    raw_data = request.data.get(
+        'data') if data_format == 'geojson' else transform_csv_to_json(raw_data)
 
     serializer = EUDRFarmModelSerializer(data=request.data)
 
@@ -471,12 +579,12 @@ def download_template(request):
 
     if format == "csv":
         response = HttpResponse(content_type="text/csv")
-        filename = f"eudr-upload-template-{timestamp_str}.csv"
+        filename = f"terratrac-upload-template-{timestamp_str}.csv"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
-        df.to_csv(response, index=True)
+        df.to_csv(response, index=False)
     elif format == "geojson":
         response = HttpResponse(content_type="application/json")
-        filename = f"eudr-upload-template-{timestamp_str}.geojson"
+        filename = f"terratrac-upload-template-{timestamp_str}.geojson"
         response["Content-Disposition"] = f'attachment; filename="{filename}"'
         response.write(json.dumps(geojson_data))
     else:

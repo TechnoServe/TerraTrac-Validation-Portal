@@ -671,8 +671,10 @@
             if (!response.ok) {
               if (response.status === 400) {
                 return response.json().then((errorData) => {
+                  console.log(errorData);
                   Toastify({
-                    text: JSON.stringify(errorData?.errors) || errorData.error,
+                    text:
+                      JSON.stringify(errorData?.errors) || errorData[0].error,
                     duration: 3000,
                     close: true,
                     gravity: "top",
