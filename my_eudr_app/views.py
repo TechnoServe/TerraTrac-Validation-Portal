@@ -110,7 +110,7 @@ def map_view(request):
         if len(farms) > 0:
             for farm in farms:
                 # Assuming farm data has 'farmer_name', 'latitude', 'longitude', 'farm_size', and 'polygon' fields
-                if 'polygon' in farm:
+                if 'polygon' in farm and len(farm['polygon']) == 1:
                     polygon = farm['polygon']
                     if polygon:
                         if farm['analysis']['is_in_protected_areas'] != '-':
@@ -189,5 +189,7 @@ def map_view(request):
 
 
 def reverse_polygon_points(polygon):
+    print(polygon[0])
     reversed_polygon = [[lon, lat] for lat, lon in polygon[0]]
+    print(reversed_polygon)
     return reversed_polygon

@@ -213,7 +213,7 @@
         </div>
       </div>
     </aside>
-    <main class="main-content position-relative border-radius-lg vh-100">
+    <main class="main-content position-relative border-radius-lg min-vh-100">
       <!-- Navbar -->
       <nav
         class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl"
@@ -962,6 +962,7 @@
         const whispDataModal = new bootstrap.Modal(
           document.getElementById("whispAnalysisModal"),
           {
+            backdrop: "static",
             keyboard: false,
           }
         );
