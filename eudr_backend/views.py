@@ -1,8 +1,5 @@
 import ast
-import csv
-import io
 import json
-import ee
 from django.http import HttpResponse
 from django.utils import timezone
 import httpx
@@ -10,11 +7,9 @@ import pandas as pd
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from shapely.geometry import Polygon, Point
 from asgiref.sync import async_to_sync, sync_to_async
 
 from eudr_backend.models import EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
-from eudr_backend.settings import initialize_earth_engine
 from .serializers import (
     EUDRFarmModelSerializer,
     EUDRUploadedFilesModelSerializer,
@@ -244,12 +239,30 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
                     response_data = None
                     url = "https://whisp.openforis.org/api/geojson"
                     headers = {"Content-Type": "application/json"}
-                    body = data
-                    async with httpx.AsyncClient(timeout=600.0) as client:
-                        response = await client.post(url, headers=headers, json=body)
-                        response_data = response.json()
+                    chunk_size = 1000
+                    analysis_results = []
+                    features = data.get('features', [])
 
-                    data["analysis"] = response_data
+                    if not features:
+                        return {"error": "No features found in the data."}
+                    async with httpx.AsyncClient(timeout=1200.0) as client:
+                        for i in range(0, len(features), chunk_size):
+                            chunk = features[i:i + chunk_size]
+                            chunked_data = {
+                                # Preserve the GeoJSON structure
+                                "type": data.get("type", "FeatureCollection"),
+                                "features": chunk
+                            }
+                            response = await client.post(url, headers=headers, json=chunked_data)
+                            response_data = response.json()
+                            if (response.status_code != 200):
+                                errors.append(
+                                    {"error": "We encountered an issue on validating against global database,\n please try again later."})
+                                return errors, created_data
+                            analysis_results.extend(response_data['data'])
+                            status_code = response.status_code
+
+                    data["analysis"] = analysis_results
 
                 # add the analysis result to the serializer data
                 serializer.validated_data["analysis"] = data["analysis"]
@@ -263,46 +276,65 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
         status_code = None
         url = "https://whisp.openforis.org/api/geojson"
         headers = {"Content-Type": "application/json"}
-        body = data
-        async with httpx.AsyncClient(timeout=600.0) as client:
-            response = await client.post(url, headers=headers, json=body)
-            response_data = response.json()
-            status_code = response.status_code
+        chunk_size = 1000
+        analysis_results = []
+        features = data.get('features', [])
+
+        if not features:
+            return {"error": "No features found in the data."}
+        async with httpx.AsyncClient(timeout=1200.0) as client:
+            for i in range(0, len(features), chunk_size):
+                chunk = features[i:i + chunk_size]
+                chunked_data = {
+                    # Preserve the GeoJSON structure
+                    "type": data.get("type", "FeatureCollection"),
+                    "features": chunk
+                }
+                response = await client.post(url, headers=headers, json=chunked_data)
+                response_data = response.json()
+                if (response.status_code != 200):
+                    errors.append(
+                        {"error": "We encountered an issue on validating against global database,\n please try again later."})
+                    return errors, created_data
+                analysis_results.extend(response_data['data'])
+                status_code = response.status_code
+            response_data = analysis_results
 
         if status_code == 200:
             data = data['features']
             # Save the serializer data with the external analysis result
-            for i, item in enumerate(response_data['data']):
+            for i, item in enumerate(response_data):
                 # check if geometry type is Polygon
-                is_polygon = item['geometry']['type'] == 'Polygon' if 'geometry' in item else False
+                is_polygon = item.get('geometry', None), [
+                    'type'] == 'Polygon' if 'geometry' in item else False
                 serializer = EUDRFarmModelSerializer(
                     data=(
                         {
                             "farmer_name": data[i]["properties"].get("farmer_name", None),
-                            "farm_size": float(data[i]["properties"].get("farm_size", item['Plot_area_ha'])),
+                            "farm_size": float(data[i]["properties"].get("farm_size", item.get('Plot_area_ha', None))),
                             "collection_site": data[i]["properties"].get("collection_site", None),
                             "agent_name": data[i]["properties"].get("agent_name", None),
                             "farm_village": data[i]["properties"].get("farm_village", None),
-                            "farm_district": data[i]["properties"].get("farm_district", item['Admin_Level_1']),
+                            "farm_district": data[i]["properties"].get("farm_district", item.get('Admin_Level_1', None)),
                             "file_id": file_id,
-                            "latitude": data[i]["geometry"]['coordinates'][1] if not is_polygon else item['Centroid_lat'],
-                            "longitude": data[i]["geometry"]['coordinates'][1] if not is_polygon else item['Centroid_lon'],
+                            "latitude": data[i]["geometry"]['coordinates'][1] if not is_polygon else item.get('Centroid_lat', 0.0),
+                            "longitude": data[i]["geometry"]['coordinates'][1] if not is_polygon else item.get('Centroid_lon', 0.0),
                             "polygon": data[i]["geometry"].get("coordinates", None),
                             "geoid": item.get("geoid", None),
                             "analysis":
                                 {
-                                    "is_in_protected_areas": item['WDPA'],
-                                    "is_in_water_body": item['In_waterbody'],
-                                    "forest_change_loss_after_2020": item['GFC_loss_after_2020'],
-                                    "fire_after_2020": item['MODIS_fire_after_2020'],
-                                    "radd_after_2020": item['RADD_after_2020'],
-                                    "tmf_deforestation_after_2020": item['TMF_def_after_2020'],
-                                    "tmf_degradation_after_2020": item['TMF_deg_after_2020'],
-                                    "tmf_disturbed": item['TMF_disturbed'],
-                                    "tree_cover_loss": item['Indicator_1_treecover'],
-                                    "commodities": item['Indicator_2_commodities'],
-                                    "disturbance_after_2020": item['Indicator_4_disturbance_after_2020'],
-                                    "eudr_risk_level": item['EUDR_risk']
+                                    "is_in_protected_areas": item.get('WDPA', None),
+                                    "is_in_water_body": item.get('In_waterbody', None),
+                                    "forest_change_loss_after_2020": item.get('GFC_loss_after_2020', None),
+                                    "fire_after_2020": item.get('MODIS_fire_after_2020', None),
+                                    "radd_after_2020": item.get('RADD_after_2020', None),
+                                    "tmf_deforestation_after_2020": item.get('TMF_def_after_2020', None),
+                                    "tmf_degradation_after_2020": item.get('TMF_deg_after_2020', None),
+                                    "tmf_disturbed": item.get('TMF_disturbed', None),
+                                    "tree_cover_loss": item.get('Indicator_1_treecover', None),
+                                    "commodities": item.get('Indicator_2_commodities', None),
+                                    "disturbance_after_2020": item.get('Indicator_4_disturbance_after_2020', None),
+                                    "eudr_risk_level": item.get('EUDR_risk', None)
                             }
                         }
                     )
@@ -313,11 +345,48 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
                 else:
                     errors.append({"error": serializer.errors})
         else:
-            errors.append({"error": "Global analysis failed"})
+            errors.append(
+                {"error": "We encountered an issue on validating against global database,\n please try again later."})
     return errors, created_data
 
 
 def transform_csv_to_json(data):
+    features = []
+    for record in data:
+        # check if latitude, longitude, and polygon fields are not found in the record, skip the record
+        if 'latitude' not in record or 'longitude' not in record:
+            continue
+        # check if polygon field is empty array or empty string
+        if record.get('polygon') in ['[]', '']:
+            feature = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [float(record['longitude']), float(record['latitude'])]
+                },
+                "properties": {k: v for k, v in record.items() if k not in ['latitude', 'longitude', 'polygon']}
+            }
+            features.append(feature)
+        else:
+            feature = {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [ast.literal_eval(record.get('polygon', '[]'))]
+                },
+                "properties": {k: v for k, v in record.items() if k not in ['latitude', 'longitude', 'polygon']}
+            }
+            features.append(feature)
+
+    geojson = {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
+    return geojson
+
+
+def transform_db_data_to_geojson(data):
     features = []
     for record in data:
         # check if latitude, longitude, and polygon fields are not found in the record, skip the record
@@ -468,6 +537,38 @@ def sync_farm_data(request):
                 # delete the file if there are errors
                 EUDRUploadedFilesModel.objects.get(id=file_id).delete()
                 return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(created_data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+def revalidate_farm_data(request):
+    # get all the data belonging to authenticated user and send it to the external API for revalidation
+    files = EUDRUploadedFilesModel.objects.filter(
+        uploaded_by=request.user.username if request.user.is_authenticated else "admin"
+    )
+    filesSerializer = EUDRUploadedFilesModelSerializer(files, many=True)
+
+    # get all the data belonging to the file_ids
+    data = EUDRFarmModel.objects.filter(
+        file_id__in=[file["id"] for file in filesSerializer.data]
+    ).order_by("-updated_at")
+    serializer = EUDRFarmModelSerializer(data, many=True)
+
+    # format the data to geojson format and send to whisp API for processing
+    raw_data = transform_db_data_to_geojson(serializer.data)
+
+    # categorize the data with same file_id and send to the external API for revalidation, store result until all file_ids are processed
+    serializer = EUDRFarmModelSerializer(data=request.data)
+
+    # combine file_name and format to save in the database with dummy uploaded_by. then retrieve the file_id
+
+    errors, created_data = async_to_sync(async_create_farm_data)(
+        raw_data, serializer, 1)
+    if errors:
+        # delete the file if there are errors
+        EUDRUploadedFilesModel.objects.get(id=1).delete()
+        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
     return Response(created_data, status=status.HTTP_201_CREATED)
 

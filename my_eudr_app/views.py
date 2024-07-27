@@ -112,10 +112,17 @@ def map_view(request):
                 # Assuming farm data has 'farmer_name', 'latitude', 'longitude', 'farm_size', and 'polygon' fields
                 if 'polygon' in farm and len(farm['polygon']) == 1:
                     polygon = farm['polygon']
+
+                    farm_feature = ee.Feature(
+                        ee.Geometry.Polygon(polygon))
+                    # Check if the farm intersects with deforestation areas
+                    intersecting_deforestation = deforestation.reduceRegions(collection=ee.FeatureCollection(
+                        [farm_feature]), reducer=ee.Reducer.anyNonZero(), scale=30).first().get('any').getInfo()
+
                     if polygon:
                         if farm['analysis']['is_in_protected_areas'] != '-':
                             color = 'gray'
-                        elif farm['analysis']['tree_cover_loss'] == 'yes':
+                        elif intersecting_deforestation:
                             color = 'red'
                         else:
                             color = 'green'

@@ -6,5 +6,3 @@ class EudrBackendConfig(AppConfig):
 
     def ready(self):
         import eudr_backend.signals
-
-        print("App is ready, signals are imported")

@@ -19,9 +19,8 @@ def get_access_token():
     return data['access_token']
 
 
-@background(schedule=300)  # Schedule task to run every 5 minutes
+@background(schedule=60)  # Schedule task to run every 5 minutes
 def update_geoid():
-    print("The update_geoid task is running.")
     access_token = get_access_token()
     headers = {
         'Authorization': f'Bearer {access_token}',

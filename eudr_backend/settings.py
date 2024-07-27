@@ -66,7 +66,7 @@ INSTALLED_APPS = [
     "my_eudr_app",
     "eudr_backend",
     "corsheaders",
-    "background_task"
+    "background_task",
 ]
 
 MIDDLEWARE = [
@@ -92,6 +92,8 @@ LOGIN_URL = 'login'
 
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'login'
+
+ASGI_APPLICATION = 'eudr_backend.asgi.application'
 
 
 def initialize_earth_engine():
@@ -126,6 +128,9 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        "OPTIONS": {
+            "timeout": 20,
+        },
     }
 }
 

@@ -534,10 +534,15 @@
 
     <script type="text/javascript">
       function googleTranslateElementInit() {
+        const lang = localStorage.getItem("terraTracLang") || "en";
         new google.translate.TranslateElement(
-          { pageLanguage: "en" },
+          {
+            pageLanguage: "en",
+          },
           "google_translate_element"
         );
+
+        changeLanguage(lang);
       }
 
       // Function to change the language
@@ -546,6 +551,9 @@
         if (translateSelect) {
           translateSelect.value = lang;
           translateSelect.dispatchEvent(new Event("change"));
+
+          // save the selected language in the local storage
+          localStorage.setItem("terraTracLang", lang);
         }
       }
 
@@ -652,9 +660,20 @@
 
       function sendDataToAPI(data, file_name, format) {
         const csrftoken = getCookie("csrftoken");
-        document.querySelector("#saveBtn").innerHTML = "Processing...";
-        document.querySelector("#saveBtn").setAttribute("disabled", true);
-        document.querySelector("#closeBtn").setAttribute("disabled", true);
+        const progressContainer = document.querySelector(".progress");
+        const progressBar = document.querySelector(".progress-bar");
+        const fileInputContainer = document.querySelector("#uploadFile");
+        const downloadDropdown = document.querySelector("#templateFormat");
+        const saveBtn = document.querySelector("#saveBtn");
+        const closeBtn = document.querySelector("#closeBtn");
+
+        progressContainer.style.visibility = "visible";
+
+        saveBtn.setAttribute("disabled", true);
+        closeBtn.setAttribute("disabled", true);
+        downloadDropdown.setAttribute("disabled", true);
+        fileInputContainer.setAttribute("disabled", true);
+
         fetch("/api/farm/add/", {
           method: "POST",
           headers: {
@@ -671,7 +690,6 @@
             if (!response.ok) {
               if (response.status === 400) {
                 return response.json().then((errorData) => {
-                  console.log(errorData);
                   Toastify({
                     text:
                       JSON.stringify(errorData?.errors) || errorData[0].error,
@@ -703,9 +721,11 @@
               }, 2000);
             }
 
-            document.querySelector("#saveBtn").innerHTML = "Save";
-            document.querySelector("#saveBtn").removeAttribute("disabled");
-            document.querySelector("#closeBtn").removeAttribute("disabled");
+            saveBtn.removeAttribute("disabled");
+            closeBtn.removeAttribute("disabled");
+            fileInputContainer.removeAttribute("disabled");
+            downloadDropdown.removeAttribute("disabled");
+            progressContainer.style.visibility = "hidden";
           })
           .catch((error) => {
             Toastify({
@@ -716,9 +736,12 @@
               position: "right",
               backgroundColor: "red",
             }).showToast();
-            document.querySelector("#saveBtn").innerHTML = "Save";
-            document.querySelector("#saveBtn").removeAttribute("disabled");
-            document.querySelector("#closeBtn").removeAttribute("disabled");
+
+            saveBtn.removeAttribute("disabled");
+            closeBtn.removeAttribute("disabled");
+            fileInputContainer.removeAttribute("disabled");
+            downloadDropdown.removeAttribute("disabled");
+            progressContainer.style.visibility = "hidden";
           });
       }
     </script>
@@ -780,6 +803,8 @@
       const farmsListTitle = document.getElementById("farms_list_title");
       const farmsContainer = document.getElementById("farmsBodyContainer");
       const fileId = new URLSearchParams(window.location.search).get("file-id");
+      const collectionSiteDropdown =
+        document.querySelector("#csFilterDropdown");
       let farmData = [];
 
       const colorClasses = {
@@ -828,12 +853,34 @@
 
             if (document.querySelector("#total_farms")) {
               document.querySelector("#total_farms").innerText = data.length;
+              // check where eudr_risk_level is high and calculate the percentage
+              const highRiskFarms = data.filter(
+                (farm) => farm.analysis.eudr_risk_level === "high"
+              );
+              document.querySelector("#farms_rate").innerText = `${(
+                (highRiskFarms.length / data.length) *
+                100
+              ).toFixed(2)}%`;
             }
             if (farmsContainer) {
               if (data.length > 0) {
-                document
-                  .querySelector("#export-btn")
-                  .removeAttribute("disabled");
+                // document
+                //   .querySelector("#export-btn")
+                //   .removeAttribute("disabled");
+                // document
+                //   .querySelector("#revalidate-all")
+                //   .removeAttribute("disabled");
+
+                // get unique collection sites and populate the dropdown
+                const collectionSites = [
+                  ...new Set(data.map((farm) => farm.collection_site)),
+                ];
+                collectionSites.forEach((site) => {
+                  const option = document.createElement("option");
+                  option.value = site;
+                  option.innerText = site;
+                  collectionSiteDropdown.appendChild(option);
+                });
               }
 
               // remove loading spinner
@@ -863,6 +910,11 @@
                     <p class="text-xs font-weight-bold mb-0">${
                       data[i].farm_size
                     } Hectares</p>
+                  </td>
+                  <td>
+                    <p class="text-xs font-weight-bold mb-0">${
+                      data[i].collection_site
+                    }</p>
                   </td>
                   <td>
                     <p class="text-xs font-weight-bold mb-0">${
@@ -954,7 +1006,7 @@
                     : value === "low"
                     ? "bg-gradient bg-danger rounded-1 px-2 text-white"
                     : value
-                }">${value}</p>
+                }">${!isNaN(value) && value > 0 ? `${value} ha` : value}</p>
         `;
           container.appendChild(card);
         });
@@ -970,50 +1022,222 @@
         whispDataModal.show();
       }
 
-      document.querySelector("#export-btn").addEventListener("click", () => {
-        // Map the farm data to the desired structure
-        const data = farmData.map((farm) => {
-          return {
-            "Geo ID": farm.geoid,
-            "Farm Size": farm.farm_size,
-            Village: farm.farm_village,
-            District: farm.farm_district,
-            // spread the analysis data and remove underscore from the keys and capitalize the first letter
-            ...Object.keys(farm.analysis).reduce((acc, key) => {
-              acc[
-                key
-                  .replace(/_/g, " ")
-                  .replace(/\b\w/g, (char) => char.toUpperCase())
-              ] = farm.analysis[key];
-              return acc;
-            }, {}),
-          };
+      // filter farms by collection site, if all sites are selected, show all farms, otherwise, show farms for the selected site
+      collectionSiteDropdown.addEventListener("change", (e) => {
+        $("#farms").DataTable().destroy();
+        const selectedSite = e.target.value;
+        const filteredFarms =
+          selectedSite === ""
+            ? farmData
+            : farmData.filter((farm) => farm.collection_site === selectedSite);
+
+        farmsContainer.innerHTML = "";
+
+        let i = 0;
+        while (i < filteredFarms.length) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>
+              <p class="text-xs text-center font-weight-bold mb-0">${i + 1}.</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${
+                filteredFarms[i].geoid
+              }</p>
+            </td>
+            <td>
+              <div class="d-flex px-2 py-1">
+                <div class="d-flex flex-column justify-content-center">
+                  <h6 class="mb-0 text-sm">${filteredFarms[i].farmer_name}</h6>
+                </div>
+              </div>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${
+                filteredFarms[i].farm_size
+              } Hectares</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${
+                filteredFarms[i].collection_site
+              }</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${
+                filteredFarms[i].farm_village
+              }</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${
+                filteredFarms[i].farm_district
+              }</p>
+            </td>
+            <td class="align-middle text-center text-sm">
+              <i class="bi bi-eye mt-5 text-primary text-lg" data-toggle="modal" data-target="#whispDataModal"
+                id="viewAnalysisBtn" role="button" onclick="viewAnalysis(${
+                  filteredFarms[i].id
+                })" title="View Analysis"></i>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${new Date(
+                filteredFarms[i].updated_at
+              ).toDateString()}</p>
+            </td>
+            <td class="align-middle text-center">
+              <a href="{% url 'map' %}?farm-id=${
+                filteredFarms[i].id
+              }" class="text-primary font-weight-bold text-lg" title="View on Map"><i class="bi bi-cursor"></i></a>
+            </td>
+        `;
+          farmsContainer.appendChild(tr);
+          i++;
+        }
+
+        $("#farms").DataTable({
+          // add loading spinner while table is being loaded
+          processing: true,
+          //disable sorting on last column
+          columnDefs: [{ orderable: false, targets: 5 }],
+          language: {
+            //customize pagination prev and next buttons: use arrows instead of words
+            paginate: {
+              previous: '<span class="fa fa-chevron-left"></span>',
+              next: '<span class="fa fa-chevron-right"></span>',
+            },
+            //customize number of elements to be displayed
+            lengthMenu:
+              'Display <select class="form-control input-sm">' +
+              '<option value="10">10</option>' +
+              '<option value="20">20</option>' +
+              '<option value="30">30</option>' +
+              '<option value="40">40</option>' +
+              '<option value="50">50</option>' +
+              '<option value="-1">All</option>' +
+              "</select> results",
+          },
         });
-
-        // Convert the mapped data to CSV format
-        const csvData = Papa.unparse(data);
-
-        // Split the CSV data into an array of rows
-        const csvRows = csvData.split("\n");
-
-        // Join the rows back into a single CSV string
-        const finalCsv = csvRows.join("\n");
-
-        // Create a blob from the CSV string
-        const blob = new Blob([finalCsv], { type: "text/csv" });
-        const url = window.URL.createObjectURL(blob);
-
-        // Create a temporary link to download the CSV file
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `validated_farms_${new Date().toISOString()}.csv`;
-        document.body.appendChild(a);
-        a.click();
-
-        // Clean up the URL object and remove the link
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
       });
+
+      // document.querySelector("#export-btn").addEventListener("click", () => {
+      //   // Map the farm data to the desired structure
+      //   const data = farmData.map((farm) => {
+      //     return {
+      //       "Geo ID": farm.geoid,
+      //       "Farm Size": farm.farm_size,
+      //       Village: farm.farm_village,
+      //       District: farm.farm_district,
+      //       // spread the analysis data and remove underscore from the keys and capitalize the first letter
+      //       ...Object.keys(farm.analysis).reduce((acc, key) => {
+      //         acc[
+      //           key
+      //             .replace(/_/g, " ")
+      //             .replace(/\b\w/g, (char) => char.toUpperCase())
+      //         ] = farm.analysis[key];
+      //         return acc;
+      //       }, {}),
+      //     };
+      //   });
+
+      //   // Convert the mapped data to CSV format
+      //   const csvData = Papa.unparse(data);
+
+      //   // Split the CSV data into an array of rows
+      //   const csvRows = csvData.split("\n");
+
+      //   // Join the rows back into a single CSV string
+      //   const finalCsv = csvRows.join("\n");
+
+      //   // Create a blob from the CSV string
+      //   const blob = new Blob([finalCsv], { type: "text/csv" });
+      //   const url = window.URL.createObjectURL(blob);
+
+      //   // Create a temporary link to download the CSV file
+      //   const a = document.createElement("a");
+      //   a.href = url;
+      //   a.download = `validated_farms_${new Date().toISOString()}.csv`;
+      //   document.body.appendChild(a);
+      //   a.click();
+
+      //   // Clean up the URL object and remove the link
+      //   window.URL.revokeObjectURL(url);
+      //   document.body.removeChild(a);
+      // });
+
+      // re-validate all farms
+      document
+        .querySelector("#revalidate-all")
+        .addEventListener("click", () => {
+          const csrftoken = getCookie("csrftoken");
+          const progressOverlay = document.querySelector(".progress-overlay");
+          const revalidateProgress = document.querySelector(
+            ".revalidate-progress"
+          );
+          const revalidateBtn = document.querySelector("#revalidate-all");
+          // const exportBtn = document.querySelector("#export-btn");
+
+          progressOverlay.style.visibility = "visible";
+          revalidateProgress.style.visibility = "visible";
+
+          revalidateBtn.setAttribute("disabled", true);
+          // exportBtn.setAttribute("disabled", true);
+
+          fetch("/api/farm/revalidate/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrftoken,
+            },
+            body: JSON.stringify({
+              file_id: fileId,
+            }),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Network response was not ok.");
+                progressOverlay.style.visibility = "hidden";
+                revalidateProgress.style.visibility = "hidden";
+              }
+              progressOverlay.style.visibility = "hidden";
+              revalidateProgress.style.visibility = "hidden";
+              return response.json();
+            })
+            .then((data) => {
+              if (data) {
+                Toastify({
+                  text: "Farms revalidated successfully!!!",
+                  duration: 3000,
+                  close: true,
+                  gravity: "top",
+                  position: "right",
+                  backgroundColor: "green",
+                }).showToast();
+
+                setTimeout(function () {
+                  window.location.reload();
+                }, 2000);
+              }
+
+              revalidateBtn.removeAttribute("disabled");
+              // exportBtn.removeAttribute("disabled");
+              progressContainer.style.visibility = "hidden";
+              revalidateProgress.style.visibility = "hidden";
+            })
+            .catch((error) => {
+              Toastify({
+                text: "Error while revalidating farms. please try again",
+                duration: 3000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                backgroundColor: "red",
+              }).showToast();
+
+              revalidateBtn.removeAttribute("disabled");
+              // exportBtn.removeAttribute("disabled");
+              progressOverlay.style.visibility = "hidden";
+              revalidateProgress.style.visibility = "hidden";
+            });
+        });
     </script>
     <script>
       const filesContainer = document.getElementById("filesContainer");
