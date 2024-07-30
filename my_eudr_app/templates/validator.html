@@ -63,30 +63,43 @@ Validator
             </button>
             <div class="dropdown d-inline-block">
               <button
-                class="btn btn-primary btn-sm"
+                class="btn btn-primary btn-sm text-white"
                 type="button"
                 id="exportFormatButton"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
+                disabled
               >
                 <i class="fas fa-download me-2"></i>
                 Export Data
               </button>
               <ul class="dropdown-menu" aria-labelledby="exportFormatButton">
                 <li>
-                  <a class="dropdown-item text-primary" href="#">
-                    <i class="fas fa-file-csv me-2"></i> Export as CSV
+                  <a
+                    class="dropdown-item text-primary"
+                    href="#"
+                    onclick="handleExport('xls')"
+                  >
+                    <i class="fas fa-file-excel me-2"></i> Export as Excel
                   </a>
                   <hr class="dropdown-divider bg-dark mx-3" />
                 </li>
                 <li>
-                  <a class="dropdown-item text-primary" href="#">
+                  <a
+                    class="dropdown-item text-primary"
+                    href="#"
+                    onclick="handleExport('geojson')"
+                  >
                     <i class="fas fa-globe me-2"></i> Export as GeoJSON
                   </a>
                   <hr class="dropdown-divider bg-dark mx-3" />
                 </li>
                 <li>
-                  <a class="dropdown-item text-primary" href="#">
+                  <a
+                    class="dropdown-item text-primary"
+                    href="#"
+                    onclick="handleExport('pdf')"
+                  >
                     <i class="fas fa-file-pdf me-2"></i> Export as PDF
                   </a>
                 </li>
@@ -117,19 +130,19 @@ Validator
                     No.
                   </th>
                   <th
-                    class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
+                    class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 w-10"
                   >
                     Geo ID
                   </th>
                   <th
-                    class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
+                    class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 w-10"
                   >
                     Farmer Name
                   </th>
                   <th
                     class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"
                   >
-                    Farm Size
+                    Farm Size (Ha)
                   </th>
                   <th
                     class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"
@@ -154,7 +167,7 @@ Validator
                   <th
                     class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
                   >
-                    Updated At
+                    Uploaded On
                   </th>
                   <th
                     class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"

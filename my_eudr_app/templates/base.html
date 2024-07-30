@@ -524,6 +524,24 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     ></script>
+    <script
+      type="text/javascript"
+      src="https://oss.sheetjs.com/sheetjs/xlsx.full.min.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js"
+    ></script>
+    <script
+      type="text/javascript"
+      src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.6/jspdf.plugin.autotable.min.js"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"
+      integrity="sha512-dlPw+ytv/6JyepmelABrgeYgHI0O+frEwgfnPdXDTOIZz+eDgfW07QXG02/O8COfivBdGNINy+Vex+lYmJ5rxw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
     <!-- Control Center for Soft Dashboard: parallax effects, scripts for the example pages etc -->
     <script src="{% static 'assets/js/argon-dashboard.js' %}"></script>
     <!-- google translator API cdn -->
@@ -568,7 +586,9 @@
             id = e.target.parentElement.parentElement.id;
           }
 
-          changeLanguage(id);
+          if (id !== "") {
+            changeLanguage(id);
+          }
         });
       });
     </script>
@@ -806,6 +826,7 @@
       const collectionSiteDropdown =
         document.querySelector("#csFilterDropdown");
       let farmData = [];
+      let filteredFarms = [];
 
       const colorClasses = {
         low: "low",
@@ -847,9 +868,8 @@
             return resp.json();
           })
           .then((data) => {
-            let i = 0;
-
             farmData = data;
+            filteredFarms = data;
 
             if (document.querySelector("#total_farms")) {
               document.querySelector("#total_farms").innerText = data.length;
@@ -857,16 +877,17 @@
               const highRiskFarms = data.filter(
                 (farm) => farm.analysis.eudr_risk_level === "high"
               );
-              document.querySelector("#farms_rate").innerText = `${(
-                (highRiskFarms.length / data.length) *
-                100
-              ).toFixed(2)}%`;
+              document.querySelector("#farms_rate").innerText = `${
+                Number(
+                  ((highRiskFarms.length / data.length) * 100).toFixed(2)
+                ) || "-"
+              }%`;
             }
             if (farmsContainer) {
               if (data.length > 0) {
-                // document
-                //   .querySelector("#export-btn")
-                //   .removeAttribute("disabled");
+                document
+                  .querySelector("#exportFormatButton")
+                  .removeAttribute("disabled");
                 // document
                 //   .querySelector("#revalidate-all")
                 //   .removeAttribute("disabled");
@@ -886,93 +907,7 @@
               // remove loading spinner
               farmsContainer.innerHTML = "";
 
-              while (i < data.length) {
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                  <td>
-                    <p class="text-xs text-center font-weight-bold mb-0">${
-                      i + 1
-                    }.</p>
-                  </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">${
-                      data[i].geoid || "N/A"
-                    }</p>
-                  </td>
-                  <td>
-                    <div class="d-flex px-2 py-1">
-                      <div class="d-flex flex-column justify-content-center">
-                        <h6 class="mb-0 text-sm">${data[i].farmer_name}</h6>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">${
-                      data[i].farm_size
-                    } Hectares</p>
-                  </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">${
-                      data[i].collection_site
-                    }</p>
-                  </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">${
-                      data[i].farm_village
-                    }</p>
-                  </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">${
-                      data[i].farm_district
-                    }</p>
-                  </td>
-                  <td class="align-middle text-center text-sm">
-                    <i class="bi bi-eye mt-5 text-primary text-lg" data-toggle="modal" data-target="#whispDataModal"
-                      id="viewAnalysisBtn" role="button" onclick="viewAnalysis(${
-                        data[i].id
-                      })" title="View Analysis"></i>
-                  </td>
-                  <td>
-                    <p class="text-xs font-weight-bold mb-0">${new Date(
-                      data[i].updated_at
-                    ).toDateString()}</p>
-                  </td>
-                  <td class="align-middle text-center">
-                    <a
-                      href="{% url 'map' %}?farm-id=${data[i].id}"
-                      class="text-primary font-weight-bold text-lg"
-                      title="View on Map"
-                      ><i class="bi bi-cursor"></i></a
-                    >
-                  </td>
-              `;
-                farmsContainer.appendChild(tr);
-                i++;
-              }
-
-              $("#farms").DataTable({
-                // add loading spinner while table is being loaded
-                processing: true,
-                //disable sorting on last column
-                columnDefs: [{ orderable: false, targets: 5 }],
-                language: {
-                  //customize pagination prev and next buttons: use arrows instead of words
-                  paginate: {
-                    previous: '<span class="fa fa-chevron-left"></span>',
-                    next: '<span class="fa fa-chevron-right"></span>',
-                  },
-                  //customize number of elements to be displayed
-                  lengthMenu:
-                    'Display <select class="form-control input-sm">' +
-                    '<option value="10">10</option>' +
-                    '<option value="20">20</option>' +
-                    '<option value="30">30</option>' +
-                    '<option value="40">40</option>' +
-                    '<option value="50">50</option>' +
-                    '<option value="-1">All</option>' +
-                    "</select> results",
-                },
-              });
+              generateData(data, farmsContainer);
             }
           })
           .catch((error) => {
@@ -1026,142 +961,230 @@
       collectionSiteDropdown.addEventListener("change", (e) => {
         $("#farms").DataTable().destroy();
         const selectedSite = e.target.value;
-        const filteredFarms =
+        filteredFarms =
           selectedSite === ""
             ? farmData
             : farmData.filter((farm) => farm.collection_site === selectedSite);
 
         farmsContainer.innerHTML = "";
 
-        let i = 0;
-        while (i < filteredFarms.length) {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>
-              <p class="text-xs text-center font-weight-bold mb-0">${i + 1}.</p>
-            </td>
-            <td>
-              <p class="text-xs font-weight-bold mb-0">${
-                filteredFarms[i].geoid
-              }</p>
-            </td>
-            <td>
-              <div class="d-flex px-2 py-1">
-                <div class="d-flex flex-column justify-content-center">
-                  <h6 class="mb-0 text-sm">${filteredFarms[i].farmer_name}</h6>
-                </div>
-              </div>
-            </td>
-            <td>
-              <p class="text-xs font-weight-bold mb-0">${
-                filteredFarms[i].farm_size
-              } Hectares</p>
-            </td>
-            <td>
-              <p class="text-xs font-weight-bold mb-0">${
-                filteredFarms[i].collection_site
-              }</p>
-            </td>
-            <td>
-              <p class="text-xs font-weight-bold mb-0">${
-                filteredFarms[i].farm_village
-              }</p>
-            </td>
-            <td>
-              <p class="text-xs font-weight-bold mb-0">${
-                filteredFarms[i].farm_district
-              }</p>
-            </td>
-            <td class="align-middle text-center text-sm">
-              <i class="bi bi-eye mt-5 text-primary text-lg" data-toggle="modal" data-target="#whispDataModal"
-                id="viewAnalysisBtn" role="button" onclick="viewAnalysis(${
-                  filteredFarms[i].id
-                })" title="View Analysis"></i>
-            </td>
-            <td>
-              <p class="text-xs font-weight-bold mb-0">${new Date(
-                filteredFarms[i].updated_at
-              ).toDateString()}</p>
-            </td>
-            <td class="align-middle text-center">
-              <a href="{% url 'map' %}?farm-id=${
-                filteredFarms[i].id
-              }" class="text-primary font-weight-bold text-lg" title="View on Map"><i class="bi bi-cursor"></i></a>
-            </td>
-        `;
-          farmsContainer.appendChild(tr);
-          i++;
-        }
-
-        $("#farms").DataTable({
-          // add loading spinner while table is being loaded
-          processing: true,
-          //disable sorting on last column
-          columnDefs: [{ orderable: false, targets: 5 }],
-          language: {
-            //customize pagination prev and next buttons: use arrows instead of words
-            paginate: {
-              previous: '<span class="fa fa-chevron-left"></span>',
-              next: '<span class="fa fa-chevron-right"></span>',
-            },
-            //customize number of elements to be displayed
-            lengthMenu:
-              'Display <select class="form-control input-sm">' +
-              '<option value="10">10</option>' +
-              '<option value="20">20</option>' +
-              '<option value="30">30</option>' +
-              '<option value="40">40</option>' +
-              '<option value="50">50</option>' +
-              '<option value="-1">All</option>' +
-              "</select> results",
-          },
-        });
+        generateData(filteredFarms, farmsContainer);
       });
 
-      // document.querySelector("#export-btn").addEventListener("click", () => {
-      //   // Map the farm data to the desired structure
-      //   const data = farmData.map((farm) => {
-      //     return {
-      //       "Geo ID": farm.geoid,
-      //       "Farm Size": farm.farm_size,
-      //       Village: farm.farm_village,
-      //       District: farm.farm_district,
-      //       // spread the analysis data and remove underscore from the keys and capitalize the first letter
-      //       ...Object.keys(farm.analysis).reduce((acc, key) => {
-      //         acc[
-      //           key
-      //             .replace(/_/g, " ")
-      //             .replace(/\b\w/g, (char) => char.toUpperCase())
-      //         ] = farm.analysis[key];
-      //         return acc;
-      //       }, {}),
-      //     };
-      //   });
+      async function handleExport(format) {
+        const languageCode = localStorage.getItem("terraTracLang") || "en";
+        const columns = await loadJsonFile(languageCode);
+        const file_names = {
+          en: "validated_farms",
+          fr: "fermes_validées",
+          rw: "ubutaka_bwasuzumwe",
+          es: "granjas_validadas",
+          sw: "mashamba_yaliyothibitishwa",
+        };
 
-      //   // Convert the mapped data to CSV format
-      //   const csvData = Papa.unparse(data);
+        switch (format) {
+          case "xls":
+            exportToExcel(columns, file_names[languageCode]);
+            break;
+          case "geojson":
+            exportToGeoJSON(columns, file_names[languageCode]);
+            break;
+          case "pdf":
+            exportToPDF(columns, file_names[languageCode]);
+            break;
+          default:
+            break;
+        }
+      }
 
-      //   // Split the CSV data into an array of rows
-      //   const csvRows = csvData.split("\n");
+      async function exportToExcel(columns, file_name) {
+        const data = filteredFarms.map((farm) => {
+          const farmData = {};
+          Object.keys(columns).forEach((column) => {
+            if (column === "analysis") {
+              Object.keys(columns[column]).forEach((col) => {
+                farmData[columns[column][col]] = farm[column][col];
+              });
+            } else {
+              farmData[columns[column]] = farm[column];
+            }
+          });
+          return farmData;
+        });
 
-      //   // Join the rows back into a single CSV string
-      //   const finalCsv = csvRows.join("\n");
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet("Farms Data");
 
-      //   // Create a blob from the CSV string
-      //   const blob = new Blob([finalCsv], { type: "text/csv" });
-      //   const url = window.URL.createObjectURL(blob);
+        // Add image
+        const logo = await fetch("/static/assets/img/tns-logo-png.png")
+          .then((res) => res.blob())
+          .then((blob) => {
+            return new File([blob], "logo.png", { type: "image/png" });
+          });
+        const imageId = workbook.addImage({
+          buffer: await logo.arrayBuffer(),
+          extension: "png",
+        });
+        worksheet.addImage(imageId, {
+          tl: { col: 2, row: 2 },
+          ext: { width: 50, height: 50 },
+        });
 
-      //   // Create a temporary link to download the CSV file
-      //   const a = document.createElement("a");
-      //   a.href = url;
-      //   a.download = `validated_farms_${new Date().toISOString()}.csv`;
-      //   document.body.appendChild(a);
-      //   a.click();
+        // Add title
+        worksheet.mergeCells("A1:Z6"); // Merge cells for title
+        worksheet.getCell("C7").value = "Terratrac Validation Report";
+        worksheet.getCell("C7").font = {
+          size: 18,
+          bold: true,
+          underline: true,
+        };
+        worksheet.getCell("C7").alignment = {
+          vertical: "middle",
+          horizontal: "center",
+        };
 
-      //   // Clean up the URL object and remove the link
-      //   window.URL.revokeObjectURL(url);
-      //   document.body.removeChild(a);
-      // });
+        // Space between title and table data
+        worksheet.getRow(9).height = 20;
+
+        // Add data starting from the 4th row
+        const headers = Object.keys(data[0]);
+        worksheet.addRow(headers);
+        data.forEach((farmData) => {
+          worksheet.addRow(Object.values(farmData));
+        });
+
+        // Save file
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${file_name}_${new Date().toISOString()}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+
+      function exportToGeoJSON(columns, file_name) {
+        let properties = {};
+        const features = filteredFarms.map((farm) => {
+          properties = {};
+
+          // Iterate over the columns
+          Object.keys(columns).forEach((column) => {
+            // Check if the column is "analysis"
+            if (column === "analysis") {
+              properties[column] = {};
+              // Iterate over the keys in the "analysis" column
+              Object.keys(columns[column]).forEach((col) => {
+                // Assign the values from the farm object to the properties object
+                properties[columns[column][col]] = farm[column][col];
+              });
+            } else {
+              // Directly assign the values for other columns
+              properties[columns[column]] = farm[column];
+            }
+          });
+          return {
+            type: "Feature",
+            properties,
+            geometry: {
+              type: farm.polygon ? "Polygon" : "Point",
+              coordinates: farm.polygon
+                ? farm.polygon
+                : [farm.longitude, farm.latitude],
+            },
+          };
+        });
+
+        const geoJSON = {
+          type: "FeatureCollection",
+          features: features,
+        };
+
+        const blob = new Blob([JSON.stringify(geoJSON)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${file_name}_${new Date().toISOString()}.geojson`;
+        a.click();
+      }
+
+      function exportToPDF(columns, file_name) {
+        const doc = new jsPDF({
+          orientation: "landscape",
+          format: "a4",
+        });
+        const image = new Image();
+        image.src = "/static/assets/img/tns-logo-png.png";
+        doc.addImage(image, "PNG", 140, 10, 20, 20);
+
+        // Add the title
+        const title = "Validated Farms";
+        doc.setFontSize(18); // Set font size
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const textWidth = doc.getTextWidth(title);
+        const x = (pageWidth - textWidth) / 2; // Center the text
+        doc.text(title, x, 40); // Adjust the y position as needed
+
+        doc.autoTable({
+          startY: 50,
+          columns: [
+            ...Object.keys(columns)
+              .map((column) =>
+                column === "analysis"
+                  ? Object.keys(columns[column]).map(
+                      (col) => columns[column][col]
+                    )
+                  : columns[column]
+              )
+              .flat(1),
+          ],
+          body: [
+            ...filteredFarms.map((farm) => {
+              const farmData = [];
+              Object.keys(columns).forEach((column) => {
+                if (column === "analysis") {
+                  Object.keys(columns[column]).forEach((col) => {
+                    farmData.push(farm[column][col]);
+                  });
+                } else {
+                  farmData.push(farm[column]);
+                }
+              });
+              return farmData;
+            }),
+          ],
+          styles: { cellWidth: "wrap", minCellHeight: 10 },
+          margin: { top: 10 },
+          didDrawCell: (data) => {
+            // Adjustments for overflowing cells
+            if (data.cell.height > 10) {
+              data.cell.textPos.y =
+                data.cell.textPos.y - (data.cell.height - 10) / 2;
+            }
+          },
+        });
+        doc.save(`${file_name}_${new Date().toISOString()}.pdf`);
+      }
+
+      async function loadJsonFile(languageCode) {
+        return await fetch("/static/assets/json/exportable_columns.json", {
+          cache: "no-cache",
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => data[languageCode] || data["en"])
+          .catch((error) => error);
+      }
 
       // re-validate all farms
       document
@@ -1238,6 +1261,92 @@
               revalidateProgress.style.visibility = "hidden";
             });
         });
+
+      function generateData(farmData, farmsContainer) {
+        let i = 0;
+        while (i < farmData.length) {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>
+              <p class="text-xs text-center font-weight-bold mb-0">${i + 1}.</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${
+                farmData[i].geoid || "N/A"
+              }</p>
+            </td>
+            <td>
+              <div class="d-flex px-2 py-1">
+                <div class="d-flex flex-column justify-content-center">
+                  <h6 class="mb-0 text-sm">${farmData[i].farmer_name}</h6>
+                </div>
+              </div>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${
+                farmData[i].farm_size
+              }</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${
+                farmData[i].collection_site
+              }</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${
+                farmData[i].farm_village
+              }</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${
+                farmData[i].farm_district
+              }</p>
+            </td>
+            <td class="align-middle text-center text-sm">
+              <i class="bi bi-eye mt-5 text-primary text-lg" data-toggle="modal" data-target="#whispDataModal"
+                id="viewAnalysisBtn" role="button" onclick="viewAnalysis(${
+                  farmData[i].id
+                })" title="View Analysis"></i>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${new Date(
+                farmData[i].updated_at
+              ).toDateString()}</p>
+            </td>
+            <td class="align-middle text-center">
+              <a href="{% url 'map' %}?farm-id=${
+                farmData[i].id
+              }" class="text-primary font-weight-bold text-lg" title="View on Map"><i class="bi bi-cursor"></i></a>
+            </td>
+        `;
+          farmsContainer.appendChild(tr);
+          i++;
+        }
+
+        $("#farms").DataTable({
+          // add loading spinner while table is being loaded
+          processing: true,
+          //disable sorting on last column
+          columnDefs: [{ orderable: false, targets: 5 }],
+          language: {
+            //customize pagination prev and next buttons: use arrows instead of words
+            paginate: {
+              previous: '<span class="fa fa-chevron-left"></span>',
+              next: '<span class="fa fa-chevron-right"></span>',
+            },
+            //customize number of elements to be displayed
+            lengthMenu:
+              'Display <select class="form-control input-sm">' +
+              '<option value="10">10</option>' +
+              '<option value="20">20</option>' +
+              '<option value="30">30</option>' +
+              '<option value="40">40</option>' +
+              '<option value="50">50</option>' +
+              '<option value="-1">All</option>' +
+              "</select> results",
+          },
+        });
+      }
     </script>
     <script>
       const filesContainer = document.getElementById("filesContainer");

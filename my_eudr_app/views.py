@@ -106,34 +106,30 @@ def map_view(request):
         f'http://127.0.0.1:8000/api/farm/list/file/{fileId}/')
     if response.status_code == 200:
         farms = response.json()
-        color = 'green'
+        color = '#0d6efd'
         if len(farms) > 0:
             for farm in farms:
                 # Assuming farm data has 'farmer_name', 'latitude', 'longitude', 'farm_size', and 'polygon' fields
                 if 'polygon' in farm and len(farm['polygon']) == 1:
                     polygon = farm['polygon']
 
-                    farm_feature = ee.Feature(
-                        ee.Geometry.Polygon(polygon))
-                    # Check if the farm intersects with deforestation areas
-                    intersecting_deforestation = deforestation.reduceRegions(collection=ee.FeatureCollection(
-                        [farm_feature]), reducer=ee.Reducer.anyNonZero(), scale=30).first().get('any').getInfo()
-
                     if polygon:
-                        if farm['analysis']['is_in_protected_areas'] != '-':
-                            color = 'gray'
-                        elif intersecting_deforestation:
-                            color = 'red'
-                        else:
-                            color = 'green'
                         folium.Polygon(
                             locations=[reverse_polygon_points(polygon)],
-                            tooltip=f"""<b>Farmer Name:</b> {farm['farmer_name']}<br>
+                            tooltip=f"""
+            <b><i><u>Farm Info:</u></i></b><br><br>
+                            <b>GeoID:</b> {farm['geoid']}<br>
+                            <b>Farmer Name:</b> {farm['farmer_name']}<br>
             <b>Farm Size:</b> {farm['farm_size']}<br>
             <b>Collection Site:</b> {farm['collection_site']}<br>
             <b>Agent Name:</b> {farm['agent_name']}<br>
             <b>Farm Village:</b> {farm['farm_village']}<br>
-            <b>District:</b> {farm['farm_district']}<br>
+            <b>District:</b> {farm['farm_district']}<br><br>
+            <b><i><u>Farm Analysis:</u></i></b><br>
+            {
+                                "<br>".join([f"<b>{key.replace('_', ' ').capitalize(
+                                )}:</b> {value}" for key, value in farm['analysis'].items()])
+                            }
             """,
                             color=color,
                             fill=True,
@@ -142,7 +138,9 @@ def map_view(request):
                 else:
                     folium.Marker(
                         location=[farm['latitude'], farm['longitude']],
-                        popup=folium.Popup(html=f"""<b>Farmer Name:</b> {farm['farmer_name']}<br>
+                        popup=folium.Popup(html=f"""
+            <b><i><u>Farm Info:</u></i></b><br><br>
+                                           <b>Farmer Name:</b> {farm['farmer_name']}<br>
             <b>Farm Size:</b> {farm['farm_size']}<br>
             <b>Collection Site:</b> {farm['collection_site']}<br>
             <b>Agent Name:</b> {farm['agent_name']}<br>
@@ -177,14 +175,14 @@ def map_view(request):
     # Add legend
     legend_html = """
     <div style="position: fixed;
-                bottom: 160px; right: 10px; width: 250px; height: auto;
+                bottom: 180px; right: 10px; width: 250px; height: auto;
                 margin-bottom: 10px;
                 background-color: white; z-index:9999; font-size:14px;
                 border:2px solid grey; padding: 10px;">
     <h4>Legend</h4><br/>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #A9E0B5; border: 1px solid green; width: 10px; height: 10px; border-radius: 30px;"></div>Valid Farms</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #DCC6B5; border: 1px solid red; width: 10px; height: 10px; border-radius: 30px;"></div> Farms in Deforestated Areas (2021-2023)</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #A2B1A8; border: 1px solid gray; width: 10px; height: 10px; border-radius: 30px;"></div> Farms in Protected Areas (2021-2023)</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #ACDCE8; border: 1px solid #0D6EFD; width: 10px; height: 10px; border-radius: 30px;"></div>Farms</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #DCC6B5; border: 1px solid red; width: 10px; height: 10px; border-radius: 30px;"></div> Deforestated Areas (2021-2023)</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #A2B1A8; border: 1px solid gray; width: 10px; height: 10px; border-radius: 30px;"></div> Protected Areas (2021-2023)</div>
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))
@@ -196,7 +194,5 @@ def map_view(request):
 
 
 def reverse_polygon_points(polygon):
-    print(polygon[0])
     reversed_polygon = [[lon, lat] for lat, lon in polygon[0]]
-    print(reversed_polygon)
     return reversed_polygon
