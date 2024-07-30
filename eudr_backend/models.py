@@ -56,3 +56,11 @@ class EUDRUploadedFilesModel(models.models.Model):
 
     def __str__(self):
         return self.file_name
+
+
+class WhispAPISetting(models.models.Model):
+    chunk_size = models.models.PositiveIntegerField(
+        default=1000, help_text="Size of WHISP API data chunks to fetch.")
+
+    def __str__(self):
+        return f"Whisp API Settings (Chunk Size: {self.chunk_size})"

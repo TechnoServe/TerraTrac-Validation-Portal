@@ -9,7 +9,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from asgiref.sync import async_to_sync, sync_to_async
 
-from eudr_backend.models import EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
+from eudr_backend.models import WhispAPISetting, EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
 from .serializers import (
     EUDRFarmModelSerializer,
     EUDRUploadedFilesModelSerializer,
@@ -227,7 +227,8 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
     async def perform_analysis(data):
         url = "https://whisp.openforis.org/api/geojson"
         headers = {"Content-Type": "application/json"}
-        chunk_size = 1000
+        settings = await sync_to_async(WhispAPISetting.objects.first)()
+        chunk_size = settings.chunk_size if settings else 1000
         analysis_results = []
         features = data.get('features', [])
 
