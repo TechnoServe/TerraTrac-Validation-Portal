@@ -908,9 +908,19 @@
               const highRiskFarms = data.filter(
                 (farm) => farm.analysis.eudr_risk_level === "high"
               );
-              document.querySelector("#farms_rate").innerText = `${
+              const lowRiskFarms = data.filter(
+                (farm) => farm.analysis.eudr_risk_level === "low"
+              );
+
+              document.querySelector("#high_farms_rate").innerText = `${
                 Number(
                   ((highRiskFarms.length / data.length) * 100).toFixed(2)
+                ) || "-"
+              }%`;
+
+              document.querySelector("#low_farms_rate").innerText = `${
+                Number(
+                  ((lowRiskFarms.length / data.length) * 100).toFixed(2)
                 ) || "-"
               }%`;
             }
@@ -1446,6 +1456,42 @@
         .catch((error) => {
           console.error("There was a problem with the fetch operation:", error);
         });
+    </script>
+
+    <script>
+      $(window).on("load", function () {
+        if (window.location.pathname === "/map/") {
+          $("#map-preLoader").show();
+          const queryParams = new URLSearchParams(window.location.search);
+          const fileId = queryParams.get("file-id");
+          const farmId = queryParams.get("farm-id");
+          const lat = queryParams.get("lat");
+          const lon = queryParams.get("lon");
+
+          $.ajax({
+            url: "{% url 'map_view' %}",
+            dataType: "json",
+            data: {
+              "file-id": fileId,
+              "farm-id": farmId,
+              lat: lat,
+              lon: lon,
+            },
+            success: function (data) {
+              if (data.error) {
+                alert(data.error);
+              } else {
+                $("#mapMonde").html(data.map_html);
+              }
+              $("#map-preLoader").hide();
+            },
+            error: function () {
+              alert("Error loading map data.");
+              $("#map-preLoader").hide();
+            },
+          });
+        }
+      });
     </script>
   </body>
 </html>

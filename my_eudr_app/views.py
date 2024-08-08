@@ -103,10 +103,10 @@ def map_view(request):
     protected_areas = ee.FeatureCollection("WCMC/WDPA/current/polygons")
 
     # Fetch data from the RESTful API endpoint.
-    response = requests.get('http://127.0.0.1:8000/api/farm/map/list/') if not fileId else requests.get(
+    response = requests.get('http://127.0.0.1:8000/api/farm/map/list/') if not fileId and not farmId else requests.get(f'http://127.0.0.1:8000/api/farm/list/{farmId}') if farmId else requests.get(
         f'http://127.0.0.1:8000/api/farm/list/file/{fileId}/')
     if response.status_code == 200:
-        farms = response.json()
+        farms = [response.json()] if farmId else response.json()
         allLoadedFarms = farms
         color = '#0D6EFD'
         if len(farms) > 0:
@@ -170,9 +170,6 @@ def map_view(request):
                                 )}:</b> {value}" for key, value in farm['analysis'].items()])
                             }
             """,
-                            # color=color,
-                            # fill=True,
-                            # fill_color=color
                         ).add_to(m)
                 else:
                     folium.Marker(
@@ -231,7 +228,7 @@ def map_view(request):
     # Generate map HTML
     map_html = m._repr_html_()
 
-    return render(request, 'map.html', {'map_html': map_html})
+    return JsonResponse({'map_html': map_html})
 
 
 def reverse_polygon_points(polygon):
