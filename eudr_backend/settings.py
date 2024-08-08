@@ -39,7 +39,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
-    "27c2-41-186-78-254.ngrok-free.app"
+    "13ee1c7130a2c917bdeaaf04d96b688c.serveo.net"
 ]
 
 

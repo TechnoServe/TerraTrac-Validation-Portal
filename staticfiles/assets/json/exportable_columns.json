@@ -7,7 +7,7 @@
     "analysis": {
       "is_in_protected_areas": "Is In Protected Areas",
       "is_in_water_body": "Is In Water Body",
-      "forest_change_Loss_after_2020": "Forest Change Loss After 2020",
+      "forest_change_loss_after_2020": "Forest Change Loss After 2020",
       "fire_after_2020": "Fire After 2020",
       "radd_after_2020": "Radd After 2020",
       "tmf_deforestation_after_2020": "Tmf Deforestation After 2020",
@@ -15,6 +15,7 @@
       "tmf_disturbed": "Tmf Disturbed",
       "tree_cover_loss": "Tree Cover Loss",
       "commodities": "Commodities",
+      "disturbance_before_2020": "Disturbance Before 2020",
       "disturbance_after_2020": "Disturbance After 2020",
       "eudr_risk_level": "EUDR Risk Level"
     },
@@ -28,7 +29,7 @@
     "analysis": {
       "is_in_protected_areas": "Est dans les zones protégées",
       "is_in_water_body": "Est dans un plan d'eau",
-      "forest_change_Loss_after_2020": "Perte de forêt après 2020",
+      "forest_change_loss_after_2020": "Perte de forêt après 2020",
       "fire_after_2020": "Incendie après 2020",
       "radd_after_2020": "Radd après 2020",
       "tmf_deforestation_after_2020": "Déforestation Tmf après 2020",
@@ -36,6 +37,7 @@
       "tmf_disturbed": "Tmf perturbé",
       "tree_cover_loss": "Perte de couverture arborée",
       "commodities": "Produits",
+      "disturbance_before_2020": "Perturbation avant 2020",
       "disturbance_after_2020": "Perturbation après 2020",
       "eudr_risk_level": "Niveau de risque EUDR"
     },
@@ -49,7 +51,7 @@
     "analysis": {
       "is_in_protected_areas": "Está en áreas protegidas",
       "is_in_water_body": "Está en cuerpo de agua",
-      "forest_change_Loss_after_2020": "Pérdida de bosque después de 2020",
+      "forest_change_loss_after_2020": "Pérdida de bosque después de 2020",
       "fire_after_2020": "Incendio después de 2020",
       "radd_after_2020": "Radd después de 2020",
       "tmf_deforestation_after_2020": "Deforestación Tmf después de 2020",
@@ -57,6 +59,7 @@
       "tmf_disturbed": "Tmf perturbado",
       "tree_cover_loss": "Pérdida de cobertura arbórea",
       "commodities": "Productos",
+      "disturbance_before_2020": "Perturbación antes de 2020",
       "disturbance_after_2020": "Perturbación después de 2020",
       "eudr_risk_level": "Nivel de riesgo EUDR"
     },
@@ -70,7 +73,7 @@
     "analysis": {
       "is_in_protected_areas": "Iko Katika Maeneo Yaliyolindwa",
       "is_in_water_body": "Iko Katika Mwili wa Maji",
-      "forest_change_Loss_after_2020": "Upotezaji wa Misitu Baada ya 2020",
+      "forest_change_loss_after_2020": "Upotezaji wa Misitu Baada ya 2020",
       "fire_after_2020": "Moto Baada ya 2020",
       "radd_after_2020": "Radd Baada ya 2020",
       "tmf_deforestation_after_2020": "Uharibifu wa Tmf Baada ya 2020",
@@ -78,6 +81,7 @@
       "tmf_disturbed": "Tmf Imeharibiwa",
       "tree_cover_loss": "Upotezaji wa Kifuniko cha Miti",
       "commodities": "Bidhaa",
+      "disturbance_before_2020": "Kuchanganyikiwa kabla ya 2020",
       "disturbance_after_2020": "Kuchanganyikiwa Baada ya 2020",
       "eudr_risk_level": "Kiwango cha Hatari ya EUDR"
     },
@@ -91,7 +95,7 @@
     "analysis": {
       "is_in_protected_areas": "Buri mu mbago zirinzwe",
       "is_in_water_body": "Buri mu mazi",
-      "forest_change_Loss_after_2020": "Guhindura ubutaka nyuma ya 2020",
+      "forest_change_loss_after_2020": "Guhindura ubutaka nyuma ya 2020",
       "fire_after_2020": "Hafashwe n'inkongi nyuma ya 2020",
       "radd_after_2020": "Hatemwe ishyamba nyuma ya 2020",
       "tmf_deforestation_after_2020": "Hatemwe ishyamba ry'ibiti nyuma ya 2020",
@@ -99,7 +103,8 @@
       "tmf_disturbed": "Hahungabanyijwe ishyamba ry'ibiti nyuma ya 2020",
       "tree_cover_loss": "Hatemwe ibiti",
       "commodities": "Ibihinzwemo",
-      "disturbance_after_2020": "Ubutakamwa bwarangijwe nyuma ya 2020",
+      "disturbance_before_2020": "Ubutaka bwangijwe Mbere ya 2020",
+      "disturbance_after_2020": "Ubutaka bwangijwe nyuma ya 2020",
       "eudr_risk_level": "Ibyago byo kutemerwa na EUDR"
     },
     "updated_at": "Itariki Byahinduriweho"

@@ -96,7 +96,7 @@
     >
       <div class="sidenav-header">
         <i
-          class="fas fa-times p-3 cursor-pointer text-secondary opacity-5 position-absolute end-0 top-0 d-none d-xl-none"
+          class="fa fa-times p-3 cursor-pointer text-secondary opacity-5 position-absolute end-0 top-0 d-none d-xl-none"
           aria-hidden="true"
           id="iconSidenav"
         ></i>
@@ -325,7 +325,7 @@
                 title="{{user.username}}"
               >
                 <span class="avatar rounded-circle cursor-pointer"
-                  ><i class="fas fa-user"></i
+                  ><i class="fa fa-user"></i
                 ></span>
               </li>
             </ul>
@@ -682,6 +682,7 @@
         const csrftoken = getCookie("csrftoken");
         const progressContainer = document.querySelector(".progress");
         const progressBar = document.querySelector(".progress-bar");
+        const progressText = document.querySelector("#upload-progress-text");
         const fileInputContainer = document.querySelector("#uploadFile");
         const downloadDropdown = document.querySelector("#templateFormat");
         const saveBtn = document.querySelector("#saveBtn");
@@ -693,6 +694,31 @@
         closeBtn.setAttribute("disabled", true);
         downloadDropdown.setAttribute("disabled", true);
         fileInputContainer.setAttribute("disabled", true);
+
+        // add setTimeout which changes progressText every 5 seconds
+
+        const texts = [
+          "Processing now... please wait",
+          "Still processing... please be patient",
+          "Still processing...",
+        ];
+
+        let currentIndex = 0;
+        let countFirstIndexUsed = 0;
+
+        function updateProgress() {
+          // Update text
+          progressText.innerText = texts[currentIndex];
+
+          // Update the index for the next cycle
+          currentIndex = (currentIndex + 1) % texts.length;
+        }
+
+        // Initial call to set the first text and progress state
+        updateProgress();
+
+        // Update text and progress every 10 seconds
+        const intervalId = setInterval(updateProgress, 10000);
 
         fetch("/api/farm/add/", {
           method: "POST",
@@ -706,6 +732,19 @@
             format: format,
           }),
         })
+          .then((response) => {
+            clearInterval(intervalId);
+            // Update the progress text
+            progressText.innerText = "Finishing up...";
+            progressBar.style.width = "100%";
+
+            // Sleep for 2 seconds before checking the response.ok
+            return new Promise((resolve) => {
+              setTimeout(() => {
+                resolve(response);
+              }, 2000);
+            });
+          })
           .then((response) => {
             if (!response.ok) {
               if (response.status === 400) {
@@ -836,24 +875,6 @@
 
       let response = null;
       if (fileId) {
-        fetch(`/api/files/list/${fileId}`)
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Network response was not ok");
-            }
-            return response.json();
-          })
-          .then((data) => {
-            farmsListTitle.innerHTML = `Farms List for ${
-              data.file_name.split(".")[0]
-            } <i class="fa fa-close bg bg-light p-1 ms-2 rounded-1 cursor-pointer" onclick="window.location.href = '/validator/'"></i>`;
-          })
-          .catch((error) => {
-            console.error(
-              "There was a problem with the fetch operation:",
-              error
-            );
-          });
         response = fetch(`/api/farm/list/file/${fileId}`);
       } else {
         response = fetch("/api/farm/list/");
@@ -870,6 +891,16 @@
           .then((data) => {
             farmData = data;
             filteredFarms = data;
+            // order filteredFarms by analysis.eudr_risk_level
+            filteredFarms.sort((a, b) => {
+              if (a.analysis.eudr_risk_level === "low") {
+                return -1;
+              } else if (a.analysis.eudr_risk_level === "medium") {
+                return 0;
+              } else {
+                return 1;
+              }
+            });
 
             if (document.querySelector("#total_farms")) {
               document.querySelector("#total_farms").innerText = data.length;
@@ -884,6 +915,9 @@
               }%`;
             }
             if (farmsContainer) {
+              const cs =
+                farmData.find((item) => item.file_id === fileId)
+                  ?.collection_site || "";
               if (data.length > 0) {
                 document
                   .querySelector("#exportFormatButton")
@@ -902,6 +936,13 @@
                   option.innerText = site;
                   collectionSiteDropdown.appendChild(option);
                 });
+
+                if (cs !== "") {
+                  farmsListTitle.innerHTML = `Farms List for ${cs} <i class="fa fa-close bg bg-light p-1 ms-2 rounded-1 cursor-pointer" onclick="window.location.href = '/validator/'"></i>`;
+                  document.querySelector(
+                    '#csFilterDropdown [value="' + cs + '"]'
+                  ).selected = true;
+                }
               }
 
               // remove loading spinner
@@ -935,13 +976,21 @@
                   .replace(/\b\w/g, (char) => char.toUpperCase())}</h6>
                 <p class="${
                   key === "eudr_risk_level" && value === "high"
-                    ? "bg-gradient bg-success rounded-1 px-2 text-white"
-                    : value === "medium"
+                    ? "bg-gradient bg-danger rounded-1 px-2 text-white"
+                    : value === "more_info_needed"
                     ? "bg-gradient bg-warning rounded-1 px-2 text-white"
                     : value === "low"
-                    ? "bg-gradient bg-danger rounded-1 px-2 text-white"
+                    ? "bg-gradient bg-success rounded-1 px-2 text-white"
                     : value
-                }">${!isNaN(value) && value > 0 ? `${value} ha` : value}</p>
+                }">${
+            !isNaN(value) && value > 0
+              ? `${value} ha`
+              : key === "eudr_risk_level"
+              ? value
+                  .replace(/_/g, " ")
+                  .replace(/\b\w/g, (char) => char.toUpperCase()) || "-"
+              : value
+          }</p>
         `;
           container.appendChild(card);
         });
@@ -970,6 +1019,24 @@
 
         generateData(filteredFarms, farmsContainer);
       });
+
+      // filter farms by eudr_risk_level
+      document
+        .querySelector("#riskLevelFilterDropdown")
+        .addEventListener("change", (e) => {
+          $("#farms").DataTable().destroy();
+          const selectedRiskLevel = e.target.value;
+          filteredFarms =
+            selectedRiskLevel === ""
+              ? farmData
+              : farmData.filter(
+                  (farm) => farm.analysis.eudr_risk_level === selectedRiskLevel
+                );
+
+          farmsContainer.innerHTML = "";
+
+          generateData(filteredFarms, farmsContainer);
+        });
 
       async function handleExport(format) {
         const languageCode = localStorage.getItem("terraTracLang") || "en";
@@ -1186,82 +1253,6 @@
           .catch((error) => error);
       }
 
-      // re-validate all farms
-      document
-        .querySelector("#revalidate-all")
-        .addEventListener("click", () => {
-          const csrftoken = getCookie("csrftoken");
-          const progressOverlay = document.querySelector(".progress-overlay");
-          const revalidateProgress = document.querySelector(
-            ".revalidate-progress"
-          );
-          const revalidateBtn = document.querySelector("#revalidate-all");
-          // const exportBtn = document.querySelector("#export-btn");
-
-          progressOverlay.style.visibility = "visible";
-          revalidateProgress.style.visibility = "visible";
-
-          revalidateBtn.setAttribute("disabled", true);
-          // exportBtn.setAttribute("disabled", true);
-
-          fetch("/api/farm/revalidate/", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRFToken": csrftoken,
-            },
-            body: JSON.stringify({
-              file_id: fileId,
-            }),
-          })
-            .then((response) => {
-              if (!response.ok) {
-                throw new Error("Network response was not ok.");
-                progressOverlay.style.visibility = "hidden";
-                revalidateProgress.style.visibility = "hidden";
-              }
-              progressOverlay.style.visibility = "hidden";
-              revalidateProgress.style.visibility = "hidden";
-              return response.json();
-            })
-            .then((data) => {
-              if (data) {
-                Toastify({
-                  text: "Farms revalidated successfully!!!",
-                  duration: 3000,
-                  close: true,
-                  gravity: "top",
-                  position: "right",
-                  backgroundColor: "green",
-                }).showToast();
-
-                setTimeout(function () {
-                  window.location.reload();
-                }, 2000);
-              }
-
-              revalidateBtn.removeAttribute("disabled");
-              // exportBtn.removeAttribute("disabled");
-              progressContainer.style.visibility = "hidden";
-              revalidateProgress.style.visibility = "hidden";
-            })
-            .catch((error) => {
-              Toastify({
-                text: "Error while revalidating farms. please try again",
-                duration: 3000,
-                close: true,
-                gravity: "top",
-                position: "right",
-                backgroundColor: "red",
-              }).showToast();
-
-              revalidateBtn.removeAttribute("disabled");
-              // exportBtn.removeAttribute("disabled");
-              progressOverlay.style.visibility = "hidden";
-              revalidateProgress.style.visibility = "hidden";
-            });
-        });
-
       function generateData(farmData, farmsContainer) {
         let i = 0;
         while (i < farmData.length) {
@@ -1301,6 +1292,23 @@
               <p class="text-xs font-weight-bold mb-0">${
                 farmData[i].farm_district
               }</p>
+            </td>
+            <td>
+              <p
+                class="${
+                  farmData[i].analysis.eudr_risk_level === "high"
+                    ? "bg-gradient bg-danger rounded-1 p-2 text-white text-xs font-weight-bold mb-0"
+                    : farmData[i].analysis.eudr_risk_level ===
+                      "more_info_needed"
+                    ? "bg-gradient bg-warning rounded-1 p-2 text-white text-xs font-weight-bold mb-0"
+                    : farmData[i].analysis.eudr_risk_level === "low"
+                    ? "bg-gradient bg-success rounded-1 p-2 text-white text-xs font-weight-bold mb-0"
+                    : farmData[i].analysis.eudr_risk_level
+                }">${
+            farmData[i].analysis.eudr_risk_level
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (char) => char.toUpperCase()) || "-"
+          }</p>
             </td>
             <td class="align-middle text-center text-sm">
               <i class="bi bi-eye mt-5 text-primary text-lg" data-toggle="modal" data-target="#whispDataModal"
@@ -1379,7 +1387,7 @@
                   <td>
                     <div class="d-flex px-2 py-1">
                       <div class="d-flex justify-content-center align-items-center gap-2">
-                        <span class="fas fa-file-alt text-primary text-xs"></span>
+                        <span class="fa fa-file-alt text-primary text-xs"></span>
                         <h6 class="mb-0 text-sm">${data[i].file_name}</h6>
                       </div>
                     </div>

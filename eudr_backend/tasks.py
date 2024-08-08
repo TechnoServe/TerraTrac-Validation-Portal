@@ -2,7 +2,7 @@ import requests
 from shapely import Polygon
 
 from eudr_backend import settings
-from .models import EUDRFarmModel
+from .models import EUDRFarmModel, EUDRUploadedFilesModel
 from background_task import background
 from shapely import wkt
 
@@ -20,14 +20,21 @@ def get_access_token():
 
 
 @background(schedule=60)  # Schedule task to run every 5 minutes
-def update_geoid():
+def update_geoid(user_id):
     access_token = get_access_token()
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
     }
-    farms = EUDRFarmModel.objects.filter(geoid__isnull=True)
+    # Get all file IDs corresponding to the user
+    user_files = EUDRUploadedFilesModel.objects.filter(uploaded_by=user_id)
+    file_ids = user_files.values_list('id', flat=True)
+
+    # Filter farms based on these file IDs and geoid being null
+    farms = EUDRFarmModel.objects.filter(
+        geoid__isnull=True, file_id__in=file_ids)
     for farm in farms:
+        print(f"Fetching geoid for farm {farm.id}")
         # check if polygon has only one ring
         if len(farm.polygon) != 1:
             continue

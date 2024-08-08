@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
             name='WhispAPISetting',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('chunk_size', models.PositiveIntegerField(default=1000, help_text='Size of WHISP API data chunks to fetch.')),
+                ('chunk_size', models.PositiveIntegerField(default=500, help_text='Size of WHISP API data chunks to fetch.')),
             ],
         ),
         migrations.AlterField(

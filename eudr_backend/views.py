@@ -8,8 +8,10 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from asgiref.sync import async_to_sync, sync_to_async
+from django.db.models import Q
 
 from eudr_backend.models import WhispAPISetting, EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
+from eudr_backend.tasks import update_geoid
 from .serializers import (
     EUDRFarmModelSerializer,
     EUDRUploadedFilesModelSerializer,
@@ -228,7 +230,7 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
         url = "https://whisp.openforis.org/api/geojson"
         headers = {"Content-Type": "application/json"}
         settings = await sync_to_async(WhispAPISetting.objects.first)()
-        chunk_size = settings.chunk_size if settings else 1000
+        chunk_size = settings.chunk_size if settings else 500
         analysis_results = []
         features = data.get('features', [])
 
@@ -250,12 +252,37 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
 
     async def save_farm_data(data, file_id, analysis_results=None):
         formatted_data = format_geojson_data(data, analysis_results, file_id)
-        serializer = EUDRFarmModelSerializer(data=formatted_data, many=True)
-        if serializer.is_valid():
-            await sync_to_async(serializer.save)()
-            return None, serializer.data
-        else:
-            return serializer.errors, None
+        saved_records = []
+
+        for item in formatted_data:
+            query = Q(farmer_name=item['farmer_name'],
+                      collection_site=item['collection_site'])
+
+            # Additional condition if polygon exists
+            if item.get('polygon'):
+                query &= Q(polygon__isnull=False) & ~Q(polygon=[])
+
+            # Additional condition if latitude and longitude are not 0 or 0.0
+            if item.get('latitude', 0) != 0 or item.get('longitude', 0) != 0:
+                query &= (Q(latitude=item['latitude'])
+                          | Q(longitude=item['longitude']))
+
+            # Retrieve the existing record based on the constructed query
+            existing_record = await sync_to_async(EUDRFarmModel.objects.filter(query).first)()
+
+            if existing_record:
+                serializer = EUDRFarmModelSerializer(
+                    existing_record, data=item)
+            else:
+                serializer = EUDRFarmModelSerializer(data=item)
+
+            if serializer.is_valid():
+                saved_instance = await sync_to_async(serializer.save)()
+                saved_records.append(saved_instance)
+            else:
+                return serializer.errors, None
+
+        return None, saved_records
 
     def format_geojson_data(geojson, analysis, file_id=None):
         # Ensure the GeoJSON contains features
@@ -299,6 +326,7 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
                     "tmf_disturbed": analysis[i].get('TMF_disturbed'),
                     "tree_cover_loss": analysis[i].get('Indicator_1_treecover'),
                     "commodities": analysis[i].get('Indicator_2_commodities'),
+                    "disturbance_before_2020": analysis[i].get('Indicator_3_disturbance_before_2020'),
                     "disturbance_after_2020": analysis[i].get('Indicator_4_disturbance_after_2020'),
                     "eudr_risk_level": analysis[i].get('EUDR_risk')
                 }
@@ -339,7 +367,9 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
                 errors.append(err)
             else:
                 created_data.extend(new_data)
-    return errors, created_data
+    serializerData = EUDRFarmModelSerializer(created_data, many=True)
+
+    return errors, serializerData.data
 
 
 def transform_csv_to_json(data):
@@ -460,7 +490,8 @@ def create_farm_data(request):
         # delete the file if there are errors
         EUDRUploadedFilesModel.objects.get(id=file_id).delete()
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
-
+    update_geoid(repeat=60,
+                 user_id=request.user.username if request.user.is_authenticated else "admin")
     return Response(created_data, status=status.HTTP_201_CREATED)
 
 
