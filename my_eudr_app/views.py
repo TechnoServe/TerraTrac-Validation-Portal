@@ -108,12 +108,11 @@ def map_view(request):
     if response.status_code == 200:
         farms = [response.json()] if farmId else response.json()
         allLoadedFarms = farms
-        color = '#0D6EFD'
         if len(farms) > 0:
             # Create a FeatureCollection for high risk level farms
             high_risk_farms = ee.FeatureCollection([
                 ee.Feature(ee.Geometry.Polygon(farm['polygon']), {
-                           'color': "#F64468"})
+                           'color': "#F64468", 'tooltip': f"{farm['farmer_name']} - {farm['farm_size']} acres"})
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'high'
             ])
 
@@ -124,15 +123,27 @@ def map_view(request):
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'low'
             ])
 
+            # Create a FeatureCollection for more info needed farms
+            more_info_needed_farms = ee.FeatureCollection([
+                ee.Feature(ee.Geometry.Polygon(farm['polygon']), {
+                           'color': "#ACDCE8"})
+                for farm in farms if farm['analysis']['eudr_risk_level'] == 'more_info_needed'
+            ])
+
             # Add the high risk level farms to the map
             high_risk_layer = ee.Image().paint(high_risk_farms)
             m.add_child(geemap.ee_tile_layer(high_risk_layer, {'palette': [
-                        "#F64468"]}, 'EUDR Risk Level (High)', shown=False))
+                        "#F64468"]}, 'EUDR Risk Level (High)', shown=True))
 
             # Add the low risk level farms to the map
             low_risk_layer = ee.Image().paint(low_risk_farms)
             m.add_child(geemap.ee_tile_layer(low_risk_layer, {'palette': [
                         "#3AD190"]}, 'EUDR Risk Level (Low)', shown=True))
+
+            # Add the more info needed farms to the map
+            more_info_needed_layer = ee.Image().paint(more_info_needed_farms)
+            m.add_child(geemap.ee_tile_layer(more_info_needed_layer, {'palette': [
+                        "#ACDCE8"]}, 'EUDR Risk Level (More Info Needed)', shown=True))
 
             for farm in farms:
                 # Assuming farm data has 'farmer_name', 'latitude', 'longitude', 'farm_size', and 'polygon' fields
@@ -140,23 +151,10 @@ def map_view(request):
                     polygon = farm['polygon']
 
                     if polygon:
-                        # if len(farms) < 30:
-                        #     farm_feature = ee.Feature(
-                        #         ee.Geometry.Polygon(polygon))
-                        #     # Check if the farm intersects with deforestation areas
-                        #     intersecting_deforestation = deforestation.reduceRegions(collection=ee.FeatureCollection(
-                        #         [farm_feature]), reducer=ee.Reducer.anyNonZero(), scale=30).first().get('any').getInfo()
-
-                        #     if farm['analysis']['is_in_protected_areas'] != '-':
-                        #         color = 'gray'
-                        #     elif intersecting_deforestation:
-                        #         color = 'red'
-                        #     else:
-                        #         color = '#0D6EFD'
                         folium.Polygon(
                             locations=[reverse_polygon_points(polygon)],
                             tooltip=f"""
-            <b><i><u>Farm Info:</u></i></b><br><br>
+            <b><i><u>Plot Info:</u></i></b><br><br>
                             <b>GeoID:</b> {farm['geoid']}<br>
                             <b>Farmer Name:</b> {farm['farmer_name']}<br>
             <b>Farm Size:</b> {farm['farm_size']}<br>
@@ -170,12 +168,13 @@ def map_view(request):
                                 )}:</b> {value}" for key, value in farm['analysis'].items()])
                             }
             """,
+                            color="transparent"
                         ).add_to(m)
                 else:
                     folium.Marker(
                         location=[farm['latitude'], farm['longitude']],
                         popup=folium.Popup(html=f"""
-            <b><i><u>Farm Info:</u></i></b><br><br>
+            <b><i><u>Plot Info:</u></i></b><br><br>
                                            <b>Farmer Name:</b> {farm['farmer_name']}<br>
             <b>Farm Size:</b> {farm['farm_size']}<br>
             <b>Collection Site:</b> {farm['collection_site']}<br>
@@ -191,7 +190,7 @@ def map_view(request):
                 (farm['polygon'] for farm in farms if farm['id'] == farmId), farms[0]['polygon'])
             if has_polygon:
                 m.fit_bounds([reverse_polygon_points(has_polygon)],
-                             max_zoom=14 if not farmId else 16)
+                             max_zoom=12 if not farmId else 16)
     else:
         print("Failed to fetch data from the API")
 
@@ -216,11 +215,11 @@ def map_view(request):
                 background-color: white; z-index:9999; font-size:14px;
                 border:2px solid grey; padding: 10px;">
     <h4>Legend</h4><br/>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #ACDCE8; border: 1px solid #0D6EFD; width: 10px; height: 10px; border-radius: 30px;"></div>{'Valid' if len(allLoadedFarms) < 30 else ''} Farms</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #DCC6B5; border: 1px solid red; width: 10px; height: 10px; border-radius: 30px;"></div>{'Farms in' if len(allLoadedFarms) < 30 else ''} Deforestated Areas (2021-2023)</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #A2B1A8; border: 1px solid gray; width: 10px; height: 10px; border-radius: 30px;"></div>{'Farms in' if len(allLoadedFarms) < 30 else ''} Protected Areas (2021-2023)</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #3AD190; width: 10px; height: 10px; border-radius: 30px;"></div>Low Risk Farms</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #F64468; width: 10px; height: 10px; border-radius: 30px;"></div>High Risk Farms</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #3AD190; border: 1px solid #3AD190; width: 10px; height: 10px; border-radius: 30px;"></div>Low Risk Plots</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #F64468; border: 1px solid #F64468; width: 10px; height: 10px; border-radius: 30px;"></div>High Risk Plots</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #ACDCE8; border: 1px solid #ACDCE8; width: 10px; height: 10px; border-radius: 30px;"></div>More Info Needed Plots</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #DCC6B5; border: 1px solid red; width: 10px; height: 10px; border-radius: 30px;"></div>{'Plots in' if len(allLoadedFarms) < 30 else ''} Deforestated Areas (2021-2023)</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #A2B1A8; border: 1px solid gray; width: 10px; height: 10px; border-radius: 30px;"></div>{'Plots in' if len(allLoadedFarms) < 30 else ''} Protected Areas (2021-2023)</div>
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))

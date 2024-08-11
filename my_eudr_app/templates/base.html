@@ -542,6 +542,9 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     ></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chart.js DataLabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <!-- Control Center for Soft Dashboard: parallax effects, scripts for the example pages etc -->
     <script src="{% static 'assets/js/argon-dashboard.js' %}"></script>
     <!-- google translator API cdn -->
@@ -890,7 +893,10 @@
           })
           .then((data) => {
             farmData = data;
-            filteredFarms = data;
+            filteredFarms = data.map((farm) => {
+              farm.updated_at = new Date(farm.updated_at).toLocaleString();
+              return farm;
+            });
             // order filteredFarms by analysis.eudr_risk_level
             filteredFarms.sort((a, b) => {
               if (a.analysis.eudr_risk_level === "low") {
@@ -905,24 +911,75 @@
             if (document.querySelector("#total_farms")) {
               document.querySelector("#total_farms").innerText = data.length;
               // check where eudr_risk_level is high and calculate the percentage
-              const highRiskFarms = data.filter(
-                (farm) => farm.analysis.eudr_risk_level === "high"
-              );
               const lowRiskFarms = data.filter(
                 (farm) => farm.analysis.eudr_risk_level === "low"
               );
+              const highRiskFarms = data.filter(
+                (farm) => farm.analysis.eudr_risk_level === "high"
+              );
+              const moreInfoNeededFarms = data.filter(
+                (farm) => farm.analysis.eudr_risk_level === "more_info_needed"
+              );
 
-              document.querySelector("#high_farms_rate").innerText = `${
-                Number(
-                  ((highRiskFarms.length / data.length) * 100).toFixed(2)
-                ) || "-"
-              }%`;
+              const lowPercentage = (
+                (lowRiskFarms.length / data.length) *
+                100
+              ).toFixed(2);
+              const highPercentage = (
+                (highRiskFarms.length / data.length) *
+                100
+              ).toFixed(2);
+              const moreInfoNeededPercentage = (
+                (moreInfoNeededFarms.length / data.length) *
+                100
+              ).toFixed(2);
 
               document.querySelector("#low_farms_rate").innerText = `${
-                Number(
-                  ((lowRiskFarms.length / data.length) * 100).toFixed(2)
-                ) || "-"
+                Number(lowPercentage) || "-"
               }%`;
+
+              const ctx = document
+                .getElementById("plotsPieChart")
+                .getContext("2d");
+              const myPieChart = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                  labels: ["High", "Low", "More Info Needed"],
+                  datasets: [
+                    {
+                      data: [
+                        Number(highPercentage),
+                        Number(lowPercentage),
+                        Number(moreInfoNeededPercentage),
+                      ],
+                      backgroundColor: ["#F64468", "#3AD190", "#ACDCE8"],
+                      hoverOffset: 4,
+                    },
+                  ],
+                },
+                options: {
+                  responsive: true,
+                  plugins: {
+                    legend: {
+                      position: "top",
+                    },
+                    tooltip: {
+                      enabled: true,
+                    },
+                    datalabels: {
+                      color: "#fff",
+                      font: {
+                        weight: "bold",
+                        size: 16,
+                      },
+                      formatter: (value, context) => {
+                        return value + "%";
+                      },
+                    },
+                  },
+                },
+                plugins: [ChartDataLabels],
+              });
             }
             if (farmsContainer) {
               const cs =
@@ -948,7 +1005,7 @@
                 });
 
                 if (cs !== "") {
-                  farmsListTitle.innerHTML = `Farms List for ${cs} <i class="fa fa-close bg bg-light p-1 ms-2 rounded-1 cursor-pointer" onclick="window.location.href = '/validator/'"></i>`;
+                  farmsListTitle.innerHTML = `Plots List for ${cs} <i class="fa fa-close bg bg-light p-1 ms-2 rounded-1 cursor-pointer" onclick="window.location.href = '/validator/'"></i>`;
                   document.querySelector(
                     '#csFilterDropdown [value="' + cs + '"]'
                   ).selected = true;
@@ -986,13 +1043,21 @@
                   .replace(/\b\w/g, (char) => char.toUpperCase())}</h6>
                 <p class="${
                   key === "eudr_risk_level" && value === "high"
-                    ? "bg-gradient bg-danger rounded-1 px-2 text-white"
+                    ? "bg-gradient rounded-1 px-2 text-white"
                     : value === "more_info_needed"
-                    ? "bg-gradient bg-warning rounded-1 px-2 text-white"
+                    ? "bg-gradient rounded-1 px-2 text-white"
                     : value === "low"
-                    ? "bg-gradient bg-success rounded-1 px-2 text-white"
+                    ? "bg-gradient rounded-1 px-2 text-white"
                     : value
-                }">${
+                }" style="background-color: ${
+            value === "high"
+              ? "#FF1C49"
+              : value === "more_info_needed"
+              ? "#78DBF4"
+              : value === "low"
+              ? "#15E289"
+              : value
+          }">${
             !isNaN(value) && value > 0
               ? `${value} ha`
               : key === "eudr_risk_level"
@@ -1090,42 +1155,18 @@
         });
 
         const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet("Farms Data");
+        const worksheet = workbook.addWorksheet("Plots Data");
 
-        // Add image
-        const logo = await fetch("/static/assets/img/tns-logo-png.png")
-          .then((res) => res.blob())
-          .then((blob) => {
-            return new File([blob], "logo.png", { type: "image/png" });
-          });
-        const imageId = workbook.addImage({
-          buffer: await logo.arrayBuffer(),
-          extension: "png",
-        });
-        worksheet.addImage(imageId, {
-          tl: { col: 2, row: 2 },
-          ext: { width: 50, height: 50 },
-        });
-
-        // Add title
-        worksheet.mergeCells("A1:Z6"); // Merge cells for title
-        worksheet.getCell("C7").value = "Terratrac Validation Report";
-        worksheet.getCell("C7").font = {
-          size: 18,
-          bold: true,
-          underline: true,
-        };
-        worksheet.getCell("C7").alignment = {
-          vertical: "middle",
-          horizontal: "center",
-        };
-
-        // Space between title and table data
-        worksheet.getRow(9).height = 20;
-
-        // Add data starting from the 4th row
+        // Add headers and apply bold styling
         const headers = Object.keys(data[0]);
-        worksheet.addRow(headers);
+        const headerRow = worksheet.addRow(headers);
+
+        // Apply bold formatting to the headers
+        headerRow.eachCell((cell) => {
+          cell.font = { bold: true };
+        });
+
+        // Add data starting from the 2nd row
         data.forEach((farmData) => {
           worksheet.addRow(Object.values(farmData));
         });
@@ -1194,20 +1235,46 @@
       function exportToPDF(columns, file_name) {
         const doc = new jsPDF({
           orientation: "landscape",
-          format: "a4",
+          format: "a2",
         });
+        const pageWidth = doc.internal.pageSize.getWidth();
         const image = new Image();
         image.src = "/static/assets/img/tns-logo-png.png";
-        doc.addImage(image, "PNG", 140, 10, 20, 20);
+        doc.addImage(image, "PNG", pageWidth / 2, 10, 20, 20);
 
         // Add the title
-        const title = "Validated Farms";
+        const title = "Validated Plots";
         doc.setFontSize(18); // Set font size
-        const pageWidth = doc.internal.pageSize.getWidth();
         const textWidth = doc.getTextWidth(title);
-        const x = (pageWidth - textWidth) / 2; // Center the text
+        const x = pageWidth / 2; // Center the text
         doc.text(title, x, 40); // Adjust the y position as needed
 
+        // Define table configuration
+        const maxWidth = pageWidth; // Page width minus margins
+        let fontSize = 13; // Starting font size
+
+        // Function to adjust column widths
+        function getColumnWidths(columns, tableWidth) {
+          const totalColumns = columns.length;
+          const columnWidth = tableWidth / totalColumns;
+          return Array(totalColumns).fill(columnWidth);
+        }
+
+        // Get column widths
+        let columnWidths = getColumnWidths(
+          Object.keys(columns)
+            .map((column) =>
+              column === "analysis"
+                ? Object.keys(columns[column]).map(
+                    (col) => columns[column][col]
+                  )
+                : columns[column]
+            )
+            .flat(1),
+          maxWidth
+        );
+
+        // Add table
         doc.autoTable({
           startY: 50,
           columns: [
@@ -1220,7 +1287,10 @@
                   : columns[column]
               )
               .flat(1),
-          ],
+          ].map((header, index) => ({
+            header,
+            width: columnWidths[index] || 40, // Default width if undefined
+          })),
           body: [
             ...filteredFarms.map((farm) => {
               const farmData = [];
@@ -1236,16 +1306,53 @@
               return farmData;
             }),
           ],
-          styles: { cellWidth: "wrap", minCellHeight: 10 },
+          styles: {
+            cellWidth: "wrap",
+            minCellHeight: 10,
+            fontSize: fontSize, // Use the initial font size
+          },
           margin: { top: 10 },
-          didDrawCell: (data) => {
-            // Adjustments for overflowing cells
-            if (data.cell.height > 10) {
-              data.cell.textPos.y =
-                data.cell.textPos.y - (data.cell.height - 10) / 2;
+          columnStyles: {
+            0: { cellWidth: "auto" }, // Adjust as needed
+          },
+          headStyles: {
+            fontSize: fontSize - 2,
+            cellWidth: "10px",
+          },
+          bodyStyles: {
+            fontSize: fontSize - 2,
+            cellWidth: "wrap",
+          },
+          didDrawPage: (data) => {
+            // Adjust column widths if necessary
+            const tableWidth = data.table.width;
+            if (tableWidth > maxWidth) {
+              fontSize = Math.max(fontSize - 1, 6); // Reduce font size
+              columnWidths = getColumnWidths(
+                Object.keys(columns)
+                  .map((column) =>
+                    column === "analysis"
+                      ? Object.keys(columns[column]).map(
+                          (col) => columns[column][col]
+                        )
+                      : columns[column]
+                  )
+                  .flat(1),
+                maxWidth
+              );
+              doc.autoTable({
+                ...data.table,
+                styles: { fontSize },
+                columnStyles: columnWidths.reduce((acc, width, index) => {
+                  acc[index] = { cellWidth: width };
+                  return acc;
+                }, {}),
+              });
             }
           },
+          pageBreak: "auto", // Automatically break the table into pages if necessary
         });
+
         doc.save(`${file_name}_${new Date().toISOString()}.pdf`);
       }
 
@@ -1307,14 +1414,22 @@
               <p
                 class="${
                   farmData[i].analysis.eudr_risk_level === "high"
-                    ? "bg-gradient bg-danger rounded-1 p-2 text-white text-xs font-weight-bold mb-0"
+                    ? "text-xs font-weight-bold mb-0"
                     : farmData[i].analysis.eudr_risk_level ===
                       "more_info_needed"
-                    ? "bg-gradient bg-warning rounded-1 p-2 text-white text-xs font-weight-bold mb-0"
+                    ? "text-xs font-weight-bold mb-0"
                     : farmData[i].analysis.eudr_risk_level === "low"
-                    ? "bg-gradient bg-success rounded-1 p-2 text-white text-xs font-weight-bold mb-0"
+                    ? "text-xs font-weight-bold mb-0"
                     : farmData[i].analysis.eudr_risk_level
-                }">${
+                }" style="color: ${
+            farmData[i].analysis.eudr_risk_level === "high"
+              ? "#FF1C49"
+              : farmData[i].analysis.eudr_risk_level === "more_info_needed"
+              ? "#78DBF4"
+              : farmData[i].analysis.eudr_risk_level === "low"
+              ? "#15E289"
+              : farmData[i].analysis.eudr_risk_level
+          }">${
             farmData[i].analysis.eudr_risk_level
               .replace(/_/g, " ")
               .replace(/\b\w/g, (char) => char.toUpperCase()) || "-"
@@ -1416,7 +1531,7 @@
                     <a
                       href="{% url 'validator' %}?file-id=${data[i].id}"
                       class="text-primary font-weight-bold text-lg me-3"
-                      title="View List of Farms"
+                      title="View List of Plots"
                       ><i class="bi bi-list"></i></a
                     >
                     <a
