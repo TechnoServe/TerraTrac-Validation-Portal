@@ -360,16 +360,17 @@
     <script>
       // if mapMonde is loaded, ask for user's location and embed it in url
       const mapMonde = document.querySelector("#mapMonde");
+      const base_url = window.location.origin;
       if (mapMonde) {
         // if user allows location, get it and embed it in the url, otherwise, use default location
         if (navigator.geolocation && !window.location.search) {
           navigator.geolocation.getCurrentPosition(
             (position) => {
               const { latitude, longitude } = position.coords;
-              window.location.href = `http://127.0.0.1:8000/map/?lat=${latitude}&lon=${longitude}`;
+              window.location.href = `${base_url}/map/?lat=${latitude}&lon=${longitude}`;
             },
             (error) => {
-              window.location.href = `http://127.0.0.1:8000/map/?lat=0.0&lon=0.0`;
+              window.location.href = `${base_url}/map/?lat=0.0&lon=0.0`;
             }
           );
         }
