@@ -2,6 +2,7 @@ import ast
 import json
 from django.http import HttpResponse
 from django.utils import timezone
+from django.core.cache import cache
 import httpx
 import pandas as pd
 from rest_framework import status
@@ -211,6 +212,10 @@ def delete_user(request, pk):
 
 # Define an async function
 async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
+    cache.delete('high_risk_layer')
+    cache.delete('low_risk_layer')
+    cache.delete('more_info_needed_layer')
+
     errors = []
     created_data = []
 
@@ -446,6 +451,10 @@ def transform_db_data_to_geojson(data):
 
 @api_view(["POST"])
 def create_farm_data(request):
+    cache.delete('high_risk_layer')
+    cache.delete('low_risk_layer')
+    cache.delete('more_info_needed_layer')
+
     data_format = request.data.get('format')
     raw_data = request.data.get('data')
 
@@ -497,6 +506,9 @@ def create_farm_data(request):
 
 @api_view(["PUT"])
 def update_farm_data(request, pk):
+    cache.delete('high_risk_layer')
+    cache.delete('low_risk_layer')
+    cache.delete('more_info_needed_layer')
     farm_data = EUDRFarmModel.objects.get(id=pk)
     serializer = EUDRFarmModelSerializer(instance=farm_data, data=request.data)
 

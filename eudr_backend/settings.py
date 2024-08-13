@@ -79,6 +79,13 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
 ]
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "/var/tmp/django_cache",
+    }
+}
+
 ROOT_URLCONF = "eudr_backend.urls"
 
 CORS_ALLOW_ALL_ORIGINS = True

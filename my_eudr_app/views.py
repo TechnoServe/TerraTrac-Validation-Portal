@@ -1,4 +1,5 @@
 from django.http import HttpResponse, JsonResponse
+from django.core.cache import cache
 from django.shortcuts import redirect, render
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
@@ -102,6 +103,11 @@ def map_view(request):
     # Fetch protected areas
     protected_areas = ee.FeatureCollection("WCMC/WDPA/current/polygons")
 
+    # Cache keys for each risk level tile layer
+    high_risk_tile_cache_key = 'high_risk_tile_layer'
+    low_risk_tile_cache_key = 'low_risk_tile_layer'
+    more_info_needed_tile_cache_key = 'more_info_needed_tile_layer'
+
     # Fetch data from the RESTful API endpoint.
     base_url = f"{request.scheme}://{request.get_host()}"
     response = requests.get(f"""{base_url}/api/farm/map/list/""") if not fileId and not farmId else requests.get(f"""{base_url}/api/farm/list/{farmId}""") if farmId else requests.get(
@@ -110,10 +116,16 @@ def map_view(request):
         farms = [response.json()] if farmId else response.json()
         allLoadedFarms = farms
         if len(farms) > 0:
+            # Try to get the cached tile layers
+            high_risk_tile_layer = cache.get(high_risk_tile_cache_key)
+            low_risk_tile_layer = cache.get(low_risk_tile_cache_key)
+            more_info_needed_tile_layer = cache.get(
+                more_info_needed_tile_cache_key)
+
             # Create a FeatureCollection for high risk level farms
             high_risk_farms = ee.FeatureCollection([
                 ee.Feature(ee.Geometry.Polygon(farm['polygon']), {
-                           'color': "#F64468", 'tooltip': f"{farm['farmer_name']} - {farm['farm_size']} acres"})
+                           'color': "#F64468", 'tooltip': f"""{farm['farmer_name']} - {farm['farm_size']} acres"""})
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'high'
             ])
 
@@ -131,20 +143,36 @@ def map_view(request):
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'more_info_needed'
             ])
 
+            # If any of the tile layers are not cached, create and cache them
+            if not high_risk_tile_layer:
+                high_risk_layer = ee.Image().paint(high_risk_farms)
+                high_risk_tile_layer = geemap.ee_tile_layer(
+                    high_risk_layer, {'palette': ["#F64468"]}, 'EUDR Risk Level (High)', shown=True)
+                cache.set(high_risk_tile_cache_key, high_risk_tile_layer,
+                          timeout=3600)  # Cache for 1 hour
+
+            if not low_risk_tile_layer:
+                low_risk_layer = ee.Image().paint(low_risk_farms)
+                low_risk_tile_layer = geemap.ee_tile_layer(
+                    low_risk_layer, {'palette': ["#3AD190"]}, 'EUDR Risk Level (Low)', shown=True)
+                cache.set(low_risk_tile_cache_key,
+                          low_risk_tile_layer, timeout=3600)
+
+            if not more_info_needed_tile_layer:
+                more_info_needed_layer = ee.Image().paint(more_info_needed_farms)
+                more_info_needed_tile_layer = geemap.ee_tile_layer(more_info_needed_layer, {
+                                                                   'palette': ["#ACDCE8"]}, 'EUDR Risk Level (More Info Needed)', shown=True)
+                cache.set(more_info_needed_tile_cache_key,
+                          more_info_needed_tile_layer, timeout=3600)
+
             # Add the high risk level farms to the map
-            high_risk_layer = ee.Image().paint(high_risk_farms)
-            m.add_child(geemap.ee_tile_layer(high_risk_layer, {'palette': [
-                        "#F64468"]}, 'EUDR Risk Level (High)', shown=True))
+            m.add_child(high_risk_tile_layer)
 
             # Add the low risk level farms to the map
-            low_risk_layer = ee.Image().paint(low_risk_farms)
-            m.add_child(geemap.ee_tile_layer(low_risk_layer, {'palette': [
-                        "#3AD190"]}, 'EUDR Risk Level (Low)', shown=True))
+            m.add_child(low_risk_tile_layer)
 
             # Add the more info needed farms to the map
-            more_info_needed_layer = ee.Image().paint(more_info_needed_farms)
-            m.add_child(geemap.ee_tile_layer(more_info_needed_layer, {'palette': [
-                        "#ACDCE8"]}, 'EUDR Risk Level (More Info Needed)', shown=True))
+            m.add_child(more_info_needed_tile_layer)
 
             for farm in farms:
                 # Assuming farm data has 'farmer_name', 'latitude', 'longitude', 'farm_size', and 'polygon' fields
