@@ -97,6 +97,10 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
 EE_CREDENTIALS = os.path.join(BASE_DIR, 'ee-eudr-compliance-68c5ebef5f20.json')
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
+
 LOGIN_URL = 'login'
 
 LOGIN_REDIRECT_URL = 'home'
