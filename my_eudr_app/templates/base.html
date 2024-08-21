@@ -875,6 +875,44 @@
       let farmData = [];
       let filteredFarms = [];
 
+      const ctx = document.getElementById("plotsPieChart").getContext("2d");
+
+      let myPieChart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: ["High", "Low", "More Info Needed"],
+          datasets: [
+            {
+              data: [0, 0, 0],
+              backgroundColor: ["#F64468", "#3AD190", "#ACDCE8"],
+              hoverOffset: 4,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: "top",
+            },
+            tooltip: {
+              enabled: true,
+            },
+            datalabels: {
+              color: "#fff",
+              font: {
+                weight: "bold",
+                size: 16,
+              },
+              formatter: (value, context) => {
+                return value + "%";
+              },
+            },
+          },
+        },
+        plugins: [ChartDataLabels],
+      });
+
       const colorClasses = {
         low: "low",
         medium: "medium",
@@ -943,10 +981,9 @@
                 Number(lowPercentage) || "-"
               }%`;
 
-              const ctx = document
-                .getElementById("plotsPieChart")
-                .getContext("2d");
-              const myPieChart = new Chart(ctx, {
+              // update the pie chart
+              myPieChart.destroy();
+              myPieChart = new Chart(ctx, {
                 type: "doughnut",
                 data: {
                   labels: ["High", "Low", "More Info Needed"],
