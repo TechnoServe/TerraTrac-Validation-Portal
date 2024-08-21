@@ -875,7 +875,7 @@
       let farmData = [];
       let filteredFarms = [];
 
-      const ctx = document.getElementById("plotsPieChart").getContext("2d");
+      const ctx = document.getElementById("plotsPieChart")?.getContext("2d");
 
       let myPieChart = new Chart(ctx, {
         type: "doughnut",
@@ -899,13 +899,13 @@
               enabled: true,
             },
             datalabels: {
-              color: "#fff",
+              color: "#111",
               font: {
                 weight: "bold",
                 size: 16,
               },
               formatter: (value, context) => {
-                return value + "%";
+                return "Fetching plots...";
               },
             },
           },
