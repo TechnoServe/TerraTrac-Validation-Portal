@@ -892,47 +892,62 @@
                 Number(lowPercentage) || "-"
               }%`;
 
-              // update the pie chart
-              myPieChart.destroy();
-              myPieChart = new Chart(ctx, {
-                type: "doughnut",
-                data: {
-                  labels: ["High", "Low", "More Info Needed"],
-                  datasets: [
-                    {
-                      data: [
-                        Number(highPercentage),
-                        Number(lowPercentage),
-                        Number(moreInfoNeededPercentage),
-                      ],
-                      backgroundColor: ["#F64468", "#3AD190", "#ACDCE8"],
-                      hoverOffset: 4,
-                    },
-                  ],
-                },
-                options: {
-                  responsive: true,
-                  plugins: {
-                    legend: {
-                      position: "top",
-                    },
-                    tooltip: {
-                      enabled: true,
-                    },
-                    datalabels: {
-                      color: "#fff",
-                      font: {
-                        weight: "bold",
-                        size: 16,
+              if (
+                Number(lowPercentage) > 0 ||
+                Number(highPercentage) > 0 ||
+                Number(moreInfoNeededPercentage) > 0
+              ) {
+                document
+                  .querySelector("#pieChartContainer")
+                  .classList.remove("d-none");
+                // update the pie chart
+                myPieChart.destroy();
+                myPieChart = new Chart(ctx, {
+                  type: "doughnut",
+                  data: {
+                    labels: ["High", "Low", "More Info Needed"],
+                    datasets: [
+                      {
+                        data: [
+                          !isNaN(Number(highPercentage))
+                            ? Number(highPercentage)
+                            : 0,
+                          !isNaN(Number(lowPercentage))
+                            ? Number(lowPercentage)
+                            : 0,
+                          !isNaN(Number(moreInfoNeededPercentage))
+                            ? Number(moreInfoNeededPercentage)
+                            : 0,
+                        ],
+                        backgroundColor: ["#F64468", "#3AD190", "#ACDCE8"],
+                        hoverOffset: 4,
                       },
-                      formatter: (value, context) => {
-                        return value + "%";
+                    ],
+                  },
+                  options: {
+                    responsive: true,
+                    plugins: {
+                      legend: {
+                        position: "top",
+                      },
+                      tooltip: {
+                        enabled: true,
+                      },
+                      datalabels: {
+                        color: "#fff",
+                        font: {
+                          weight: "bold",
+                          size: 16,
+                        },
+                        formatter: (value, context) => {
+                          return value + "%";
+                        },
                       },
                     },
                   },
-                },
-                plugins: [ChartDataLabels],
-              });
+                  plugins: [ChartDataLabels],
+                });
+              }
             }
             if (farmsContainer) {
               const cs =
