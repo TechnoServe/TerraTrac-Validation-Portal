@@ -53,6 +53,14 @@ Validator
         <div class="d-flex card-header pb-0">
           <h6 id="farms_list_title">Plots List</h6>
           <div class="ms-auto">
+            <a
+              href="{% url 'map' %}"
+              class="d-none btn btn-primary btn-sm ms-auto text-white"
+              id="viewMapBtn"
+            >
+              <i class="fa fa-map me-2"></i>
+              View on Map
+            </a>
             <!-- <button
               class="btn btn-primary btn-sm ms-auto text-white"
               id="revalidate-all"

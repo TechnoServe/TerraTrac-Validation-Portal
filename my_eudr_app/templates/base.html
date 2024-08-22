@@ -394,100 +394,6 @@
       crossorigin="anonymous"
     ></script>
     <script>
-      var ctx1 = document.getElementById("chart-line").getContext("2d");
-
-      var gradientStroke1 = ctx1.createLinearGradient(0, 230, 0, 50);
-
-      gradientStroke1.addColorStop(1, "rgba(94, 114, 228, 0.2)");
-      gradientStroke1.addColorStop(0.2, "rgba(94, 114, 228, 0.0)");
-      gradientStroke1.addColorStop(0, "rgba(94, 114, 228, 0)");
-      new Chart(ctx1, {
-        type: "line",
-        data: {
-          labels: [
-            "Apr",
-            "May",
-            "Jun",
-            "Jul",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec",
-          ],
-          datasets: [
-            {
-              label: "Mobile apps",
-              tension: 0.4,
-              borderWidth: 0,
-              pointRadius: 0,
-              borderColor: "#5e72e4",
-              backgroundColor: gradientStroke1,
-              borderWidth: 3,
-              fill: true,
-              data: [50, 40, 300, 220, 500, 250, 400, 230, 500],
-              maxBarThickness: 6,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-          },
-          interaction: {
-            intersect: false,
-            mode: "index",
-          },
-          scales: {
-            y: {
-              grid: {
-                drawBorder: false,
-                display: true,
-                drawOnChartArea: true,
-                drawTicks: false,
-                borderDash: [5, 5],
-              },
-              ticks: {
-                display: true,
-                padding: 10,
-                color: "#fbfbfb",
-                font: {
-                  size: 11,
-                  family: "Open Sans",
-                  style: "normal",
-                  lineHeight: 2,
-                },
-              },
-            },
-            x: {
-              grid: {
-                drawBorder: false,
-                display: false,
-                drawOnChartArea: false,
-                drawTicks: false,
-                borderDash: [5, 5],
-              },
-              ticks: {
-                display: true,
-                color: "#ccc",
-                padding: 20,
-                font: {
-                  size: 11,
-                  family: "Open Sans",
-                  style: "normal",
-                  lineHeight: 2,
-                },
-              },
-            },
-          },
-        },
-      });
-    </script>
-    <script>
       var win = navigator.platform.indexOf("Win") > -1;
       if (win && document.querySelector("#sidenav-scrollbar")) {
         var options = {
@@ -607,7 +513,7 @@
       let links = document.querySelectorAll(".nav-link");
       const selectedDownloadFormat = document.querySelector("#templateFormat");
 
-      selectedDownloadFormat.addEventListener("change", (e) => {
+      selectedDownloadFormat?.addEventListener("change", (e) => {
         const selectedFormat = e.target.value;
 
         if (selectedFormat !== "") {
@@ -816,19 +722,19 @@
       let dropArea = document.getElementById("drop-area");
 
       ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
-        dropArea.addEventListener(eventName, preventDefaults, false);
+        dropArea?.addEventListener(eventName, preventDefaults, false);
         document.body.addEventListener(eventName, preventDefaults, false);
       });
 
       ["dragenter", "dragover"].forEach((eventName) => {
-        dropArea.addEventListener(eventName, highlight, false);
+        dropArea?.addEventListener(eventName, highlight, false);
       });
 
       ["dragleave", "drop"].forEach((eventName) => {
-        dropArea.addEventListener(eventName, unhighlight, false);
+        dropArea?.addEventListener(eventName, unhighlight, false);
       });
 
-      dropArea.addEventListener("drop", handleDrop, false);
+      dropArea?.addEventListener("drop", handleDrop, false);
 
       function preventDefaults(e) {
         e.preventDefault();
@@ -857,12 +763,12 @@
         console.log("Uploading...");
       }
 
-      dropArea.addEventListener("click", () => {
+      dropArea?.addEventListener("click", () => {
         fileElem.click();
       });
 
       let fileElem = document.getElementById("fileElem");
-      fileElem.addEventListener("change", function (e) {
+      fileElem?.addEventListener("change", function (e) {
         handleFiles(this.files);
       });
     </script>
@@ -875,43 +781,48 @@
       let farmData = [];
       let filteredFarms = [];
 
-      const ctx = document.getElementById("plotsPieChart")?.getContext("2d");
+      const ctx = document.getElementById("plotsPieChart");
+      let myPieChart = null;
 
-      let myPieChart = new Chart(ctx, {
-        type: "doughnut",
-        data: {
-          labels: ["High", "Low", "More Info Needed"],
-          datasets: [
-            {
-              data: [0, 0, 0],
-              backgroundColor: ["#F64468", "#3AD190", "#ACDCE8"],
-              hoverOffset: 4,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              position: "top",
-            },
-            tooltip: {
-              enabled: true,
-            },
-            datalabels: {
-              color: "#111",
-              font: {
-                weight: "bold",
-                size: 16,
+      if (ctx) {
+        ctx.height = 200;
+
+        myPieChart = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: ["High", "Low", "More Info Needed"],
+            datasets: [
+              {
+                data: [0, 0, 0],
+                backgroundColor: ["#F64468", "#3AD190", "#ACDCE8"],
+                hoverOffset: 4,
               },
-              formatter: (value, context) => {
-                return "Fetching plots...";
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: "top",
+              },
+              tooltip: {
+                enabled: true,
+              },
+              datalabels: {
+                color: "#111",
+                font: {
+                  weight: "bold",
+                  size: 16,
+                },
+                formatter: (value, context) => {
+                  return "Fetching plots...";
+                },
               },
             },
           },
-        },
-        plugins: [ChartDataLabels],
-      });
+          plugins: [ChartDataLabels],
+        });
+      }
 
       const colorClasses = {
         low: "low",
@@ -1047,6 +958,12 @@
                 });
 
                 if (cs !== "") {
+                  document
+                    .querySelector("#viewMapBtn")
+                    .classList.remove("d-none");
+                  document.querySelector(
+                    "#viewMapBtn"
+                  ).href += `?file-id=${fileId}`;
                   farmsListTitle.innerHTML = `Plots List for ${cs} <i class="fa fa-close bg bg-light p-1 ms-2 rounded-1 cursor-pointer" onclick="window.location.href = '/validator/'"></i>`;
                   document.querySelector(
                     '#csFilterDropdown [value="' + cs + '"]'
@@ -1124,7 +1041,7 @@
       }
 
       // filter farms by collection site, if all sites are selected, show all farms, otherwise, show farms for the selected site
-      collectionSiteDropdown.addEventListener("change", (e) => {
+      collectionSiteDropdown?.addEventListener("change", (e) => {
         $("#farms").DataTable().destroy();
         const selectedSite = e.target.value;
         filteredFarms =
@@ -1140,7 +1057,7 @@
       // filter farms by eudr_risk_level
       document
         .querySelector("#riskLevelFilterDropdown")
-        .addEventListener("change", (e) => {
+        ?.addEventListener("change", (e) => {
           $("#farms").DataTable().destroy();
           const selectedRiskLevel = e.target.value;
           filteredFarms =

@@ -352,6 +352,8 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
             else:
                 errors.append(serializer.errors)
         else:
+            # format the data to geojson format and send to whisp API for processing
+            print(data)
             # Create new record with analysis
             err, analysis_results = await perform_analysis(data)
             if err:
@@ -537,6 +539,7 @@ def sync_farm_data(request):
 
     # loop through the data and check if the record exists
     for item in data:
+        file_id = None
         # check if data device_id exists in file table
         if not EUDRUploadedFilesModel.objects.filter(device_id=item["device_id"]).exists():
             # create a new file record
@@ -570,7 +573,8 @@ def sync_farm_data(request):
 
             if errors:
                 # delete the file if there are errors
-                EUDRUploadedFilesModel.objects.get(id=file_id).delete()
+                if file_id:
+                    EUDRUploadedFilesModel.objects.get(id=file_id).delete()
                 return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
     return Response(created_data, status=status.HTTP_201_CREATED)
