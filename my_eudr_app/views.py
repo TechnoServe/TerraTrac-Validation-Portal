@@ -117,15 +117,18 @@ def map_view(request):
         allLoadedFarms = farms
         if len(farms) > 0:
             # Try to get the cached tile layers
-            high_risk_tile_layer = cache.get(high_risk_tile_cache_key)
-            low_risk_tile_layer = cache.get(low_risk_tile_cache_key)
-            more_info_needed_tile_layer = cache.get(
-                more_info_needed_tile_cache_key)
+            high_risk_tile_layer = None
+            # cache.get(high_risk_tile_cache_key)
+            low_risk_tile_layer = None
+            # cache.get(low_risk_tile_cache_key)
+            more_info_needed_tile_layer = None
+            # cache.get(
+            #     more_info_needed_tile_cache_key)
 
             # Create a FeatureCollection for high risk level farms
             high_risk_farms = ee.FeatureCollection([
                 ee.Feature(ee.Geometry.Polygon(farm['polygon']), {
-                           'color': "#F64468", 'tooltip': f"""{farm['farmer_name']} - {farm['farm_size']} acres"""})
+                           'color': "#F64468"})
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'high'
             ])
 
@@ -148,22 +151,22 @@ def map_view(request):
                 high_risk_layer = ee.Image().paint(high_risk_farms)
                 high_risk_tile_layer = geemap.ee_tile_layer(
                     high_risk_layer, {'palette': ["#F64468"]}, 'EUDR Risk Level (High)', shown=True)
-                cache.set(high_risk_tile_cache_key, high_risk_tile_layer,
-                          timeout=3600)  # Cache for 1 hour
+                # cache.set(high_risk_tile_cache_key, high_risk_tile_layer,
+                #           timeout=3600)  # Cache for 1 hour
 
             if not low_risk_tile_layer:
                 low_risk_layer = ee.Image().paint(low_risk_farms)
                 low_risk_tile_layer = geemap.ee_tile_layer(
                     low_risk_layer, {'palette': ["#3AD190"]}, 'EUDR Risk Level (Low)', shown=True)
-                cache.set(low_risk_tile_cache_key,
-                          low_risk_tile_layer, timeout=3600)
+                # cache.set(low_risk_tile_cache_key,
+                #           low_risk_tile_layer, timeout=3600)
 
             if not more_info_needed_tile_layer:
                 more_info_needed_layer = ee.Image().paint(more_info_needed_farms)
                 more_info_needed_tile_layer = geemap.ee_tile_layer(more_info_needed_layer, {
                                                                    'palette': ["#ACDCE8"]}, 'EUDR Risk Level (More Info Needed)', shown=True)
-                cache.set(more_info_needed_tile_cache_key,
-                          more_info_needed_tile_layer, timeout=3600)
+                # cache.set(more_info_needed_tile_cache_key,
+                #           more_info_needed_tile_layer, timeout=3600)
 
             # Add the high risk level farms to the map
             m.add_child(high_risk_tile_layer)
