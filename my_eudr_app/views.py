@@ -197,7 +197,7 @@ def map_view(request):
             <b><i><u>Farm Analysis:</u></i></b><br>
             {
                                 "<br>".join([f"<b>{key.replace('_', ' ').capitalize(
-                                )}:</b> {value}" for key, value in farm['analysis'].items()])
+                                )}:</b> {str(value).title() if value else 'No'}" for key, value in farm['analysis'].items()])
                             }
             """,
                             color="transparent"
