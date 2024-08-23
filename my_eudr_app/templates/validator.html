@@ -364,6 +364,8 @@ Validator
     tabindex="-1"
     aria-labelledby="uploadFarmInfoModalLabel"
     aria-hidden="true"
+    data-bs-backdrop="static"
+    data-bs-keyboard="false"
   >
     <div class="modal-dialog">
       <div class="modal-content">
@@ -376,7 +378,9 @@ Validator
             class="btn-close"
             data-bs-dismiss="modal"
             aria-label="Close"
-          ></button>
+          >
+            <i class="fa fa-times text-dark-emphasis" aria-hidden="true"></i>
+          </button>
         </div>
         <div class="modal-body">
           <em>
