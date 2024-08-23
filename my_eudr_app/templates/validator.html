@@ -187,6 +187,13 @@ Validator
                     class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2 w-10"
                   >
                     Risk Level
+                    <!-- add info icon to open modal -->
+                    <i
+                      class="fa fa-info-circle text-primary ms-1"
+                      data-bs-toggle="modal"
+                      data-bs-target="#whispAnalysisCriteriasModal"
+                      onclick="event.stopPropagation()"
+                    ></i>
                   </th>
                   <th
                     class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
@@ -256,19 +263,100 @@ Validator
     </div>
   </div>
 
-  <!-- <div class="progress-overlay">
-    <div class="progress revalidate-progress" style="width: 50%">
-      <div
-        class="progress-bar progress-bar-striped progress-bar-animated bg-dark"
-        role="progressbar"
-        style="width: 100%; height: 20px"
-      >
-        <span class="progress-text py-4 font-italic"
-          >Wait while revalidating...</span
-        >
+  <div
+    class="modal fade"
+    id="whispAnalysisCriteriasModal"
+    tabindex="-1"
+    role="dialog"
+    aria-labelledby="whispAnalysisCriteriasModalLabel"
+    aria-hidden="true"
+    data-bs-backdrop="static"
+    data-bs-keyboard="false"
+  >
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="whispAnalysisCriteriasModalLabel">
+            Risk Level Criteria
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          >
+            <i class="fa fa-times text-dark-emphasis" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <!-- add N.B that there is referenced site -->
+            <div class="col-md-12">
+              <p class="text-xs text-muted">
+                The risk level is determined by the following criteria as per
+                <a
+                  class="link-primary"
+                  href="https://openforis.org/solutions/whisp/"
+                  target="_blank"
+                  >Whisp definition</a
+                >:
+              </p>
+            </div>
+            <div class="row">
+              <div class="col-md-12">
+                <div class="d-flex justify-content-between">
+                  <div class="d-flex flex-column align-items-center">
+                    <div class="d-flex flex-column">
+                      <div class="d-flex align-items-center me-3">
+                        <div
+                          class="bg-secondary rounded-circle me-2"
+                          style="width: 10px; height: 10px"
+                        ></div>
+                        <span class="text-success">Low</span>
+                      </div>
+                      <p class="text-xs text-muted ms-3">
+                        any plot outside of mapped forest, overlapping with an
+                        available commodity map or with any observed disturbance
+                        map before 2020.
+                      </p>
+                    </div>
+                    <div class="d-flex flex-column">
+                      <div class="d-flex align-items-center me-3">
+                        <div
+                          class="bg-secondary rounded-circle me-2"
+                          style="width: 10px; height: 10px"
+                        ></div>
+                        <span class="text-danger">High</span>
+                      </div>
+                      <p class="text-xs text-muted ms-3">
+                        plot is within mapped forest, not within any mapped
+                        commodity, and only disturbances detected after 2020
+                      </p>
+                    </div>
+                    <div class="d-flex flex-column">
+                      <div class="d-flex align-items-center me-3">
+                        <div
+                          class="bg-secondary rounded-circle me-2"
+                          style="width: 10px; height: 10px"
+                        ></div>
+                        <span class="text-info">More Info Needed</span>
+                      </div>
+                      <p class="text-xs text-muted ms-3">
+                        plots that have not been disturbed or lack other
+                        evidence to determine their risk level. This
+                        classification highlights areas that require further
+                        investigation.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  </div> -->
+  </div>
 
   <div
     class="modal fade"
