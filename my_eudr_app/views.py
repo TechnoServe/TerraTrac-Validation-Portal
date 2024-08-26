@@ -226,7 +226,7 @@ def map_view(request):
     else:
         print("Failed to fetch data from the API")
 
-    deforestation_vis = {'palette': ['FF0000']}
+    deforestation_vis = {'palette': ['3C0B08']}
     deforestation_map = geemap.ee_tile_layer(
         deforestation, deforestation_vis, 'Deforestation (2021-2023)', shown=False)
     m.add_child(deforestation_map)
@@ -250,7 +250,7 @@ def map_view(request):
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #3AD190; border: 1px solid #3AD190; width: 10px; height: 10px; border-radius: 30px;"></div>Low Risk Plots</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #F64468; border: 1px solid #F64468; width: 10px; height: 10px; border-radius: 30px;"></div>High Risk Plots</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #ACDCE8; border: 1px solid #ACDCE8; width: 10px; height: 10px; border-radius: 30px;"></div>More Info Needed Plots</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #DCC6B5; border: 1px solid red; width: 10px; height: 10px; border-radius: 30px;"></div>{'Plots in' if len(allLoadedFarms) < 30 else ''} Deforestated Areas (2021-2023)</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #3C0B08; width: 10px; height: 10px; border-radius: 30px;"></div>{'Plots in' if len(allLoadedFarms) < 30 else ''} Deforestated Areas (2021-2023)</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #A2B1A8; border: 1px solid gray; width: 10px; height: 10px; border-radius: 30px;"></div>{'Plots in' if len(allLoadedFarms) < 30 else ''} Protected Areas (2021-2023)</div>
     </div>
     """
