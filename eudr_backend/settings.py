@@ -95,7 +95,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"
 
-EE_CREDENTIALS = os.path.join(BASE_DIR, 'ee-eudr-compliance-68c5ebef5f20.json')
+EE_CREDENTIALS = os.path.join(BASE_DIR, 'ee-eudr-compliance-bc1b62e4e930.json')
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
 
