@@ -34,7 +34,6 @@ def update_geoid(user_id):
     farms = EUDRFarmModel.objects.filter(
         geoid__isnull=True, file_id__in=file_ids)
     for farm in farms:
-        print(f"Fetching geoid for farm {farm.id}")
         # check if polygon has only one ring
         if len(farm.polygon) != 1:
             continue
@@ -60,5 +59,3 @@ def update_geoid(user_id):
         else:
             farm.geoid = data.get("matched geo ids")[0]
             farm.save()
-            print(f"""Failed to fetch geoid for farm {
-                farm.id}: {response.status_code}""")
