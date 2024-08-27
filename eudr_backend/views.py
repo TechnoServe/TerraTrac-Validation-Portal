@@ -671,8 +671,14 @@ def retrieve_farm_data_from_file_id(request, pk):
 
 @api_view(["GET"])
 def retrieve_files(request):
-    data = EUDRUploadedFilesModel.objects.filter(
-        uploaded_by=request.user.username if request.user.is_authenticated else "admin").order_by("-updated_at")
+    data = None
+    if request.user.is_authenticated:
+        # Filter by the authenticated user's username
+        data = EUDRUploadedFilesModel.objects.filter(
+            uploaded_by=request.user.username).order_by("-updated_at")
+    else:
+        # Retrieve all records if no authenticated user
+        data = EUDRUploadedFilesModel.objects.all().order_by("-updated_at")
     serializer = EUDRUploadedFilesModelSerializer(data, many=True)
     return Response(serializer.data)
 
