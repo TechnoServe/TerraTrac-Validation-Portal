@@ -281,9 +281,11 @@ async def perform_analysis(data):
                 "features": chunk
             }
             response = await client.post(url, headers=headers, json=chunked_data)
+
             if response.status_code != 200:
                 return {"error": "Validation against global database failed."}, None
             analysis_results.extend(response.json().get('data', []))
+
     return None, analysis_results
 
 
@@ -382,7 +384,7 @@ def transform_csv_to_json(data):
         if 'latitude' not in record or 'longitude' not in record:
             continue
         # check if polygon field is empty array or empty string
-        if record.get('polygon') in ['[]', '']:
+        if not record.get('polygon') or record.get('polygon') in ['[]', '']:
             feature = {
                 "type": "Feature",
                 "geometry": {
@@ -417,8 +419,9 @@ def transform_db_data_to_geojson(data, isSyncing=False):
         # check if latitude, longitude, and polygon fields are not found in the record, skip the record
         if 'latitude' not in record or 'longitude' not in record:
             continue
-        # check if polygon field is empty array or empty string
-        if record.get('polygon') in ['[]', '']:
+        # check if polygon field is empty array or empty string or has only one ring
+
+        if not record.get('polygon') or record.get('polygon') in ['[]', ''] or len(record.get('polygon', [])) == 1:
             feature = {
                 "type": "Feature",
                 "geometry": {
