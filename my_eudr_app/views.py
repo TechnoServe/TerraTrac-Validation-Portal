@@ -76,6 +76,22 @@ def logout_view(request):
         return redirect('login')
 
 
+def glad_gfc_loss_per_year_prep():
+    # Load the Global Forest Change dataset
+    gfc = ee.Image("UMD/hansen/global_forest_change_2023_v1_11")
+    img_stack = None
+    # Generate an image based on GFC with one band of forest tree loss per year from 2001 to 2022
+    for i in range(21, 23 + 1):
+        gfc_loss_year = gfc.select(['lossyear']).eq(
+            i).And(gfc.select(['treecover2000']).gt(10))
+        gfc_loss_year = gfc_loss_year.rename("GFC_loss_year_" + str(2000+i))
+        if img_stack is None:
+            img_stack = gfc_loss_year
+        else:
+            img_stack = img_stack.addBands(gfc_loss_year)
+    return img_stack
+
+
 @login_required
 def map_view(request):
     initialize_earth_engine()
@@ -84,7 +100,6 @@ def map_view(request):
     userLat = request.GET.get('lat') or 0.0
     userLon = request.GET.get('lon') or 0.0
     farmId = int(farmId) if farmId else None
-    allLoadedFarms = None
 
     # Create a Folium map object.
     m = folium.Map(location=[userLat, userLon],
@@ -95,11 +110,10 @@ def map_view(request):
         tiles='https://mt1.google.com/vt/lyrs=r&x={x}&y={y}&z={z}', attr='Google', name='Google Maps').add_to(m)
     folium.TileLayer(tiles='https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
                      attr='Google', name='Google Satellite', show=False).add_to(m)
-    image2023 = ee.Image(
-        'UMD/hansen/global_forest_change_2023_v1_11').select('lossyear').eq(1).selfMask()
 
     # Add deforestation layer (2021-2023)
-    deforestation = image2023
+    deforestation = ee.Image(
+        'UMD/hansen/global_forest_change_2023_v1_11').select('lossyear').eq(1).selfMask()
     # Fetch protected areas
     protected_areas = ee.FeatureCollection("WCMC/WDPA/current/polygons")
 
@@ -114,7 +128,6 @@ def map_view(request):
         f"""{base_url}/api/farm/list/file/{fileId}/""")
     if response.status_code == 200:
         farms = [response.json()] if farmId else response.json()
-        allLoadedFarms = farms
         if len(farms) > 0:
             # Try to get the cached tile layers
             high_risk_tile_layer = None
@@ -250,8 +263,8 @@ def map_view(request):
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #3AD190; border: 1px solid #3AD190; width: 10px; height: 10px; border-radius: 30px;"></div>Low Risk Plots</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #F64468; border: 1px solid #F64468; width: 10px; height: 10px; border-radius: 30px;"></div>High Risk Plots</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #ACDCE8; border: 1px solid #ACDCE8; width: 10px; height: 10px; border-radius: 30px;"></div>More Info Needed Plots</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #3C0B08; width: 10px; height: 10px; border-radius: 30px;"></div>{'Plots in' if len(allLoadedFarms) < 30 else ''} Deforestated Areas (2021-2023)</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #A2B1A8; border: 1px solid gray; width: 10px; height: 10px; border-radius: 30px;"></div>{'Plots in' if len(allLoadedFarms) < 30 else ''} Protected Areas (2021-2023)</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #3C0B08; width: 10px; height: 10px; border-radius: 30px;"></div>Deforestated Areas (2021-2023)</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #A2B1A8; border: 1px solid gray; width: 10px; height: 10px; border-radius: 30px;"></div>Protected Areas (2021-2023)</div>
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))

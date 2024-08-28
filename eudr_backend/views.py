@@ -213,7 +213,7 @@ def delete_user(request, pk):
 
 
 # Define an async function
-async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
+async def async_create_farm_data(data, serializer, file_id, isSyncing=False, hasCreatedFiles=[]):
     cache.delete('high_risk_layer')
     cache.delete('low_risk_layer')
     cache.delete('more_info_needed_layer')
@@ -223,7 +223,7 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False):
 
     if isSyncing:
         formatted_data = transform_db_data_to_geojson(data, True)
-        err, analysis_results = await perform_analysis(formatted_data)
+        err, analysis_results = await perform_analysis(formatted_data, hasCreatedFiles)
         if err:
             errors.append(err)
         else:
@@ -262,7 +262,7 @@ async def get_existing_record(data):
     return await sync_to_async(EUDRFarmModel.objects.filter(**lookup_fields).first)()
 
 
-async def perform_analysis(data):
+async def perform_analysis(data, hasCreatedFiles=[]):
     url = "https://whisp.openforis.org/api/geojson"
     headers = {"Content-Type": "application/json"}
     settings = await sync_to_async(WhispAPISetting.objects.first)()
@@ -283,6 +283,9 @@ async def perform_analysis(data):
             response = await client.post(url, headers=headers, json=chunked_data)
 
             if response.status_code != 200:
+                if hasCreatedFiles:
+                    EUDRUploadedFilesModel.objects.filter(
+                        id__in=hasCreatedFiles).delete()
                 return {"error": "Validation against global database failed."}, None
             analysis_results.extend(response.json().get('data', []))
 
@@ -514,6 +517,7 @@ def sync_farm_data(request):
 
     errors = []
     response_data = []
+    created_files_ids = []
 
     # Step 2-5: Process each group
     for collection_site, farms in grouped_data.items():
@@ -548,10 +552,11 @@ def sync_farm_data(request):
                     uploaded_by=uploaded_by
                 )
                 file_id = file_created.pk
+                created_files_ids.append(file_id)
             # Step 3: Process each farm in the group
             serializer = EUDRFarmModelSerializer(data=farms)
             errors, created_data = async_to_sync(async_create_farm_data)(
-                farms, serializer, file_id, True
+                farms, serializer, file_id, True, created_files_ids
             )
             json_data = json.loads(
                 serializers.serialize('json', created_data[0]))
@@ -651,7 +656,9 @@ def retrieve_map_data(request):
     files = EUDRUploadedFilesModel.objects.all()
     filesSerializer = EUDRUploadedFilesModelSerializer(files, many=True)
 
-    data = EUDRFarmModel.objects.all().order_by("-updated_at")
+    data = EUDRFarmModel.objects.filter(
+        uploaded_by=request.user.username if request.user.is_authenticated else "admin"
+    ).order_by("-updated_at")
 
     serializer = EUDRFarmModelSerializer(data, many=True)
 
