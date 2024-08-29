@@ -76,22 +76,6 @@ def logout_view(request):
         return redirect('login')
 
 
-def glad_gfc_loss_per_year_prep():
-    # Load the Global Forest Change dataset
-    gfc = ee.Image("UMD/hansen/global_forest_change_2023_v1_11")
-    img_stack = None
-    # Generate an image based on GFC with one band of forest tree loss per year from 2001 to 2022
-    for i in range(21, 23 + 1):
-        gfc_loss_year = gfc.select(['lossyear']).eq(
-            i).And(gfc.select(['treecover2000']).gt(10))
-        gfc_loss_year = gfc_loss_year.rename("GFC_loss_year_" + str(2000+i))
-        if img_stack is None:
-            img_stack = gfc_loss_year
-        else:
-            img_stack = img_stack.addBands(gfc_loss_year)
-    return img_stack
-
-
 @login_required
 def map_view(request):
     initialize_earth_engine()
@@ -112,10 +96,22 @@ def map_view(request):
                      attr='Google', name='Google Satellite', show=False).add_to(m)
 
     # Add deforestation layer (2021-2023)
-    deforestation = ee.Image(
-        'UMD/hansen/global_forest_change_2023_v1_11').select('lossyear').eq(1).selfMask()
+    gfc = ee.Image("UMD/hansen/global_forest_change_2023_v1_11")
+    deforestation = gfc.select(['lossyear']).gt(
+        20).And(gfc.select(['treecover2000']).gt(10))
     # Fetch protected areas
-    protected_areas = ee.FeatureCollection("WCMC/WDPA/current/polygons")
+    wdpa_poly = ee.FeatureCollection("WCMC/WDPA/current/polygons")
+
+    wdpa_filt = wdpa_poly.filter(
+        ee.Filter.And(ee.Filter.neq('STATUS', 'Proposed'),
+                      ee.Filter.neq('STATUS', 'Not Reported'),
+                      ee.Filter.neq('DESIG_ENG', 'UNESCO-MAB Biosphere Reserve'))
+    )
+    protected_areas = ee.Image().paint(wdpa_filt, 1)
+    
+    # kbas_2023_poly = ee.FeatureCollection("projects/ee-andyarnellgee/assets/p0004_commodity_mapper_support/raw/KBAsGlobal_2023_March_01_POL")
+
+    # commodity_areas = ee.Image().paint(kbas_2023_poly,1)
 
     # Cache keys for each risk level tile layer
     high_risk_tile_cache_key = 'high_risk_tile_layer'
@@ -141,41 +137,60 @@ def map_view(request):
             # Create a FeatureCollection for high risk level farms
             high_risk_farms = ee.FeatureCollection([
                 ee.Feature(ee.Geometry.Polygon(farm['polygon']), {
-                           'color': "#F64468"})
+                    'color': "#F64468",  # Border color
+                    # Background color with low opacity
+                    'fillColor': '#f495a8'
+                })
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'high'
             ])
 
-            # Create a FeatureCollection for low risk level farms
+            # Low-risk farms with border and low-opacity background
             low_risk_farms = ee.FeatureCollection([
                 ee.Feature(ee.Geometry.Polygon(farm['polygon']), {
-                           'color': "#3AD190"})
+                    'color': "#3AD190",  # Border color
+                    # Background color with low opacity
+                    'fillColor': 'rgba(58, 209, 144, 0.3)'
+                })
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'low'
             ])
 
-            # Create a FeatureCollection for more info needed farms
+            # Farms needing more information with border and low-opacity background
             more_info_needed_farms = ee.FeatureCollection([
                 ee.Feature(ee.Geometry.Polygon(farm['polygon']), {
-                           'color': "#ACDCE8"})
+                    'color': "#ACDCE8",  # Border color
+                    # Background color with low opacity
+                    'fillColor': 'rgba(172, 220, 232, 0.3)'
+                })
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'more_info_needed'
             ])
 
             # If any of the tile layers are not cached, create and cache them
             if not high_risk_tile_layer:
-                high_risk_layer = ee.Image().paint(high_risk_farms)
+                high_risk_layer = ee.Image().paint(
+                    # Paint the fill (1) and the border width (2)
+                    high_risk_farms, 1, 2
+                )
+
+                # Add the layer with low-opacity fill and a solid border color
                 high_risk_tile_layer = geemap.ee_tile_layer(
-                    high_risk_layer, {'palette': ["#F64468"]}, 'EUDR Risk Level (High)', shown=True)
+                    high_risk_layer,
+                    # add the fill color and border color
+                    {'palette': ["#F64468"]},
+                    'EUDR Risk Level (High)',
+                    shown=True
+                )
                 # cache.set(high_risk_tile_cache_key, high_risk_tile_layer,
                 #           timeout=3600)  # Cache for 1 hour
 
             if not low_risk_tile_layer:
-                low_risk_layer = ee.Image().paint(low_risk_farms)
+                low_risk_layer = ee.Image().paint(low_risk_farms, 1, 2)
                 low_risk_tile_layer = geemap.ee_tile_layer(
                     low_risk_layer, {'palette': ["#3AD190"]}, 'EUDR Risk Level (Low)', shown=True)
                 # cache.set(low_risk_tile_cache_key,
                 #           low_risk_tile_layer, timeout=3600)
 
             if not more_info_needed_tile_layer:
-                more_info_needed_layer = ee.Image().paint(more_info_needed_farms)
+                more_info_needed_layer = ee.Image().paint(more_info_needed_farms, 1, 2)
                 more_info_needed_tile_layer = geemap.ee_tile_layer(more_info_needed_layer, {
                                                                    'palette': ["#ACDCE8"]}, 'EUDR Risk Level (More Info Needed)', shown=True)
                 # cache.set(more_info_needed_tile_cache_key,
@@ -239,15 +254,21 @@ def map_view(request):
     else:
         print("Failed to fetch data from the API")
 
-    deforestation_vis = {'palette': ['3C0B08']}
+    deforestation_vis = {'palette': ['#900850']}
     deforestation_map = geemap.ee_tile_layer(
         deforestation, deforestation_vis, 'Deforestation (2021-2023)', shown=False)
     m.add_child(deforestation_map)
 
     # Add protected areas layer
+    protected_areas_vis = {'palette': ['#585858']}
     protected_areas_map = geemap.ee_tile_layer(
-        protected_areas, {}, 'Protected Areas', shown=False)
+        protected_areas, protected_areas_vis, 'Protected Areas', shown=False)
     m.add_child(protected_areas_map)
+    
+    # commodity_areas_vis = {'palette': ['#111111']}
+    # commodity_areas_map = geemap.ee_tile_layer(
+    #     commodity_areas, commodity_areas_vis, 'Commodity Areas', shown=False)
+    # m.add_child(commodity_areas_map)
 
     # Add layer control
     folium.LayerControl(collapsed=False).add_to(m)
@@ -260,11 +281,11 @@ def map_view(request):
                 background-color: white; z-index:9999; font-size:14px;
                 border:2px solid grey; padding: 10px;">
     <h4>Legend</h4><br/>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #3AD190; border: 1px solid #3AD190; width: 10px; height: 10px; border-radius: 30px;"></div>Low Risk Plots</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #F64468; border: 1px solid #F64468; width: 10px; height: 10px; border-radius: 30px;"></div>High Risk Plots</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #ACDCE8; border: 1px solid #ACDCE8; width: 10px; height: 10px; border-radius: 30px;"></div>More Info Needed Plots</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #3C0B08; width: 10px; height: 10px; border-radius: 30px;"></div>Deforestated Areas (2021-2023)</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #A2B1A8; border: 1px solid gray; width: 10px; height: 10px; border-radius: 30px;"></div>Protected Areas (2021-2023)</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #fff; border: 1px solid #3AD190; width: 10px; height: 10px; border-radius: 30px;"></div>Low Risk Plots</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #fff; border: 1px solid #F64468; width: 10px; height: 10px; border-radius: 30px;"></div>High Risk Plots</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #fff; border: 1px solid #ACDCE8; width: 10px; height: 10px; border-radius: 30px;"></div>More Info Needed Plots</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #900850; width: 10px; height: 10px; border-radius: 30px;"></div>Deforestated Areas (2021-2023)</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #585858; width: 10px; height: 10px; border-radius: 30px;"></div>Protected Areas (2021-2023)</div>
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))
