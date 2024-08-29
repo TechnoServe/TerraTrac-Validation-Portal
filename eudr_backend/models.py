@@ -27,8 +27,11 @@ class EUDRUserModel(models.models.Model):
 class EUDRFarmModel(models.models.Model):
     remote_id = models.models.CharField(max_length=255, null=True, blank=True)
     farmer_name = models.models.CharField(max_length=255)
+    member_id = models.models.CharField(max_length=255, null=True, blank=True)
     farm_size = models.models.FloatField()
     collection_site = models.models.CharField(max_length=255)
+    site_id = models.models.ForeignKey(
+        "EUDRCollectionSiteModel", on_delete=models.models.CASCADE, null=True, blank=True)
     agent_name = models.models.CharField(max_length=255, null=True, blank=True)
     farm_village = models.models.CharField(max_length=255)
     farm_district = models.models.CharField(max_length=255)
@@ -45,6 +48,22 @@ class EUDRFarmModel(models.models.Model):
 
     def __str__(self):
         return self.farmer_name
+
+
+class EUDRCollectionSiteModel(models.models.Model):
+    site_name = models.models.CharField(max_length=255)
+    site_district = models.models.CharField(max_length=255)
+    site_manager = models.models.CharField(max_length=255, null=True)
+    site_village = models.models.CharField(max_length=255)
+    site_email = models.models.EmailField(
+        max_length=255, null=True, blank=True)
+    site_phone_number = models.models.CharField(
+        max_length=255, null=True, blank=True)
+    created_at = models.models.DateTimeField(auto_now_add=True)
+    updated_at = models.models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.site_name
 
 
 class EUDRUploadedFilesModel(models.models.Model):
