@@ -41,8 +41,7 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "3.21.66.57",
     "ec2-3-21-66-57.us-east-2.compute.amazonaws.com",
-    "testterratrac.tnslabs.org",
-    "lawyers-resorts-justify-gothic.trycloudflare.com"
+    "testterratrac.tnslabs.org"
 ]
 
 

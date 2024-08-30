@@ -488,10 +488,10 @@ def create_farm_data(request):
     file_serializer = EUDRUploadedFilesModelSerializer(data=file_data)
 
     if file_serializer.is_valid():
-        if not EUDRUploadedFilesModel.objects.filter(file_name=file_data["file_name"]).exists():
+        if not EUDRUploadedFilesModel.objects.filter(file_name=file_data["file_name"], uploaded_by=request.user.username if request.user.is_authenticated else "admin").exists():
             file_serializer.save()
         file_id = EUDRUploadedFilesModel.objects.get(
-            file_name=file_data["file_name"]).id
+            file_name=file_data["file_name"], uploaded_by=request.user.username if request.user.is_authenticated else "admin").id
     else:
         EUDRUploadedFilesModel.objects.get(
             id=file_serializer.data.get("id")).delete()

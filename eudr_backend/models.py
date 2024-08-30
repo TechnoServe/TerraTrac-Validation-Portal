@@ -29,7 +29,7 @@ class EUDRFarmModel(models.models.Model):
     farmer_name = models.models.CharField(max_length=255)
     member_id = models.models.CharField(max_length=255, null=True, blank=True)
     farm_size = models.models.FloatField()
-    collection_site = models.models.CharField(max_length=255)
+    collection_site = models.models.CharField(max_length=255, blank=True)
     site_id = models.models.ForeignKey(
         "EUDRCollectionSiteModel", on_delete=models.models.CASCADE, null=True, blank=True)
     agent_name = models.models.CharField(max_length=255, null=True, blank=True)
