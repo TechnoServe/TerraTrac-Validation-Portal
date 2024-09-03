@@ -108,7 +108,7 @@ def map_view(request):
                       ee.Filter.neq('DESIG_ENG', 'UNESCO-MAB Biosphere Reserve'))
     )
     protected_areas = ee.Image().paint(wdpa_filt, 1)
-    
+
     # kbas_2023_poly = ee.FeatureCollection("projects/ee-andyarnellgee/assets/p0004_commodity_mapper_support/raw/KBAsGlobal_2023_March_01_POL")
 
     # commodity_areas = ee.Image().paint(kbas_2023_poly,1)
@@ -146,7 +146,7 @@ def map_view(request):
 
             # Low-risk farms with border and low-opacity background
             low_risk_farms = ee.FeatureCollection([
-                ee.Feature(ee.Geometry.Polygon(farm['polygon']), {
+                ee.Feature(ee.Geometry.Polygon(farm['polygon']) if not farm['polygon'] or not len(farm['polygon']) == 2 else ee.Geometry.Point([farm['latitude'], farm['longitude']]), {
                     'color': "#3AD190",  # Border color
                     # Background color with low opacity
                     'fillColor': 'rgba(58, 209, 144, 0.3)'
@@ -211,9 +211,23 @@ def map_view(request):
                     polygon = farm['polygon']
 
                     if polygon:
-                        folium.Polygon(
-                            locations=[reverse_polygon_points(polygon)],
-                            tooltip=f"""
+                        js = {
+                            "type": "FeatureCollection",
+                            "features": [
+                                    {
+                                        "type": "Feature",
+                                        "properties": {},
+                                        "geometry": {
+                                            "coordinates": polygon,
+                                            "type": "Polygon"
+                                        }
+                                    }
+                            ]
+                        }
+                        geo_pol = folium.GeoJson(data=js, control=False, style_function=lambda x: {
+                            'color': 'transparent', 'fillColor': 'transparent'})
+                        folium.Popup(
+                            html=f"""
             <b><i><u>Plot Info:</u></i></b><br><br>
                             <b>GeoID:</b> {farm['geoid']}<br>
                             <b>Farmer Name:</b> {farm['farmer_name']}<br>
@@ -225,32 +239,42 @@ def map_view(request):
             <b><i><u>Farm Analysis:</u></i></b><br>
             {
                                 "<br>".join([f"<b>{key.replace('_', ' ').capitalize(
-                                )}:</b> {str(value).title() if value else 'No'}" for key, value in farm['analysis'].items()])
+                                )}:</b> {str(value).replace('_', ' ').title() if value else 'No'}" for key, value in farm['analysis'].items()])
                             }
-            """,
-                            color="transparent"
-                        ).add_to(m)
+            """, max_width="500").add_to(geo_pol)
+                        geo_pol.add_to(m)
                 else:
                     folium.Marker(
                         location=[farm['latitude'], farm['longitude']],
                         popup=folium.Popup(html=f"""
             <b><i><u>Plot Info:</u></i></b><br><br>
-                                           <b>Farmer Name:</b> {farm['farmer_name']}<br>
+                            <b>GeoID:</b> {farm['geoid']}<br>
+                            <b>Farmer Name:</b> {farm['farmer_name']}<br>
             <b>Farm Size:</b> {farm['farm_size']}<br>
             <b>Collection Site:</b> {farm['collection_site']}<br>
             <b>Agent Name:</b> {farm['agent_name']}<br>
             <b>Farm Village:</b> {farm['farm_village']}<br>
-            <b>District:</b> {farm['farm_district']}<br>
-            """, show=True),
-                        icon=folium.Icon(color='green', icon='leaf'),
+            <b>District:</b> {farm['farm_district']}<br><br>
+            <b><i><u>Farm Analysis:</u></i></b><br>
+            {
+                            "<br>".join([f"<b>{key.replace('_', ' ').capitalize(
+                            )}:</b> {str(value).replace('_', ' ').title() if value else 'No'}" for key, value in farm['analysis'].items()])
+                        }
+            """, max_width="500", show=True if farmId or (not farmId and farms.index(farm) == 0) else False
+                        ),
+                        icon=folium.Icon(color='green' if farm['analysis']['eudr_risk_level'] ==
+                                         'low' else 'red' if farm['analysis']['eudr_risk_level'] == 'high' else 'skyblue', icon='leaf'),
                     ).add_to(m)
 
             # zoom to the extent of the map to the first polygon
             has_polygon = next(
-                (farm['polygon'] for farm in farms if farm['id'] == farmId), farms[0]['polygon'])
+                (farm['polygon'] for farm in farms if farm['id'] == farmId and not farm['polygon'] or not len(farm['polygon']) == 2), farms[0]['polygon'] if not farm['polygon'] or not len(farm['polygon']) == 2 else None)
             if has_polygon:
                 m.fit_bounds([reverse_polygon_points(has_polygon)],
-                             max_zoom=12 if not farmId else 16)
+                             max_zoom=14 if not farmId else 16)
+            else:
+                m.fit_bounds(
+                    [[farms[0]['latitude'], farms[0]['longitude']]], max_zoom=18)
     else:
         print("Failed to fetch data from the API")
 
@@ -264,7 +288,7 @@ def map_view(request):
     protected_areas_map = geemap.ee_tile_layer(
         protected_areas, protected_areas_vis, 'Protected Areas', shown=False)
     m.add_child(protected_areas_map)
-    
+
     # commodity_areas_vis = {'palette': ['#111111']}
     # commodity_areas_map = geemap.ee_tile_layer(
     #     commodity_areas, commodity_areas_vis, 'Commodity Areas', shown=False)
