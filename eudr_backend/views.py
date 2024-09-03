@@ -13,9 +13,11 @@ from asgiref.sync import async_to_sync, sync_to_async
 from django.db.models import Q
 from django.core import serializers
 
-from eudr_backend.models import WhispAPISetting, EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
+from eudr_backend.models import EUDRCollectionSiteModel, EUDRFarmBackupModel, WhispAPISetting, EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
 from eudr_backend.tasks import update_geoid
 from .serializers import (
+    EUDRCollectionSiteModelSerializer,
+    EUDRFarmBackupModelSerializer,
     EUDRFarmModelSerializer,
     EUDRUploadedFilesModelSerializer,
     EUDRUserModelSerializer,
@@ -511,81 +513,67 @@ def create_farm_data(request):
 
 @api_view(["POST"])
 def sync_farm_data(request):
-    grouped_data = defaultdict(list)
-    for farm_data in request.data:
-        grouped_data[farm_data['collection_site']].append(farm_data)
+    sync_results = []
+    data = request.data
+    for entry in data:
+        # Check or create collection site
+        site_data = entry.get('collection_site')
+        # append device_id to site_data
+        site_data['device_id'] = entry.get("device_id")
+        site, created = EUDRCollectionSiteModel.objects.update_or_create(
+            name=site_data['name'],
+            defaults=site_data
+        )
 
-    errors = []
-    response_data = []
-    created_files_ids = []
-
-    # Step 2-5: Process each group
-    for collection_site, farms in grouped_data.items():
-        try:
-            # Step 2: Check if a file exists or create a new one
-            device_id = farms[0].get('device_id')
-            uploaded_by = farms[0].get('agent_name', 'Unknown')
-
-            remote_ids = [item['remote_id'] for item in farms]
-            existing_farms = EUDRFarmModel.objects.filter(
-                remote_id__in=remote_ids)
-
-            # filter out the existing farms with only file_id and remote_id
-            existing_farms = existing_farms.values('file_id', 'remote_id')
-
-            # get first record to get the file_id
-            file_id = existing_farms[0]['file_id'] if existing_farms else None
-
-            # check if it exists in EUDRUploadedFilesModel, and update the file_name, device_id, and uploaded_by
-            existing_file = EUDRUploadedFilesModel.objects.filter(id=file_id)
-
-            if existing_file.exists():
-                existing_file.update(
-                    file_name=collection_site,
-                    device_id=device_id,
-                    uploaded_by=uploaded_by
-                )
-            else:
-                file_created = EUDRUploadedFilesModel.objects.create(
-                    file_name=collection_site,
-                    device_id=device_id,
-                    uploaded_by=uploaded_by
-                )
-                file_id = file_created.pk
-                created_files_ids.append(file_id)
-            # Step 3: Process each farm in the group
-            serializer = EUDRFarmModelSerializer(data=farms)
-            errors, created_data = async_to_sync(async_create_farm_data)(
-                farms, serializer, file_id, True, created_files_ids
+        # Sync farms
+        for farm_data in entry.get('farms', []):
+            farm_data['site_id'] = site
+            farm, farm_created = EUDRFarmBackupModel.objects.update_or_create(
+                remote_id=farm_data.get('remote_id'),
+                defaults=farm_data
             )
-            json_data = json.loads(
-                serializers.serialize('json', created_data[0]))
-            for item in json_data:
-                item['status'] = 200
+            sync_results.append(farm.remote_id)
 
-            response_data.extend(json_data)
+    return Response({"synced_remote_ids": sync_results}, status=status.HTTP_200_OK)
 
-            if errors:
-                for item in farms:
-                    item['status'] = 400
 
-        except Exception as group_error:
-            # Record group-specific errors
-            errors.append({
-                'collection_site': collection_site,
-                'error': str(group_error)
-            })
+@api_view(["POST"])
+def restore_farm_data(request):
+    device_id = request.data.get("device_id")
+    phone_number = request.data.get("phone_number")
+    email = request.data.get("email")
 
-    # Step 5: Return the response data and errors
-    mapped_data = [
-        {
-            "remote_id": obj["fields"]["remote_id"],
-            "status": obj["status"]
-        }
-        for obj in response_data
-    ]
+    collection_sites = []
 
-    return Response(mapped_data, status=status.HTTP_201_CREATED)
+    # Query based on priority: device_id, phone_number, or email
+    if device_id:
+        collection_sites = EUDRCollectionSiteModel.objects.filter(
+            device_id=device_id)
+    elif phone_number:
+        collection_sites = EUDRCollectionSiteModel.objects.filter(
+            phone_number=phone_number)
+    elif email:
+        collection_sites = EUDRCollectionSiteModel.objects.filter(email=email)
+
+    if not collection_sites:
+        return Response([], status=status.HTTP_200_OK)
+
+    # Prepare the restore data in the required format
+    restore_data = []
+
+    for site in collection_sites:
+        # Fetch all farms linked to this collection site
+        farms = EUDRFarmBackupModel.objects.filter(site_id=site.id)
+        farm_data = EUDRFarmBackupModelSerializer(farms, many=True).data
+
+        # Construct the structure with the collection site and farms
+        restore_data.append({
+            "device_id": site.device_id,
+            "collection_site": EUDRCollectionSiteModelSerializer(site).data,
+            "farms": farm_data
+        })
+
+    return Response(restore_data, status=status.HTTP_200_OK)
 
 
 @api_view(["PUT"])
@@ -647,6 +635,24 @@ def retrieve_farm_data(request):
     ).order_by("-updated_at")
 
     serializer = EUDRFarmModelSerializer(data, many=True)
+
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
+def retrieve_all_synced_farm_data(request):
+    data = EUDRFarmBackupModel.objects.all().order_by("-updated_at")
+
+    serializer = EUDRFarmBackupModelSerializer(data, many=True)
+
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
+def retrieve_collection_sites(request):
+    data = EUDRCollectionSiteModel.objects.all().order_by("-updated_at")
+
+    serializer = EUDRCollectionSiteModelSerializer(data, many=True)
 
     return Response(serializer.data)
 

@@ -41,7 +41,8 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "3.21.66.57",
     "ec2-3-21-66-57.us-east-2.compute.amazonaws.com",
-    "testterratrac.tnslabs.org"
+    "testterratrac.tnslabs.org",
+    "behalf-devel-theaters-these.trycloudflare.com"
 ]
 
 
@@ -142,7 +143,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
         "OPTIONS": {
-            "timeout": 20,
+            "timeout": 50,
         },
     }
 }
