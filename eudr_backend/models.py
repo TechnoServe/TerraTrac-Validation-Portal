@@ -67,6 +67,7 @@ class EUDRFarmBackupModel(models.models.Model):
 
 class EUDRCollectionSiteModel(models.models.Model):
     name = models.models.CharField(max_length=255)
+    local_cs_id = models.models.CharField(max_length=255, null=True)
     device_id = models.models.CharField(max_length=255, null=True)
     agent_name = models.models.CharField(max_length=255, null=True)
     email = models.models.EmailField(
