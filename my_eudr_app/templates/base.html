@@ -164,7 +164,8 @@
               <span class="nav-link-text ms-1">Map</span>
             </a>
           </li>
-          <!-- <li class="nav-item">
+          {% if user.is_authenticated and user.is_staff %}
+          <li class="nav-item">
             <a
               class="nav-link {% if active_page == 'users' %}active{% endif %}"
               href="{% url 'users' %}"
@@ -176,7 +177,8 @@
               </div>
               <span class="nav-link-text ms-1">Users</span>
             </a>
-          </li> -->
+          </li>
+          {% endif %}
           <li class="nav-item">
             <a class="nav-link" href="{% url 'logout' %}" id="logout">
               <div

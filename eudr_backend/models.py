@@ -10,18 +10,17 @@ class UserType(models.models.enums.Choices):
 class EUDRUserModel(models.models.Model):
     first_name = models.models.CharField(max_length=255)
     last_name = models.models.CharField(max_length=255)
-    email = models.models.EmailField(max_length=255, unique=True)
-    phone_number = models.models.CharField(max_length=255)
+    username = models.models.EmailField(max_length=255, unique=True)
     password = models.models.CharField(max_length=255)
     is_active = models.models.BooleanField(default=True)
     user_type = models.models.CharField(
-        max_length=255, choices=UserType.choices, default=UserType.ADMIN
+        max_length=255, choices=UserType.choices, default=UserType.AGENT
     )
     created_at = models.models.DateTimeField(auto_now_add=True)
     updated_at = models.models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.email
+        return self.username
 
 
 class EUDRFarmModel(models.models.Model):

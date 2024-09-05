@@ -89,7 +89,34 @@
           <h4 class="text-center my-4">TerraTrac Validator Login</h4>
           <form method="POST">
             <div class="d-flex flex-column align-items-center">
-              {% csrf_token %} {{ form.as_p }}
+              {% csrf_token %}
+              <div class="form-group">
+                <label for="id_username">Email</label>
+                <input
+                  type="text"
+                  name="username"
+                  id="id_username"
+                  class="form-control {% if messages %}is-invalid{% endif %}"
+                  required
+                />
+                {% if messages %}
+                <div class="invalid-feedback">
+                  {% for message in messages %} {{ message }} {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+
+              <!-- Password Field -->
+              <div class="form-group">
+                <label for="id_password">Password</label>
+                <input
+                  type="password"
+                  name="password"
+                  id="id_password"
+                  class="form-control {% if messages %}is-invalid{% endif %}"
+                  required
+                />
+              </div>
               <button
                 type="submit"
                 class="btn btn-primary d-flex justify-content-center"

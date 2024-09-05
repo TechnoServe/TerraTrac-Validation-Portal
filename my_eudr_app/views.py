@@ -3,6 +3,7 @@ from django.core.cache import cache
 from django.shortcuts import redirect, render
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 import ee
 import folium
@@ -64,6 +65,7 @@ def map(request):
 
 
 @login_required
+@staff_member_required(login_url='/login/')
 def users(request):
     active_page = "users"
 
