@@ -1556,6 +1556,111 @@
     </script>
 
     <script>
+      const usersContainer = document.getElementById("usersContainer");
+
+      fetch("/api/users/")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          let i = 0;
+
+          if (document.querySelector("#total_users")) {
+            document.querySelector("#total_users").innerText = data.length;
+          }
+
+          if (usersContainer) {
+            // remove loading spinner
+            usersContainer.innerHTML = "";
+
+            while (i < data.length) {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+              <td>
+                <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
+              </td>
+              <td>
+                  <h6 class="mb-0 text-sm">${data[i].first_name} ${
+                data[i].last_name
+              }</h6>
+              </td>
+              <td>
+                <p class="text-xs font-weight-bold mb-0">${data[i].username}</p>
+              </td>
+              <td>
+                <p class="text-xs font-weight-bold mb-0">${
+                  data[i].user_type || "N/A"
+                }</p>
+              </td>
+              <td>
+                <p class="text-xs font-weight-bold mb-0">${
+                  data[i].is_active
+                }</p>
+              </td>
+              <td>
+                <p class="text-xs font-weight-bold mb-0">${new Date(
+                  data[i].date_joined
+                ).toLocaleString()}</p>
+              </td>
+              <td>
+                <a
+                  href="{% url 'validator' %}?user-id=${data[i].id}"
+                  class="text-primary font-weight-bold text-lg me-3"
+                  title="View User List of Plots"
+                  ><i class="bi bi-list"></i></a
+                >
+                <a
+                  href="#?user-id=${data[i].id}"
+                  class="text-primary font-weight-bold text-lg"
+                  title="Edit User"
+                  ><i class="bi bi-pen"></i></a
+                >
+                <a
+                  href="#?user-id=${data[i].id}"
+                  class="text-primary font-weight-bold text-lg"
+                  title="Delete User"
+                  ><i class="bi bi-trash"></i></a
+                >
+              </td>
+          `;
+
+              usersContainer.appendChild(tr);
+              i++;
+            }
+
+            $("#files").DataTable({
+              language: {
+                //customize pagination prev and next buttons: use arrows instead of words
+                paginate: {
+                  previous: '<span class="fa fa-chevron-left"></span>',
+                  next: '<span class="fa fa-chevron-right"></span>',
+                },
+                //customize number of elements to be displayed
+                lengthMenu:
+                  'Display <select class="form-control input-sm">' +
+                  '<option value="10">10</option>' +
+                  '<option value="20">20</option>' +
+                  '<option value="30">30</option>' +
+                  '<option value="40">40</option>' +
+                  '<option value="50">50</option>' +
+                  '<option value="-1">All</option>' +
+                  "</select> results",
+              },
+            });
+          }
+        })
+        .catch((error) => {
+          console.error(
+            "There was a problem with the fetch users operation:",
+            error
+          );
+        });
+    </script>
+
+    <script>
       $(window).on("load", function () {
         if (window.location.pathname === "/map/") {
           $("#map-preLoader").show();

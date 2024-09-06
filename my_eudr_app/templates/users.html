@@ -26,9 +26,17 @@ Users
         </div>
         <div class="card-body px-0 pt-0 pb-2">
           <div class="table-responsive p-0">
-            <table class="table align-items-center mb-0">
+            <table
+              id="users"
+              class="table table-striped align-items-center mb-0"
+            >
               <thead>
                 <tr>
+                  <th
+                    class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
+                  >
+                    No.
+                  </th>
                   <th
                     class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
                   >
@@ -37,17 +45,7 @@ Users
                   <th
                     class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"
                   >
-                    Email
-                  </th>
-                  <th
-                    class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"
-                  >
-                    Phone Number
-                  </th>
-                  <th
-                    class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"
-                  >
-                    Address
+                    Username
                   </th>
                   <th
                     class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
@@ -59,10 +57,23 @@ Users
                   >
                     Status
                   </th>
+                  <th
+                    class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
+                  >
+                    Joined On
+                  </th>
                   <th class="text-secondary opacity-7"></th>
                 </tr>
               </thead>
-              <tbody></tbody>
+              <tbody id="usersContainer">
+                <tr>
+                  <td colspan="7" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </div>
         </div>

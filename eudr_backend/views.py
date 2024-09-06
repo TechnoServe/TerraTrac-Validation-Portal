@@ -1,7 +1,6 @@
 import ast
-from collections import defaultdict
 import json
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.utils import timezone
 from django.core.cache import cache
 import httpx
@@ -11,7 +10,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from asgiref.sync import async_to_sync, sync_to_async
 from django.db.models import Q
-from django.core import serializers
+from django.contrib.auth.models import User
 
 from eudr_backend.models import EUDRCollectionSiteModel, EUDRFarmBackupModel, WhispAPISetting, EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
 from eudr_backend.tasks import update_geoid
@@ -183,7 +182,7 @@ def create_user(request):
 
 @api_view(["GET"])
 def retrieve_users(request):
-    data = EUDRUserModel.objects.all()
+    data = User.objects.all().order_by("-date_joined")
     serializer = EUDRUserModelSerializer(data, many=True)
     return Response(serializer.data)
 
@@ -627,7 +626,7 @@ def revalidate_farm_data(request):
 def retrieve_farm_data(request):
     files = EUDRUploadedFilesModel.objects.filter(
         uploaded_by=request.user.username if request.user.is_authenticated else "admin"
-    )
+    ) if not request.user.is_staff else EUDRUploadedFilesModel.objects.all()
     filesSerializer = EUDRUploadedFilesModelSerializer(files, many=True)
 
     data = EUDRFarmModel.objects.filter(
@@ -664,7 +663,7 @@ def retrieve_map_data(request):
 
     data = EUDRFarmModel.objects.filter(
         uploaded_by=request.user.username if request.user.is_authenticated else "admin"
-    ).order_by("-updated_at")
+    ).order_by("-updated_at") if not request.user.is_staff else EUDRFarmModel.objects.all().order_by("-updated_at")
 
     serializer = EUDRFarmModelSerializer(data, many=True)
 
@@ -691,7 +690,7 @@ def retrieve_files(request):
     if request.user.is_authenticated:
         # Filter by the authenticated user's username
         data = EUDRUploadedFilesModel.objects.filter(
-            uploaded_by=request.user.username).order_by("-updated_at")
+            uploaded_by=request.user.username).order_by("-updated_at") if not request.user.is_staff else EUDRUploadedFilesModel.objects.all().order_by("-updated_at")
     else:
         # Retrieve all records if no authenticated user
         data = EUDRUploadedFilesModel.objects.all().order_by("-updated_at")
