@@ -639,6 +639,23 @@ def retrieve_farm_data(request):
 
 
 @api_view(["GET"])
+def retrieve_user_farm_data(request, pk):
+    users = User.objects.filter(id=pk)
+    files = EUDRUploadedFilesModel.objects.filter(
+        uploaded_by=users.values()[0].get("username")
+    )
+    filesSerializer = EUDRUploadedFilesModelSerializer(files, many=True)
+
+    data = EUDRFarmModel.objects.filter(
+        file_id__in=[file["id"] for file in filesSerializer.data]
+    ).order_by("-updated_at")
+
+    serializer = EUDRFarmModelSerializer(data, many=True)
+
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
 def retrieve_all_synced_farm_data(request):
     data = EUDRFarmBackupModel.objects.all().order_by("-updated_at")
 

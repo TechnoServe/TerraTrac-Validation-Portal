@@ -778,6 +778,7 @@
       const farmsListTitle = document.getElementById("farms_list_title");
       const farmsContainer = document.getElementById("farmsBodyContainer");
       const fileId = new URLSearchParams(window.location.search).get("file-id");
+      const userId = new URLSearchParams(window.location.search).get("user-id");
       const collectionSiteDropdown =
         document.querySelector("#csFilterDropdown");
       let farmData = [];
@@ -836,7 +837,9 @@
       if (fileId) {
         response = fetch(`/api/farm/list/file/${fileId}`);
       } else {
-        response = fetch("/api/farm/list/");
+        response = userId
+          ? fetch(`/api/farm/list/user/${userId}`)
+          : fetch("/api/farm/list/");
       }
 
       if (response) {
@@ -1592,12 +1595,7 @@
               </td>
               <td>
                 <p class="text-xs font-weight-bold mb-0">${
-                  data[i].user_type || "N/A"
-                }</p>
-              </td>
-              <td>
-                <p class="text-xs font-weight-bold mb-0">${
-                  data[i].is_active
+                  data[i].is_active ? "Active" : "Inactive"
                 }</p>
               </td>
               <td>
@@ -1605,14 +1603,17 @@
                   data[i].date_joined
                 ).toLocaleString()}</p>
               </td>
-              <td>
+              <td class="d-flex justify-content-center gap-3">
                 <a
                   href="{% url 'validator' %}?user-id=${data[i].id}"
-                  class="text-primary font-weight-bold text-lg me-3"
+                  class="text-primary font-weight-bold text-lg"
                   title="View User List of Plots"
                   ><i class="bi bi-list"></i></a
                 >
-                <a
+                ${
+                  data[i].is_superuser
+                    ? ""
+                    : `<a
                   href="#?user-id=${data[i].id}"
                   class="text-primary font-weight-bold text-lg"
                   title="Edit User"
@@ -1623,7 +1624,8 @@
                   class="text-primary font-weight-bold text-lg"
                   title="Delete User"
                   ><i class="bi bi-trash"></i></a
-                >
+                >`
+                }
               </td>
           `;
 

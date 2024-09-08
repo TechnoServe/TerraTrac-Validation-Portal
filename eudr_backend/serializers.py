@@ -7,7 +7,7 @@ class EUDRUserModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'first_name', 'last_name',
-                  'username', 'is_active', 'date_joined']
+                  'username', 'is_active', 'date_joined', 'is_staff', 'is_superuser']
 
 
 class EUDRFarmModelSerializer(serializers.ModelSerializer):
