@@ -179,18 +179,6 @@
             </a>
           </li>
           {% endif %}
-          <li class="nav-item">
-            <a class="nav-link" href="{% url 'logout' %}" id="logout">
-              <div
-                class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center"
-              >
-                <i
-                  class="ni ni-button-power text-primary text-sm opacity-10"
-                ></i>
-              </div>
-              <span class="nav-link-text ms-1">Logout</span>
-            </a>
-          </li>
         </ul>
         <div class="fixed-bottom mb-4 pe-5">
           <div class="container-fluid">
@@ -322,13 +310,43 @@
                 </a>
               </li>
               <!-- add circled div with logged in username first letter -->
-              <li
-                class="nav-item d-flex align-items-center"
-                title="{{user.username}}"
-              >
-                <span class="avatar rounded-circle cursor-pointer"
-                  ><i class="fa fa-user"></i
-                ></span>
+              <li class="nav-item dropdown">
+                <a
+                  class="nav-link dropdown-toggle d-flex align-items-center"
+                  href="#"
+                  id="navbarDropdown"
+                  role="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  <span
+                    class="avatar text-bg-light rounded-4 font-weight-bolder"
+                  >
+                    <!-- prettier-ignore -->
+                    {{ user.first_name|slice:":1" }}{{ user.last_name|slice:":1" }}
+                  </span>
+                </a>
+                <ul
+                  class="dropdown-menu dropdown-menu-end"
+                  aria-labelledby="navbarDropdown"
+                >
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="{% url 'profile' %}"
+                      id="profile"
+                      >Profile</a
+                    >
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="{% url 'logout' %}"
+                      id="logout"
+                      >Logout</a
+                    >
+                  </li>
+                </ul>
               </li>
             </ul>
           </div>
@@ -389,6 +407,11 @@
           event.preventDefault();
           document.getElementById("logout-form").submit();
         });
+    </script>
+    <script>
+      document.getElementById("profile").addEventListener("click", function () {
+        window.location.href = "{% url 'profile' %}";
+      });
     </script>
     <!-- Font Awesome Icons -->
     <script

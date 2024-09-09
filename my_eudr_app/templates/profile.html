@@ -1,0 +1,137 @@
+<!--
+=========================================================
+* Argon Dashboard 2 - v2.0.4
+=========================================================
+
+* Product Page: https://www.creative-tim.com/product/argon-dashboard
+* Copyright 2022 Creative Tim (https://www.creative-tim.com)
+* Licensed under MIT (https://www.creative-tim.com/license)
+* Coded by Creative Tim
+
+=========================================================
+
+* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+-->
+<!-- prettier-ignore -->
+{% extends 'base.html' %} {% block title %}Profile{% endblock %} {% block additional_title_content %}
+Profile
+{% endblock %} {% block content %}
+{% load static %}
+
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8">
+      <div class="card mb-4">
+        <div class="card-body d-flex align-items-center">
+          <img
+            src="{% static 'assets/img/dummy-avatar.png' %}"
+            alt="Avatar"
+            class="rounded-circle me-3"
+            width="80"
+            height="80"
+          />
+          <div>
+            <h4>{{ user.first_name }} {{ user.last_name }}</h4>
+            <p class="mb-0 text-muted">{{ user.email }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5>Personal Information</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{% url 'profile' %}">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="first_name" class="form-label">First Name</label>
+              <input
+                type="text"
+                class="form-control"
+                id="first_name"
+                name="first_name"
+                value="{{ user.first_name }}"
+                required
+              />
+            </div>
+            <div class="mb-3">
+              <label for="last_name" class="form-label">Last Name</label>
+              <input
+                type="text"
+                class="form-control"
+                id="last_name"
+                name="last_name"
+                value="{{ user.last_name }}"
+                required
+              />
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input
+                type="email"
+                class="form-control"
+                id="email"
+                name="email"
+                value="{{ user.email }}"
+                required
+              />
+            </div>
+            <button type="submit" class="btn btn-primary">
+              Update Profile
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h5>Change Password</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{% url 'change_password' %}">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="old_password" class="form-label"
+                >Current Password</label
+              >
+              <input
+                type="password"
+                class="form-control"
+                id="old_password"
+                name="old_password"
+                required
+              />
+            </div>
+            <div class="mb-3">
+              <label for="new_password1" class="form-label">New Password</label>
+              <input
+                type="password"
+                class="form-control"
+                id="new_password1"
+                name="new_password1"
+                required
+              />
+            </div>
+            <div class="mb-3">
+              <label for="new_password2" class="form-label"
+                >Confirm New Password</label
+              >
+              <input
+                type="password"
+                class="form-control"
+                id="new_password2"
+                name="new_password2"
+                required
+              />
+            </div>
+            <button type="submit" class="btn btn-danger">
+              Change Password
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,15 +1,15 @@
-from django.http import HttpResponse, JsonResponse
-from django.core.cache import cache
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
 import ee
 import folium
 import geemap.foliumap as geemap
 import requests
 from eudr_backend.settings import initialize_earth_engine
+from django.contrib import messages
 
 
 def signup_view(request):
@@ -38,6 +38,24 @@ def login_view(request):
     else:
         form = AuthenticationForm()
     return render(request, 'auth/login.html', {'form': form})
+
+
+@login_required
+def change_password(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Important to keep the user logged in
+            update_session_auth_hash(request, user)
+            messages.success(
+                request, 'Your password was successfully updated!')
+            return redirect('profile')
+        else:
+            messages.error(request, 'Please correct the error below.')
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, 'change_password.html', {'form': form})
 
 
 @login_required
@@ -74,6 +92,19 @@ def users(request):
     active_page = "users"
 
     return render(request, "users.html", {"active_page": active_page, 'user': request.user})
+
+
+@login_required
+def profile(request):
+    if request.method == 'POST':
+        user = request.user
+        user.first_name = request.POST.get('first_name')
+        user.last_name = request.POST.get('last_name')
+        user.email = request.POST.get('email')
+        user.save()
+        messages.success(request, 'Profile updated successfully.')
+        return redirect('profile')
+    return render(request, 'profile.html')
 
 
 def logout_view(request):
