@@ -185,3 +185,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AGSTACK_EMAIL = config('AGSTACK_API_EMAIL')
 AGSTACK_PASSWORD = config('AGSTACK_API_PASSWORD')
+
+# email credentials
+# settings.py
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = 'TerraTrac Validation Portal '+config('EMAIL_HOST_DEFAULT_USER')

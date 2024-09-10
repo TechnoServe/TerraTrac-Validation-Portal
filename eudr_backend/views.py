@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from asgiref.sync import async_to_sync, sync_to_async
 from django.db.models import Q
 from django.contrib.auth.models import User
+from django.contrib.auth.views import PasswordResetView
 
 from eudr_backend.models import EUDRCollectionSiteModel, EUDRFarmBackupModel, WhispAPISetting, EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
 from eudr_backend.tasks import update_geoid
@@ -783,3 +784,9 @@ def download_template(request):
         return Response({"error": "Invalid format"}, status=status.HTTP_400_BAD_REQUEST)
 
     return response
+
+
+class CustomPasswordResetView(PasswordResetView):
+    email_template_name = 'password_reset_email.html'
+    subject_template_name = 'password_reset_subject.txt'
+    success_url = 'password_reset_done'
