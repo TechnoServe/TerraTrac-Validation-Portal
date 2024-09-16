@@ -676,11 +676,13 @@ def retrieve_collection_sites(request):
 
 @api_view(["GET"])
 def retrieve_map_data(request):
-    files = EUDRUploadedFilesModel.objects.all()
+    files = EUDRUploadedFilesModel.objects.filter(
+        uploaded_by=request.user.username if request.user.is_authenticated else "admin"
+    )
     filesSerializer = EUDRUploadedFilesModelSerializer(files, many=True)
 
     data = EUDRFarmModel.objects.filter(
-        uploaded_by=request.user.username if request.user.is_authenticated else "admin"
+        file_id__in=[file["id"] for file in filesSerializer.data]
     ).order_by("-updated_at") if not request.user.is_staff else EUDRFarmModel.objects.all().order_by("-updated_at")
 
     serializer = EUDRFarmModelSerializer(data, many=True)

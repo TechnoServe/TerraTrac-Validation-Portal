@@ -21,6 +21,8 @@ from django.conf import settings
 from django.utils.http import urlsafe_base64_decode
 from django.shortcuts import get_object_or_404
 
+from my_eudr_app.ee_images import combine_commodities_images, combine_disturbances_after_2020_images, combine_disturbances_before_2020_images, combine_forest_cover_images
+
 
 def signup_view(request):
     if request.method == 'POST':
@@ -385,21 +387,35 @@ def map_view(request):
     else:
         print("Failed to fetch data from the API")
 
-    deforestation_vis = {'palette': ['#900850']}
-    deforestation_map = geemap.ee_tile_layer(
-        deforestation, deforestation_vis, 'Deforestation (2021-2023)', shown=False)
-    m.add_child(deforestation_map)
-
     # Add protected areas layer
     protected_areas_vis = {'palette': ['#585858']}
     protected_areas_map = geemap.ee_tile_layer(
         protected_areas, protected_areas_vis, 'Protected Areas', shown=False)
     m.add_child(protected_areas_map)
 
-    # commodity_areas_vis = {'palette': ['#111111']}
-    # commodity_areas_map = geemap.ee_tile_layer(
-    #     commodity_areas, commodity_areas_vis, 'Commodity Areas', shown=False)
-    # m.add_child(commodity_areas_map)
+    # Add forest mapped areas from ee_images.py
+    forest_mapped_areas_vis = {'palette': ['#00FF00']}
+    forest_mapped_areas_map = geemap.ee_tile_layer(
+        combine_forest_cover_images(), {}, 'Forest Mapped Areas', shown=False)
+    m.add_child(forest_mapped_areas_map)
+
+    # Add commodity areas from ee_images.py
+    commodity_areas_vis = {'palette': ['#FFD700']}
+    commodity_areas_map = geemap.ee_tile_layer(
+        combine_commodities_images(), {}, 'Commodity Areas', shown=False)
+    m.add_child(commodity_areas_map)
+
+    # add disturbed areas before 2020
+    disturbed_areas_before_2020_vis = {'palette': ['#FF4500']}
+    disturbed_areas_before_2020_map = geemap.ee_tile_layer(
+        combine_disturbances_before_2020_images(), {}, 'Disturbed Areas Before 2020', shown=False)
+    m.add_child(disturbed_areas_before_2020_map)
+
+    # add disturbed areas after 2020
+    disturbed_areas_after_2020_vis = {'palette': ['#FF0000']}
+    disturbed_areas_after_2020_map = geemap.ee_tile_layer(
+        combine_disturbances_after_2020_images(), {}, 'Disturbed Areas After 2020', shown=False)
+    m.add_child(disturbed_areas_after_2020_map)
 
     # Add layer control
     folium.LayerControl(collapsed=False).add_to(m)
@@ -415,7 +431,6 @@ def map_view(request):
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #fff; border: 1px solid #3AD190; width: 10px; height: 10px; border-radius: 30px;"></div>Low Risk Plots</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #fff; border: 1px solid #F64468; width: 10px; height: 10px; border-radius: 30px;"></div>High Risk Plots</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #fff; border: 1px solid #ACDCE8; width: 10px; height: 10px; border-radius: 30px;"></div>More Info Needed Plots</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #900850; width: 10px; height: 10px; border-radius: 30px;"></div>Deforestated Areas (2021-2023)</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #585858; width: 10px; height: 10px; border-radius: 30px;"></div>Protected Areas (2021-2023)</div>
     </div>
     """
