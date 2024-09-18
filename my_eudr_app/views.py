@@ -380,7 +380,7 @@ def map_view(request):
                 (farm['polygon'] for farm in farms if farm['id'] == farmId and not farm['polygon'] or not len(farm['polygon']) == 2), farms[0]['polygon'] if not farm['polygon'] or not len(farm['polygon']) == 2 else None)
             if has_polygon:
                 m.fit_bounds([reverse_polygon_points(has_polygon)],
-                             max_zoom=14 if not farmId else 16)
+                             max_zoom=18 if not farmId else 16)
             else:
                 m.fit_bounds(
                     [[farms[0]['latitude'], farms[0]['longitude']]], max_zoom=18)
