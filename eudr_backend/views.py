@@ -12,7 +12,9 @@ from asgiref.sync import async_to_sync, sync_to_async
 from django.db.models import Q
 from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordResetView
+import boto3
 
+from eudr_backend import settings
 from eudr_backend.models import EUDRCollectionSiteModel, EUDRFarmBackupModel, WhispAPISetting, EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
 from eudr_backend.tasks import update_geoid
 from .serializers import (
@@ -270,6 +272,7 @@ async def perform_analysis(data, hasCreatedFiles=[]):
     settings = await sync_to_async(WhispAPISetting.objects.first)()
     chunk_size = settings.chunk_size if settings else 500
     analysis_results = []
+    data = json.loads(data) if isinstance(data, str) else data
     features = data.get('features', [])
 
     if not features:
@@ -331,6 +334,7 @@ async def save_farm_data(data, file_id, analysis_results=None):
 
 def format_geojson_data(geojson, analysis, file_id=None):
     # Ensure the GeoJSON contains features
+    geojson = json.loads(geojson) if isinstance(geojson, str) else geojson
     features = geojson.get('features', [])
     if not features:
         return []
@@ -463,7 +467,10 @@ def create_farm_data(request):
     cache.delete('more_info_needed_layer')
 
     data_format = request.data.get('format')
-    raw_data = request.data.get('data')
+    raw_data = json.loads(request.data.get(
+        'data')) if data_format == 'geojson' else request.data.get('data')
+    file = request.FILES.get('file')
+    file_name = file.name.split('.')[0]
 
     if not data_format or not raw_data:
         return Response({'error': 'Format and data are required'}, status=status.HTTP_400_BAD_REQUEST)
@@ -475,6 +482,11 @@ def create_farm_data(request):
         return Response({'error': 'Unsupported format'}, status=status.HTTP_400_BAD_REQUEST)
 
     if errors:
+        # store the file in aws s3 bucket failed directory
+        s3 = boto3.client('s3', aws_access_key_id=settings.ACCESS_KEY_ID,
+                          aws_secret_access_key=settings.SECRET_ACCESS_KEY)
+        s3.upload_fileobj(file, settings.STORAGE_BUCKET_NAME,
+                          f'failed/{request.user.username}_{file.name}', ExtraArgs={'ACL': 'public-read'})
         return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
 
     raw_data = request.data.get(
@@ -484,7 +496,7 @@ def create_farm_data(request):
 
     # combine file_name and format to save in the database with dummy uploaded_by. then retrieve the file_id
     file_data = {
-        "file_name": f"{request.data.get('file_name')}.{request.data.get('format')}",
+        "file_name": f"{file_name}.{request.data.get('format')}",
         "uploaded_by": request.user.username if request.user.is_authenticated else "admin",
     }
     file_serializer = EUDRUploadedFilesModelSerializer(data=file_data)
@@ -497,6 +509,11 @@ def create_farm_data(request):
     else:
         EUDRUploadedFilesModel.objects.get(
             id=file_serializer.data.get("id")).delete()
+        # store the file in aws s3 bucket failed directory
+        s3 = boto3.client('s3', aws_access_key_id=settings.ACCESS_KEY_ID,
+                          aws_secret_access_key=settings.SECRET_ACCESS_KEY)
+        s3.upload_fileobj(file, settings.STORAGE_BUCKET_NAME,
+                          f'failed/{request.user.username}_{file.name}', ExtraArgs={'ACL': 'public-read'})
         return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # Call the async function from sync context
@@ -505,9 +522,20 @@ def create_farm_data(request):
     if errors:
         # delete the file if there are errors
         EUDRUploadedFilesModel.objects.get(id=file_id).delete()
+        # store the file in aws s3 bucket failed directory
+        s3 = boto3.client('s3', aws_access_key_id=settings.ACCESS_KEY_ID,
+                          aws_secret_access_key=settings.SECRET_ACCESS_KEY)
+        s3.upload_fileobj(file, settings.STORAGE_BUCKET_NAME,
+                          f'failed/{request.user.username}_{file.name}', ExtraArgs={'ACL': 'public-read'})
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
     update_geoid(repeat=60,
                  user_id=request.user.username if request.user.is_authenticated else "admin")
+
+    # store the file in aws s3 bucket processed directory
+    s3 = boto3.client('s3', aws_access_key_id=settings.ACCESS_KEY_ID,
+                      aws_secret_access_key=settings.SECRET_ACCESS_KEY)
+    s3.upload_fileobj(file, settings.STORAGE_BUCKET_NAME,
+                      f'processed/{request.user.username}_{file.name}', ExtraArgs={'ACL': 'public-read'})
     return Response(created_data, status=status.HTTP_201_CREATED)
 
 
@@ -716,6 +744,31 @@ def retrieve_files(request):
         data = EUDRUploadedFilesModel.objects.all().order_by("-updated_at")
     serializer = EUDRUploadedFilesModelSerializer(data, many=True)
     return Response(serializer.data)
+
+
+@api_view(["GET"])
+def retrieve_s3_files(request):
+    # Retrieve all files from all directories in the S3 bucket
+    s3 = boto3.client('s3', aws_access_key_id=settings.ACCESS_KEY_ID,
+                      aws_secret_access_key=settings.SECRET_ACCESS_KEY)
+    response = s3.list_objects_v2(Bucket=settings.STORAGE_BUCKET_NAME)
+    # get file urls and date uploaded
+    files = []
+    count = 0
+    for content in response.get('Contents', []):
+        file = {
+            'id': count,
+            'file_name': content.get('Key').split("/")[1].split("_", 1)[1],
+            'last_modified': content.get('LastModified'),
+            'size': content.get('Size') / 1024,
+            'url': f"{settings.S3_BASE_URL}{content.get('Key')}",
+            'uploaded_by': content.get('Key').split("/")[1].split("_")[0],
+            'category': content.get('Key').split("/")[0],
+        }
+        files.append(file)
+        count += 1
+
+    return Response(files)
 
 
 @api_view(["GET"])

@@ -32,6 +32,7 @@ from eudr_backend.views import (
     retrieve_file,
     retrieve_files,
     retrieve_map_data,
+    retrieve_s3_files,
     retrieve_user,
     retrieve_user_farm_data,
     retrieve_users,
@@ -51,6 +52,7 @@ urlpatterns = [
     path("map/", views.map, name="map"),
     path("map_data", views.map_view, name="map_view"),
     path("users/", views.users, name="users"),
+    path("uploads/", views.all_uploaded_files, name="uploads"),
     path("profile/", views.profile, name="profile"),
     path('profile/change-password/', views.change_password, name='change_password'),
     path("logout/", views.logout_view, name="logout"),
@@ -76,6 +78,7 @@ urlpatterns = [
     path("api/collection_sites/list/", retrieve_collection_sites,
          name="retrieve_collection_sites"),
     path("api/files/list/", retrieve_files, name="retrieve_files"),
+    path("api/files/list/all/", retrieve_s3_files, name="retrieve_all_files"),
     path("api/files/list/<int:pk>/", retrieve_file, name="retrieve_file"),
     path(
         "api/farm/list/file/<int:pk>/",

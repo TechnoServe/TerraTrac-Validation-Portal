@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     "eudr_backend",
     "corsheaders",
     "background_task",
+    "storages",
 ]
 
 MIDDLEWARE = [
@@ -194,4 +195,17 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = 'TerraTrac Validation Portal '+config('EMAIL_HOST_DEFAULT_USER')
+DEFAULT_FROM_EMAIL = 'TerraTrac Validation Portal ' + \
+    config('EMAIL_HOST_DEFAULT_USER')
+
+# AWS S3 Settings
+ACCESS_KEY_ID = config('ACCESS_KEY_ID')
+SECRET_ACCESS_KEY = config('SECRET_ACCESS_KEY')
+STORAGE_BUCKET_NAME = config('STORAGE_BUCKET_NAME')
+S3_REGION_NAME = config('S3_REGION_NAME')
+S3_CUSTOM_DOMAIN = f'{STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+S3_BASE_URL = f'https://{STORAGE_BUCKET_NAME}.s3.{
+    S3_REGION_NAME}.amazonaws.com/'
+
+# Django-storages config
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'

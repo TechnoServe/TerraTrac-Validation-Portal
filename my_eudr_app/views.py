@@ -107,6 +107,14 @@ def users(request):
 
 
 @login_required
+@staff_member_required(login_url='/login/')
+def all_uploaded_files(request):
+    active_page = "uploads"
+
+    return render(request, "uploads.html", {"active_page": active_page, 'user': request.user})
+
+
+@login_required
 def profile(request):
     if request.method == 'POST':
         user = request.user

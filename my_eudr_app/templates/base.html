@@ -579,6 +579,8 @@
         const format = file.name.split(".").pop().toLowerCase();
         const file_name = file.name.split(".")[0];
 
+        document.querySelector("#error-container").classList.add("d-none");
+
         try {
           const reader = new FileReader();
           reader.onload = function (e) {
@@ -601,7 +603,7 @@
             if (data) {
               // Now we have the formatted data
               // Send it to the API
-              sendDataToAPI(data, file_name, format);
+              sendDataToAPI(data, file_name, format, file);
             } else {
               alert("Invalid file format or file is empty.");
             }
@@ -617,7 +619,7 @@
         }
       }
 
-      function sendDataToAPI(data, file_name, format) {
+      function sendDataToAPI(data, file_name, format, file) {
         const csrftoken = getCookie("csrftoken");
         const progressContainer = document.querySelector(".progress");
         const progressBar = document.querySelector(".progress-bar");
@@ -659,17 +661,18 @@
         // Update text and progress every 10 seconds
         const intervalId = setInterval(updateProgress, 10000);
 
+        const formData = new FormData();
+        formData.append("data", JSON.stringify(data));
+        formData.append("file_name", file_name);
+        formData.append("format", format);
+        formData.append("file", file);
+
         fetch("/api/farm/add/", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             "X-CSRFToken": csrftoken,
           },
-          body: JSON.stringify({
-            data: data,
-            file_name: file_name,
-            format: format,
-          }),
+          body: formData,
         })
           .then((response) => {
             clearInterval(intervalId);
@@ -687,16 +690,22 @@
           .then((response) => {
             if (!response.ok) {
               if (response.status === 400) {
+                document
+                  .querySelector("#error-container")
+                  .classList.remove("d-none");
+
                 return response.json().then((errorData) => {
-                  Toastify({
-                    text:
-                      JSON.stringify(errorData?.errors) || errorData[0].error,
-                    duration: 3000,
-                    close: true,
-                    gravity: "top",
-                    position: "right",
-                    backgroundColor: "red",
-                  }).showToast();
+                  document.querySelector("#headingOneErrorText").textContent =
+                    errorData?.errors?.[0];
+                  document
+                    .querySelector("#close-error-accordion")
+                    .addEventListener("click", (e) => {
+                      e.preventDefault();
+
+                      document
+                        .querySelector("#error-container")
+                        .classList.add("d-none");
+                    });
                 });
               }
               throw new Error("Network response was not ok.");
@@ -726,14 +735,21 @@
             progressContainer.style.visibility = "hidden";
           })
           .catch((error) => {
-            Toastify({
-              text: "Error while uploading data. please try again",
-              duration: 3000,
-              close: true,
-              gravity: "top",
-              position: "right",
-              backgroundColor: "red",
-            }).showToast();
+            document
+              .querySelector("#error-container")
+              .classList.remove("d-none");
+
+            document.querySelector("#headingOneErrorText").textContent =
+              "Error while uploading data. please try again";
+            document
+              .querySelector("#close-error-accordion")
+              .addEventListener("click", (e) => {
+                e.preventDefault();
+
+                document
+                  .querySelector("#error-container")
+                  .classList.add("d-none");
+              });
 
             saveBtn.removeAttribute("disabled");
             closeBtn.removeAttribute("disabled");
@@ -1489,6 +1505,7 @@
         });
       }
     </script>
+
     <script>
       const filesContainer = document.getElementById("filesContainer");
 
@@ -1556,6 +1573,105 @@
             }
 
             $("#files").DataTable({
+              language: {
+                //customize pagination prev and next buttons: use arrows instead of words
+                paginate: {
+                  previous: '<span class="fa fa-chevron-left"></span>',
+                  next: '<span class="fa fa-chevron-right"></span>',
+                },
+                //customize number of elements to be displayed
+                lengthMenu:
+                  'Display <select class="form-control input-sm">' +
+                  '<option value="10">10</option>' +
+                  '<option value="20">20</option>' +
+                  '<option value="30">30</option>' +
+                  '<option value="40">40</option>' +
+                  '<option value="50">50</option>' +
+                  '<option value="-1">All</option>' +
+                  "</select> results",
+              },
+            });
+          }
+        })
+        .catch((error) => {
+          console.error("There was a problem with the fetch operation:", error);
+        });
+    </script>
+
+    <script>
+      const allFilesContainer = document.getElementById("allFilesContainer");
+
+      fetch("/api/files/list/all/")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          let i = 0;
+
+          if (document.querySelector("#all_files_uploaded")) {
+            document.querySelector("#all_files_uploaded").innerText =
+              data.length;
+          }
+
+          if (allFilesContainer) {
+            // remove loading spinner
+            allFilesContainer.innerHTML = "";
+
+            while (i < data.length) {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+              <td>
+                <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
+              </td>
+              <td>
+                <div class="d-flex px-2 py-1">
+                  <div class="d-flex justify-content-center align-items-center gap-2">
+                    <span class="fa fa-file-alt text-primary text-xs"></span>
+                    <h6 class="mb-0 text-sm">${data[i].file_name}</h6>
+                  </div>
+                </div>
+              </td>
+              <td>
+                    <p class="mb-0 text-sm">${Number(data[i].size).toFixed(
+                      1
+                    )}Kbs</p>
+              </td>
+              <td>
+                <p class="text-xs font-weight-bold mb-0">${
+                  data[i].uploaded_by
+                }</p>
+              </td>
+              <td>
+                <p class="btn btn-${
+                  data[i].category === "processed" ? "success" : "danger"
+                } text-xs font-weight-bold mb-0">${data[
+                i
+              ].category.toUpperCase()}</p>
+              </td>
+              <td>
+                <p class="text-xs font-weight-bold mb-0">${new Date(
+                  data[i].last_modified
+                ).toLocaleString()}</p>
+              </td>
+              <td>
+                <a
+                  href="${data[i].url}"
+                  class="text-primary font-weight-bold text-lg me-3"
+                  title="Download File"
+                  download
+                  ><i class="bi bi-download"></i></a
+                >
+              </td>
+          `;
+
+              allFilesContainer.appendChild(tr);
+              i++;
+            }
+
+            $("#all_files").DataTable({
               language: {
                 //customize pagination prev and next buttons: use arrows instead of words
                 paginate: {

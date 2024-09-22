@@ -13,8 +13,8 @@
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 -->
 <!-- prettier-ignore -->
-{% extends 'base.html' %} {% block title %}Validated Files{% endblock %} {% block additional_title_content %}
-Validated Files
+{% extends 'base.html' %} {% block title %}All Uploads{% endblock %} {% block additional_title_content %}
+All Uploads
 {% endblock %} {% block content %}
 
 <div class="w-100 px-4">
@@ -22,24 +22,12 @@ Validated Files
     <div class="col-12">
       <div class="card mb-4">
         <div class="d-flex card-header pb-0">
-          <h6>Uploaded Files List</h6>
-          {% if user.is_authenticated and user.is_staff %}
-          <div class="ms-auto">
-            <a
-              href="{% url 'uploads' %}"
-              class="btn btn-primary btn-sm ms-auto text-white"
-              id="viewMapBtn"
-            >
-              <i class="fa fa-files-o me-2"></i>
-              View All Uploads
-            </a>
-          </div>
-          {% endif %}
+          <h6>All Uploaded Files List</h6>
         </div>
         <div class="card-body px-0 pt-0 pb-2">
           <div class="table-responsive p-0">
             <table
-              id="files"
+              id="all_files"
               class="table table-striped align-items-center mb-0"
               style="width: 100%"
             >
@@ -56,9 +44,19 @@ Validated Files
                     File Name
                   </th>
                   <th
+                    class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7"
+                  >
+                    File Size
+                  </th>
+                  <th
                     class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"
                   >
                     Uploaded By
+                  </th>
+                  <th
+                    class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"
+                  >
+                    Category
                   </th>
                   <th
                     class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2"
@@ -68,9 +66,9 @@ Validated Files
                   <th class="text-secondary opacity-7">Actions</th>
                 </tr>
               </thead>
-              <tbody id="filesContainer">
+              <tbody id="allFilesContainer">
                 <tr>
-                  <td colspan="5" class="text-center">
+                  <td colspan="7" class="text-center">
                     <div class="spinner-border text-primary" role="status">
                       <span class="visually-hidden">Loading...</span>
                     </div>
