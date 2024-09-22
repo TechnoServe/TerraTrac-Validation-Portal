@@ -483,9 +483,9 @@ def create_farm_data(request):
 
     if errors:
         # store the file in aws s3 bucket failed directory
-        s3 = boto3.client('s3', aws_access_key_id=settings.ACCESS_KEY_ID,
-                          aws_secret_access_key=settings.SECRET_ACCESS_KEY)
-        s3.upload_fileobj(file, settings.STORAGE_BUCKET_NAME,
+        s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                          aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+        s3.upload_fileobj(file, settings.AWS_STORAGE_BUCKET_NAME,
                           f'failed/{request.user.username}_{file.name}', ExtraArgs={'ACL': 'public-read'})
         return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -510,9 +510,9 @@ def create_farm_data(request):
         EUDRUploadedFilesModel.objects.get(
             id=file_serializer.data.get("id")).delete()
         # store the file in aws s3 bucket failed directory
-        s3 = boto3.client('s3', aws_access_key_id=settings.ACCESS_KEY_ID,
-                          aws_secret_access_key=settings.SECRET_ACCESS_KEY)
-        s3.upload_fileobj(file, settings.STORAGE_BUCKET_NAME,
+        s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                          aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+        s3.upload_fileobj(file, settings.AWS_STORAGE_BUCKET_NAME,
                           f'failed/{request.user.username}_{file.name}', ExtraArgs={'ACL': 'public-read'})
         return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -523,18 +523,18 @@ def create_farm_data(request):
         # delete the file if there are errors
         EUDRUploadedFilesModel.objects.get(id=file_id).delete()
         # store the file in aws s3 bucket failed directory
-        s3 = boto3.client('s3', aws_access_key_id=settings.ACCESS_KEY_ID,
-                          aws_secret_access_key=settings.SECRET_ACCESS_KEY)
-        s3.upload_fileobj(file, settings.STORAGE_BUCKET_NAME,
+        s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                          aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+        s3.upload_fileobj(file, settings.AWS_STORAGE_BUCKET_NAME,
                           f'failed/{request.user.username}_{file.name}', ExtraArgs={'ACL': 'public-read'})
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
     update_geoid(repeat=60,
                  user_id=request.user.username if request.user.is_authenticated else "admin")
 
     # store the file in aws s3 bucket processed directory
-    s3 = boto3.client('s3', aws_access_key_id=settings.ACCESS_KEY_ID,
-                      aws_secret_access_key=settings.SECRET_ACCESS_KEY)
-    s3.upload_fileobj(file, settings.STORAGE_BUCKET_NAME,
+    s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                      aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+    s3.upload_fileobj(file, settings.AWS_STORAGE_BUCKET_NAME,
                       f'processed/{request.user.username}_{file.name}', ExtraArgs={'ACL': 'public-read'})
     return Response(created_data, status=status.HTTP_201_CREATED)
 
@@ -749,9 +749,9 @@ def retrieve_files(request):
 @api_view(["GET"])
 def retrieve_s3_files(request):
     # Retrieve all files from all directories in the S3 bucket
-    s3 = boto3.client('s3', aws_access_key_id=settings.ACCESS_KEY_ID,
-                      aws_secret_access_key=settings.SECRET_ACCESS_KEY)
-    response = s3.list_objects_v2(Bucket=settings.STORAGE_BUCKET_NAME)
+    s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                      aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+    response = s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
     # get file urls and date uploaded
     files = []
     count = 0
@@ -761,7 +761,7 @@ def retrieve_s3_files(request):
             'file_name': content.get('Key').split("/")[1].split("_", 1)[1],
             'last_modified': content.get('LastModified'),
             'size': content.get('Size') / 1024,
-            'url': f"{settings.S3_BASE_URL}{content.get('Key')}",
+            'url': f"{settings.AWS_S3_BASE_URL}{content.get('Key')}",
             'uploaded_by': content.get('Key').split("/")[1].split("_")[0],
             'category': content.get('Key').split("/")[0],
         }
