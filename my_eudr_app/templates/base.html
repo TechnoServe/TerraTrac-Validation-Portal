@@ -550,7 +550,7 @@
         const selectedFormat = e.target.value;
 
         if (selectedFormat !== "") {
-          window.location.href = `/api/download-template?format=${encodeURIComponent(
+          window.location.href = `/api/download-template?format%3D${encodeURIComponent(
             selectedFormat
           )}`;
         }

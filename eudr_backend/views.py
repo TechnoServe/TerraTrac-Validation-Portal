@@ -468,7 +468,7 @@ def create_farm_data(request):
 
     data_format = request.data.get('format')
     raw_data = json.loads(request.data.get(
-        'data')) if data_format == 'geojson' else request.data.get('data')
+        'data')) if isinstance(request.data.get('data'), str) else request.data.get('data')
     file = request.FILES.get('file')
     file_name = file.name.split('.')[0]
 
