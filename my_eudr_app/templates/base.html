@@ -240,7 +240,7 @@
                 >
                   <li class="mb-2">
                     <a
-                      class="dropdown-item border-radius-md"
+                      class="dropdown-item dropdown-item-lang border-radius-md"
                       href="javascript:;"
                       id="en"
                     >
@@ -249,7 +249,7 @@
                   </li>
                   <li class="mb-2">
                     <a
-                      class="dropdown-item border-radius-md"
+                      class="dropdown-item dropdown-item-lang border-radius-md"
                       href="javascript:;"
                       id="fr"
                     >
@@ -258,7 +258,7 @@
                   </li>
                   <li class="mb-2">
                     <a
-                      class="dropdown-item border-radius-md"
+                      class="dropdown-item dropdown-item-lang border-radius-md"
                       href="javascript:;"
                       id="rw"
                     >
@@ -267,7 +267,7 @@
                   </li>
                   <li class="mb-2">
                     <a
-                      class="dropdown-item border-radius-md"
+                      class="dropdown-item dropdown-item-lang border-radius-md"
                       href="javascript:;"
                       id="es"
                     >
@@ -276,7 +276,7 @@
                   </li>
                   <li class="mb-2">
                     <a
-                      class="dropdown-item border-radius-md"
+                      class="dropdown-item dropdown-item-lang border-radius-md"
                       href="javascript:;"
                       id="sw"
                     >
@@ -478,8 +478,8 @@
       referrerpolicy="no-referrer"
     ></script>
     <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.3/jspdf.plugin.autotable.min.js"
-      integrity="sha512-CNhbAXGrvqmSMpgydAOp7SFP50hdDaIMir76cuptjMdG0V4Hq7h+JzpSudrD2mRC38tawkA8aQSU8dQ0H6hzdQ=="
+      src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.6/jspdf.plugin.autotable.min.js"
+      integrity="sha512-UooE17DA6XZdlWbO65qbXIQm/oaathAoLKaaVXD9+1CoFNuWeJLnQ1nOaVjPCAZv/x8BuuJZA1EBrhoHtGpsMg=="
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     ></script>
@@ -526,7 +526,7 @@
       }
 
       // Event listener for language selection
-      document.querySelectorAll(".dropdown-item").forEach((item) => {
+      document.querySelectorAll(".dropdown-item-lang").forEach((item) => {
         item.addEventListener("click", (e) => {
           e.preventDefault();
 
