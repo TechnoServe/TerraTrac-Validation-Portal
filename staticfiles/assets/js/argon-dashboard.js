@@ -56,7 +56,7 @@ function initMap() {
   const farmId = urlParams.get("farm-id");
   const fileId = urlParams.get("file-id");
   let geojsonData = [];
-  const mapPreloader = document.getElementById("map-preLoader");
+  const mapPreloader = document.getElementById("loader-container");
   mapPreloader.style.display = "block";
 
   // request access to location, otherwise use default location
