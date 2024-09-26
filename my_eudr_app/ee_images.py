@@ -179,7 +179,7 @@ def glad_gfc_loss_before_2020_prep():
     # Load the Global Forest Change dataset
     gfc = ee.Image("UMD/hansen/global_forest_change_2023_v1_11")
     gfc_loss = gfc.select(['lossyear']).lte(20).And(
-        gfc.select(['treecover2000']).gt(10))
+        gfc.select(['treecover2000']).gt(10)).selfMask()
     return gfc_loss.rename("GFC_loss_before_2020")
 
 # ESA_fire_before_2020:
@@ -260,7 +260,7 @@ def glad_gfc_loss_after_2020_prep():
     # Load the Global Forest Change dataset
     gfc = ee.Image("UMD/hansen/global_forest_change_2023_v1_11")
     gfc_loss = gfc.select(['lossyear']).gt(20).And(
-        gfc.select(['treecover2000']).gt(10))
+        gfc.select(['treecover2000']).gt(10)).selfMask()
     return gfc_loss.rename("GFC_loss_after_2020")
 
 # MODIS_fire_after_2020:

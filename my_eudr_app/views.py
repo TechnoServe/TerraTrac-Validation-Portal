@@ -255,8 +255,6 @@ def map_view(request):
             high_risk_farms = ee.FeatureCollection([
                 ee.Feature(ee.Geometry.Polygon(farm['polygon']), {
                     'color': "#F64468",  # Border color
-                    # Background color with low opacity
-                    'fillColor': '#f495a8'
                 })
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'high'
             ])
@@ -265,8 +263,6 @@ def map_view(request):
             low_risk_farms = ee.FeatureCollection([
                 ee.Feature(ee.Geometry.Polygon(farm['polygon']) if not farm['polygon'] or not len(farm['polygon']) == 2 else ee.Geometry.Point([farm['latitude'], farm['longitude']]), {
                     'color': "#3AD190",  # Border color
-                    # Background color with low opacity
-                    'fillColor': 'rgba(58, 209, 144, 0.3)'
                 })
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'low'
             ])
@@ -275,8 +271,6 @@ def map_view(request):
             more_info_needed_farms = ee.FeatureCollection([
                 ee.Feature(ee.Geometry.Polygon(farm['polygon']), {
                     'color': "#ACDCE8",  # Border color
-                    # Background color with low opacity
-                    'fillColor': 'rgba(172, 220, 232, 0.3)'
                 })
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'more_info_needed'
             ])
@@ -342,7 +336,8 @@ def map_view(request):
                             ]
                         }
                         geo_pol = folium.GeoJson(data=js, control=False, style_function=lambda x: {
-                            'color': 'transparent', 'fillColor': 'transparent'})
+                            'color': 'transparent', 'fillColor': '#777'
+                        })
                         folium.Popup(
                             html=f"""
             <b><i><u>Plot Info:</u></i></b><br><br>
@@ -402,19 +397,16 @@ def map_view(request):
     m.add_child(protected_areas_map)
 
     # Add forest mapped areas from ee_images.py
-    forest_mapped_areas_vis = {'palette': ['#00FF00']}
     forest_mapped_areas_map = geemap.ee_tile_layer(
         combine_forest_cover_images(), {}, 'Forest Mapped Areas', shown=False)
     m.add_child(forest_mapped_areas_map)
 
     # Add commodity areas from ee_images.py
-    commodity_areas_vis = {'palette': ['#FFD700']}
     commodity_areas_map = geemap.ee_tile_layer(
         combine_commodities_images(), {}, 'Commodity Areas', shown=False)
     m.add_child(commodity_areas_map)
 
     # add disturbed areas before 2020
-    disturbed_areas_before_2020_vis = {'palette': ['#FF4500']}
     disturbed_areas_before_2020_map = geemap.ee_tile_layer(
         combine_disturbances_before_2020_images(), {}, 'Disturbed Areas Before 2020', shown=False)
     m.add_child(disturbed_areas_before_2020_map)
