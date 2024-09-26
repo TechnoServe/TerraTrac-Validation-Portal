@@ -38,7 +38,7 @@ def update_geoid(user_id):
         if len(farm.polygon) != 1:
             continue
 
-        reversed_coords = [[(lon, lat) for lat, lon in ring]
+        reversed_coords = [[(lat, lon) for lat, lon in ring]
                            for ring in farm.polygon]
 
 # Create a Shapely Polygon
