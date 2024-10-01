@@ -81,21 +81,34 @@ def validate_csv(data):
         try:
             float(record['farm_size'])
         except ValueError:
-            errors.append(f'Row {i}: "farm_size" must be a number.')
+            errors.append(f'Record {i+1}: "farm_size" must be a number.')
         try:
             float(record['latitude'])
         except ValueError:
-            errors.append(f'Row {i}: "latitude" must be a number.')
+            errors.append(f'Record {i+1}: "latitude" must be a number.')
         try:
             float(record['longitude'])
         except ValueError:
-            errors.append(f'Row {i}: "longitude" must be a number.')
+            errors.append(f'Record {i+1}: "longitude" must be a number.')
+
+    # if polygon is invalid, return error
+    for i, record in enumerate(
+        data[:-1] if (
+            len(data[-1]) < len(REQUIRED_FIELDS)
+        ) else data
+    ):
         try:
-            ast.literal_eval(record['polygon'])
+            polygon = record['polygon']
+            if float(record['farm_size']) >= 4 and not is_valid_polygon(json.loads(polygon)):
+                errors.append(
+                    f'Record {i+1}: Should have valid polygon format.')
+            elif polygon and not is_valid_polygon(json.loads(polygon)):
+                errors.append(
+                    f'Record {i+1}: Should have valid polygon format.')
         except ValueError:
-            errors.append(f'Row {i}: "polygon" must be a list.')
+            errors.append(f'Record {i+1}: "polygon" must be a list.')
         except SyntaxError:
-            errors.append(f'Row {i}: "polygon" must be a list.')
+            errors.append(f'Record {i+1}: "polygon" must be a list.')
 
     return errors
 
@@ -151,6 +164,9 @@ def validate_geojson(data: dict) -> bool:
             if not (isinstance(coordinates[0], list) and len(coordinates[0]) >= 4):
                 errors.append(
                     'Invalid GeoJSON coordinates. Must be a list of lists with at least 4 coordinates')
+            if properties.get('farm_size') >= 4 and not is_valid_polygon(coordinates):
+                errors.append(
+                    'Invalid GeoJSON coordinates. Must be a valid polygon')
             for coord in coordinates[0]:
                 if not (isinstance(coord, list) and len(coord) == 2):
                     errors.append(
@@ -165,6 +181,9 @@ def validate_geojson(data: dict) -> bool:
             if not all(isinstance(c, (int, float)) for c in coordinates):
                 errors.append(
                     'Invalid GeoJSON coordinates. Must be a list of numbers')
+            if properties.get('farm_size') >= 4:
+                errors.append(
+                    'Invalid record. Farm size must be less than 4 hectares for a point geometry')
         else:
             errors.append(
                 'Invalid GeoJSON geometry type. Must be Point or Polygon')
@@ -291,7 +310,7 @@ async def perform_analysis(data, hasCreatedFiles=[]):
                 if hasCreatedFiles:
                     EUDRUploadedFilesModel.objects.filter(
                         id__in=hasCreatedFiles).delete()
-                return {"error": "Validation against global database failed."}, None
+                return {"Validation against global database failed."}, None
             analysis_results.extend(response.json().get('data', []))
 
     return None, analysis_results
@@ -386,6 +405,16 @@ def format_geojson_data(geojson, analysis, file_id=None):
     return formatted_data_list
 
 
+def is_valid_polygon(polygon):
+    # Check if the polygon is a list and has at least 3 points, each with exactly 2 coordinates
+    try:
+        if isinstance(polygon, list) and (len(polygon[0]) >= 3 or len(polygon) >= 3):
+            return True
+        return False
+    except Exception as e:
+        return False
+
+
 def transform_csv_to_json(data):
     features = []
     for record in data:
@@ -393,7 +422,7 @@ def transform_csv_to_json(data):
         if 'latitude' not in record or 'longitude' not in record:
             continue
         # check if polygon field is empty array or empty string
-        if not record.get('polygon') or record.get('polygon') in ['[]', '']:
+        if not record.get('polygon') or record.get('polygon') in ['']:
             feature = {
                 "type": "Feature",
                 "geometry": {
@@ -429,8 +458,9 @@ def transform_db_data_to_geojson(data, isSyncing=False):
         if 'latitude' not in record or 'longitude' not in record:
             continue
         # check if polygon field is empty array or empty string or has only one ring
+        print(record.get('polygon', '[]'))
 
-        if not record.get('polygon') or record.get('polygon') in ['[]', ''] or len(record.get('polygon', [])) == 1:
+        if not record.get('polygon') or record.get('polygon') in [''] or len(record.get('polygon', [])) == 1:
             feature = {
                 "type": "Feature",
                 "geometry": {
@@ -514,7 +544,7 @@ def create_farm_data(request):
                           aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
         s3.upload_fileobj(file, settings.AWS_STORAGE_BUCKET_NAME,
                           f'failed/{request.user.username}_{file.name}', ExtraArgs={'ACL': 'public-read'})
-        return Response(file_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'errors': file_serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
     # Call the async function from sync context
     errors, created_data = async_to_sync(async_create_farm_data)(
@@ -527,7 +557,7 @@ def create_farm_data(request):
                           aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
         s3.upload_fileobj(file, settings.AWS_STORAGE_BUCKET_NAME,
                           f'failed/{request.user.username}_{file.name}', ExtraArgs={'ACL': 'public-read'})
-        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
     update_geoid(repeat=60,
                  user_id=request.user.username if request.user.is_authenticated else "admin")
 

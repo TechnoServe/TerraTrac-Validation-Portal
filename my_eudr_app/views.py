@@ -19,8 +19,7 @@ from django.core.mail import send_mail
 from django.urls import reverse
 from django.conf import settings
 from django.utils.http import urlsafe_base64_decode
-from django.shortcuts import get_object_or_404
-
+from eudr_backend.views import is_valid_polygon
 from my_eudr_app.ee_images import combine_commodities_images, combine_disturbances_after_2020_images, combine_disturbances_before_2020_images, combine_forest_cover_images
 
 
@@ -251,27 +250,38 @@ def map_view(request):
             # cache.get(
             #     more_info_needed_tile_cache_key)
 
-            # Create a FeatureCollection for high risk level farms
             high_risk_farms = ee.FeatureCollection([
-                ee.Feature(ee.Geometry.Polygon(farm['polygon']), {
-                    'color': "#F64468",  # Border color
-                })
+                ee.Feature(
+                    ee.Geometry.Point([farm['longitude'], farm['latitude']]) if not farm.get('polygon') or farm.get('polygon') in ['[]', ''] or not is_valid_polygon(farm.get('polygon'))
+                    else ee.Geometry.Polygon(farm['polygon']),
+                    {
+                        'color': "#F64468",  # Border color
+                    }
+                )
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'high'
             ])
 
             # Low-risk farms with border and low-opacity background
             low_risk_farms = ee.FeatureCollection([
-                ee.Feature(ee.Geometry.Polygon(farm['polygon']) if not farm['polygon'] or not len(farm['polygon']) == 2 else ee.Geometry.Point([farm['latitude'], farm['longitude']]), {
-                    'color': "#3AD190",  # Border color
-                })
+                ee.Feature(
+                    ee.Geometry.Point([farm['longitude'], farm['latitude']]) if not farm.get('polygon') or farm.get('polygon') in ['[]', ''] or not is_valid_polygon(farm.get('polygon'))
+                    else ee.Geometry.Polygon(farm['polygon']),
+                    {
+                        'color': "#3AD190",  # Border color
+                    }
+                )
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'low'
             ])
 
             # Farms needing more information with border and low-opacity background
             more_info_needed_farms = ee.FeatureCollection([
-                ee.Feature(ee.Geometry.Polygon(farm['polygon']), {
-                    'color': "#ACDCE8",  # Border color
-                })
+                ee.Feature(
+                    ee.Geometry.Point([farm['longitude'], farm['latitude']]) if not farm.get('polygon') or farm.get('polygon') in ['[]', ''] or not is_valid_polygon(farm.get('polygon'))
+                    else ee.Geometry.Polygon(farm['polygon']),
+                    {
+                        'color': "#ACDCE8",  # Border color
+                    }
+                )
                 for farm in farms if farm['analysis']['eudr_risk_level'] == 'more_info_needed'
             ])
 
@@ -290,22 +300,19 @@ def map_view(request):
                     'EUDR Risk Level (High)',
                     shown=True
                 )
-                # cache.set(high_risk_tile_cache_key, high_risk_tile_layer,
-                #           timeout=3600)  # Cache for 1 hour
+                # cache.set(high_risk_tile_cache_key, high_risk_tile_layer, timeout=3600)  # Cache for 1 hour
 
             if not low_risk_tile_layer:
                 low_risk_layer = ee.Image().paint(low_risk_farms, 1, 2)
                 low_risk_tile_layer = geemap.ee_tile_layer(
                     low_risk_layer, {'palette': ["#3AD190"]}, 'EUDR Risk Level (Low)', shown=True)
-                # cache.set(low_risk_tile_cache_key,
-                #           low_risk_tile_layer, timeout=3600)
+                # cache.set(low_risk_tile_cache_key, low_risk_tile_layer, timeout=3600)
 
             if not more_info_needed_tile_layer:
                 more_info_needed_layer = ee.Image().paint(more_info_needed_farms, 1, 2)
-                more_info_needed_tile_layer = geemap.ee_tile_layer(more_info_needed_layer, {
-                                                                   'palette': ["#ACDCE8"]}, 'EUDR Risk Level (More Info Needed)', shown=True)
-                # cache.set(more_info_needed_tile_cache_key,
-                #           more_info_needed_tile_layer, timeout=3600)
+                more_info_needed_tile_layer = geemap.ee_tile_layer(
+                    more_info_needed_layer, {'palette': ["#ACDCE8"]}, 'EUDR Risk Level (More Info Needed)', shown=True)
+                # cache.set(more_info_needed_tile_cache_key, more_info_needed_tile_layer, timeout=3600)
 
             # Add the high risk level farms to the map
             m.add_child(high_risk_tile_layer)
@@ -375,7 +382,7 @@ def map_view(request):
             """, max_width="500", show=True if farmId or (not farmId and farms.index(farm) == 0) else False
                         ),
                         icon=folium.Icon(color='green' if farm['analysis']['eudr_risk_level'] ==
-                                         'low' else 'red' if farm['analysis']['eudr_risk_level'] == 'high' else 'skyblue', icon='leaf'),
+                                         'low' else 'red' if farm['analysis']['eudr_risk_level'] == 'high' else 'lightblue', icon='leaf'),
                     ).add_to(m)
 
             # zoom to the extent of the map to the first polygon
@@ -397,22 +404,25 @@ def map_view(request):
     m.add_child(protected_areas_map)
 
     # Add forest mapped areas from ee_images.py
+    forest_mapped_areas_vis = {'palette': ['#D73027']}
     forest_mapped_areas_map = geemap.ee_tile_layer(
         combine_forest_cover_images(), {}, 'Forest Mapped Areas', shown=False)
     m.add_child(forest_mapped_areas_map)
 
     # Add commodity areas from ee_images.py
+    commodity_areas_vis = {'palette': ['#FEE08B']}
     commodity_areas_map = geemap.ee_tile_layer(
         combine_commodities_images(), {}, 'Commodity Areas', shown=False)
     m.add_child(commodity_areas_map)
 
     # add disturbed areas before 2020
+    disturbed_areas_before_2020_vis = {'palette': ['#4575B4']}
     disturbed_areas_before_2020_map = geemap.ee_tile_layer(
         combine_disturbances_before_2020_images(), {}, 'Disturbed Areas Before 2020', shown=False)
     m.add_child(disturbed_areas_before_2020_map)
 
     # add disturbed areas after 2020
-    disturbed_areas_after_2020_vis = {'palette': ['#FF0000']}
+    disturbed_areas_after_2020_vis = {'palette': ['#1A9850']}
     disturbed_areas_after_2020_map = geemap.ee_tile_layer(
         combine_disturbances_after_2020_images(), {}, 'Disturbed Areas After 2020', shown=False)
     m.add_child(disturbed_areas_after_2020_map)
