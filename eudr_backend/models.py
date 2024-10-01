@@ -35,6 +35,7 @@ class EUDRFarmModel(models.models.Model):
     latitude = models.models.FloatField(default=0.0)
     longitude = models.models.FloatField(default=0.0)
     polygon = models.models.JSONField()
+    accuracies = models.models.JSONField(default=list, blank=True)
     geoid = models.models.CharField(max_length=255, null=True, blank=True)
     is_validated = models.models.BooleanField(default=False)
     analysis = models.models.JSONField(null=True, blank=True)
@@ -57,6 +58,7 @@ class EUDRFarmBackupModel(models.models.Model):
     latitude = models.models.FloatField(default=0.0)
     longitude = models.models.FloatField(default=0.0)
     coordinates = models.models.JSONField()
+    accuracies = models.models.JSONField(default=list, blank=True)
     created_at = models.models.DateTimeField(auto_now_add=True)
     updated_at = models.models.DateTimeField(auto_now=True)
 
