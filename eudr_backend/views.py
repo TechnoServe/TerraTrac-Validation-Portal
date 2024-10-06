@@ -13,6 +13,7 @@ from django.db.models import Q
 from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordResetView
 import boto3
+from shapely import MultiPolygon, Polygon, unary_union
 
 from eudr_backend import settings
 from eudr_backend.models import EUDRCollectionSiteModel, EUDRFarmBackupModel, WhispAPISetting, EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
@@ -152,6 +153,7 @@ def validate_geojson(data: dict) -> bool:
         # Check for valid geometry
         geometry = feature.get('geometry')
         if not isinstance(geometry, dict):
+            print(geometry)
             errors.append('Invalid GeoJSON geometry. Must be a dictionary')
             continue
         geometry_type = geometry.get('type')
@@ -184,6 +186,27 @@ def validate_geojson(data: dict) -> bool:
             if properties.get('farm_size') >= 4:
                 errors.append(
                     'Invalid record. Farm size must be less than 4 hectares for a point geometry')
+        elif geometry_type == 'MultiPolygon':
+            if not (isinstance(coordinates, list) and len(coordinates) >= 1):
+                errors.append(
+                    'Invalid GeoJSON coordinates. Must be a list of lists')
+            for polygon in coordinates:
+                if not (isinstance(polygon, list) and len(polygon) >= 1):
+                    errors.append(
+                        'Invalid GeoJSON coordinates. Must be a list of lists')
+                if not (isinstance(polygon[0], list) and len(polygon[0]) >= 4):
+                    errors.append(
+                        'Invalid GeoJSON coordinates. Must be a list of lists with at least 4 coordinates')
+                if properties.get('farm_size') >= 4 and not is_valid_polygon(polygon):
+                    errors.append(
+                        'Invalid GeoJSON coordinates. Must be a valid polygon')
+                for coord in polygon[0]:
+                    if not (isinstance(coord, list) and len(coord) == 2):
+                        errors.append(
+                            'Invalid GeoJSON coordinates. Must be a list of lists with 2 coordinates')
+                    if not all(isinstance(c, (int, float)) for c in coord):
+                        errors.append(
+                            'Invalid GeoJSON coordinates. Must be a list of lists with numbers')
         else:
             errors.append(
                 'Invalid GeoJSON geometry type. Must be Point or Polygon')
@@ -367,6 +390,14 @@ def format_geojson_data(geojson, analysis, file_id=None):
         is_polygon = geometry.get('type') == 'Polygon'
         coordinates = geometry.get('coordinates', [])
 
+        # make union of coordinates if it is a MultiPolygon
+        if geometry.get('type') == 'MultiPolygon':
+            coordinates = []
+            for polygon in geometry.get('coordinates', []):
+                coordinates.extend(polygon)
+        else:
+            coordinates = geometry.get('coordinates', [])
+
         latitude = coordinates[1] if not is_polygon and len(
             coordinates) > 1 else properties.get('Centroid_lat', 0.0)
         longitude = coordinates[0] if not is_polygon and len(
@@ -451,14 +482,49 @@ def transform_csv_to_json(data):
     return geojson
 
 
+def flatten_geojson(geojson):
+    """
+    Loops through a GeoJSON object and flattens any MultiPolygon geometry to Polygon.
+    """
+    for feature in geojson.get('features', []):
+        geometry = feature.get('geometry', {})
+        if geometry['type'] == 'MultiPolygon':
+            # Flatten the MultiPolygon into a Polygon
+            feature['geometry'] = flatten_multipolygon(geometry)
+    return geojson
+
+
+def flatten_multipolygon(multipolygon):
+    """
+    Flattens a MultiPolygon geometry into a Polygon by combining inner arrays of coordinates.
+    """
+    if multipolygon['type'] != 'MultiPolygon':
+        raise ValueError("Input geometry is not a MultiPolygon")
+
+    # Initialize an empty list to hold combined coordinates
+    flattened_coordinates = []
+
+    # Iterate through the coordinates of each polygon in the MultiPolygon
+    for polygon in multipolygon['coordinates']:
+        # Each polygon has a list of rings (outer boundary, inner holes), we only want to combine the outer boundaries
+        for ring in polygon:
+            flattened_coordinates.extend(ring)
+
+    # Create the new Polygon geometry
+    polygon = {
+        "type": "Polygon",
+        "coordinates": [flattened_coordinates]
+    }
+
+    return polygon
+
+
 def transform_db_data_to_geojson(data, isSyncing=False):
     features = []
     for record in data:
         # check if latitude, longitude, and polygon fields are not found in the record, skip the record
         if 'latitude' not in record or 'longitude' not in record:
             continue
-        # check if polygon field is empty array or empty string or has only one ring
-        print(record.get('polygon', '[]'))
 
         if not record.get('polygon') or record.get('polygon') in [''] or len(record.get('polygon', [])) == 1:
             feature = {
@@ -519,8 +585,8 @@ def create_farm_data(request):
                           f'failed/{request.user.username}_{file.name}', ExtraArgs={'ACL': 'public-read'})
         return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    raw_data = request.data.get(
-        'data') if data_format == 'geojson' else transform_csv_to_json(raw_data)
+    raw_data = flatten_geojson(json.loads(request.data.get(
+        'data'))) if data_format == 'geojson' else transform_csv_to_json(raw_data)
 
     serializer = EUDRFarmModelSerializer(data=request.data)
 
