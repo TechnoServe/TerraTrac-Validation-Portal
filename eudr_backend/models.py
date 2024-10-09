@@ -35,6 +35,7 @@ class EUDRFarmModel(models.models.Model):
     latitude = models.models.FloatField(default=0.0)
     longitude = models.models.FloatField(default=0.0)
     polygon = models.models.JSONField()
+    polygon_type = models.models.CharField(max_length=255, null=True, blank=True)
     accuracies = models.models.JSONField(default=list, blank=True)
     geoid = models.models.CharField(max_length=255, null=True, blank=True)
     is_validated = models.models.BooleanField(default=False)

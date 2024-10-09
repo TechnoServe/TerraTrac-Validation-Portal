@@ -19,7 +19,7 @@ from django.core.mail import send_mail
 from django.urls import reverse
 from django.conf import settings
 from django.utils.http import urlsafe_base64_decode
-from eudr_backend.views import is_valid_polygon
+from eudr_backend.views import flatten_geojson, flatten_multipolygon_coordinates, is_valid_polygon
 from my_eudr_app.ee_images import combine_commodities_images, combine_disturbances_after_2020_images, combine_disturbances_before_2020_images, combine_forest_cover_images
 
 
@@ -325,8 +325,8 @@ def map_view(request):
 
             for farm in farms:
                 # Assuming farm data has 'farmer_name', 'latitude', 'longitude', 'farm_size', and 'polygon' fields
-                if 'polygon' in farm and len(farm['polygon']) == 1:
-                    polygon = farm['polygon']
+                if 'polygon' in farm and len(flatten_multipolygon_coordinates(farm['polygon'])) == 1:
+                    polygon = flatten_multipolygon_coordinates(farm['polygon'])
 
                     if polygon:
                         js = {
@@ -354,7 +354,9 @@ def map_view(request):
             <b>Collection Site:</b> {farm['collection_site']}<br>
             <b>Agent Name:</b> {farm['agent_name']}<br>
             <b>Farm Village:</b> {farm['farm_village']}<br>
-            <b>District:</b> {farm['farm_district']}<br><br>
+            <b>District:</b> {farm['farm_district']}<br>
+            {'<b>N.B:</b> <i>This is a Multi Polygon Type Plot</i>' if farm['polygon_type'] == 'MultiPolygon' else ''}
+            <br><br>
             <b><i><u>Farm Analysis:</u></i></b><br>
             {
                                 "<br>".join([f"<b>{key.replace('_', ' ').capitalize(
@@ -387,7 +389,7 @@ def map_view(request):
 
             # zoom to the extent of the map to the first polygon
             has_polygon = next(
-                (farm['polygon'] for farm in farms if farm['id'] == farmId and not farm['polygon'] or not len(farm['polygon']) == 2), farms[0]['polygon'] if not farm['polygon'] or not len(farm['polygon']) == 2 else None)
+                (flatten_multipolygon_coordinates(farm['polygon']) for farm in farms if farm['id'] == farmId and not flatten_multipolygon_coordinates(farm['polygon']) or not len(flatten_multipolygon_coordinates(farm['polygon'])) == 2), None)
             if has_polygon:
                 m.fit_bounds([reverse_polygon_points(has_polygon)],
                              max_zoom=18 if not farmId else 16)

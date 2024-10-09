@@ -315,6 +315,7 @@ async def perform_analysis(data, hasCreatedFiles=[]):
     chunk_size = settings.chunk_size if settings else 500
     analysis_results = []
     data = json.loads(data) if isinstance(data, str) else data
+    data = flatten_geojson(data)
     features = data.get('features', [])
 
     if not features:
@@ -387,7 +388,8 @@ def format_geojson_data(geojson, analysis, file_id=None):
         geometry = feature.get('geometry', {})
 
         # Determine if the geometry is a Polygon and extract coordinates
-        is_polygon = geometry.get('type') == 'Polygon'
+        is_polygon = geometry.get('type') == 'Polygon' or geometry.get(
+            'type') == 'MultiPolygon'
         coordinates = geometry.get('coordinates', [])
 
         # make union of coordinates if it is a MultiPolygon
@@ -413,6 +415,7 @@ def format_geojson_data(geojson, analysis, file_id=None):
             "latitude": latitude,
             "longitude": longitude,
             "polygon": coordinates,
+            "polygon_type": geometry.get('type'),
             "geoid": properties.get("geoid"),
             "file_id": file_id,
             "analysis": {
@@ -439,7 +442,10 @@ def format_geojson_data(geojson, analysis, file_id=None):
 def is_valid_polygon(polygon):
     # Check if the polygon is a list and has at least 3 points, each with exactly 2 coordinates
     try:
-        if isinstance(polygon, list) and (len(polygon[0]) >= 3 or len(polygon) >= 3):
+        if isinstance(polygon, list) and (
+            (len(polygon[0]) >= 3 or len(polygon) >= 3) or
+            (isinstance(polygon[0], list) and len(polygon[0][0]) >= 3)
+        ):
             return True
         return False
     except Exception as e:
@@ -518,6 +524,12 @@ def flatten_multipolygon(multipolygon):
 
     return polygon
 
+def flatten_multipolygon_coordinates(multipolygon_coords):
+    flattened_coordinates = []
+    for polygon in multipolygon_coords:
+        flattened_coordinates.extend(polygon)
+    return [flattened_coordinates]
+
 
 def transform_db_data_to_geojson(data, isSyncing=False):
     features = []
@@ -585,8 +597,8 @@ def create_farm_data(request):
                           f'failed/{request.user.username}_{file.name}', ExtraArgs={'ACL': 'public-read'})
         return Response({'errors': errors}, status=status.HTTP_400_BAD_REQUEST)
 
-    raw_data = flatten_geojson(json.loads(request.data.get(
-        'data'))) if data_format == 'geojson' else transform_csv_to_json(raw_data)
+    raw_data = request.data.get(
+        'data') if data_format == 'geojson' else transform_csv_to_json(raw_data)
 
     serializer = EUDRFarmModelSerializer(data=request.data)
 
