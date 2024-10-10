@@ -8,6 +8,7 @@ import ee
 import folium
 import geemap.foliumap as geemap
 import requests
+from shapely import Polygon
 from eudr_backend.settings import initialize_earth_engine
 from django.contrib import messages
 from django.contrib.auth.models import User
@@ -325,26 +326,43 @@ def map_view(request):
 
             for farm in farms:
                 # Assuming farm data has 'farmer_name', 'latitude', 'longitude', 'farm_size', and 'polygon' fields
-                if 'polygon' in farm and len(flatten_multipolygon_coordinates(farm['polygon'])) == 1:
+                polygon = flatten_multipolygon_coordinates(
+                    farm['polygon']) if farm['polygon_type'] == 'MultiPolygon' else farm['polygon']
+                if 'polygon' in farm and len(polygon) == 1:
                     polygon = flatten_multipolygon_coordinates(farm['polygon'])
 
                     if polygon:
+                        farm_polygon = Polygon(polygon[0])
+                        is_overlapping = any(farm_polygon.overlaps(
+                            Polygon(other_farm['polygon'][0])) for other_farm in farms)
+
+                        # Define GeoJSON data for Folium
                         js = {
                             "type": "FeatureCollection",
                             "features": [
-                                    {
-                                        "type": "Feature",
-                                        "properties": {},
-                                        "geometry": {
-                                            "coordinates": polygon,
-                                            "type": "Polygon"
-                                        }
+                                {
+                                    "type": "Feature",
+                                    "properties": {},
+                                    "geometry": {
+                                        "coordinates": polygon,
+                                        "type": "Polygon"
                                     }
+                                }
                             ]
                         }
-                        geo_pol = folium.GeoJson(data=js, control=False, style_function=lambda x: {
-                            'color': 'transparent', 'fillColor': '#777'
-                        })
+
+                        # If overlapping, change the fill color
+                        fill_color = '#800080' if is_overlapping else '#777'
+
+                        # Create the GeoJson object with the appropriate style
+                        geo_pol = folium.GeoJson(
+                            data=js,
+                            control=False,
+                            style_function=lambda x, fill_color=fill_color: {
+                                'color': 'transparent',
+                                'fillColor': fill_color
+                            }
+                        )
                         folium.Popup(
                             html=f"""
             <b><i><u>Plot Info:</u></i></b><br><br>
@@ -389,7 +407,7 @@ def map_view(request):
 
             # zoom to the extent of the map to the first polygon
             has_polygon = next(
-                (flatten_multipolygon_coordinates(farm['polygon']) for farm in farms if farm['id'] == farmId and not flatten_multipolygon_coordinates(farm['polygon']) or not len(flatten_multipolygon_coordinates(farm['polygon'])) == 2), None)
+                ((flatten_multipolygon_coordinates(farm['polygon']) if farm['polygon_type'] == 'MultiPolygon' else farm['polygon']) for farm in farms if farm['id'] == farmId and not (flatten_multipolygon_coordinates(farm['polygon']) if farm['polygon_type'] == 'MultiPolygon' else farm['polygon']) or not len(flatten_multipolygon_coordinates(farm['polygon']) if farm['polygon_type'] == 'MultiPolygon' else farm['polygon']) == 2), None)
             if has_polygon:
                 m.fit_bounds([reverse_polygon_points(has_polygon)],
                              max_zoom=18 if not farmId else 16)
@@ -443,6 +461,7 @@ def map_view(request):
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #fff; border: 1px solid #3AD190; width: 10px; height: 10px; border-radius: 30px;"></div>Low Risk Plots</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #fff; border: 1px solid #F64468; width: 10px; height: 10px; border-radius: 30px;"></div>High Risk Plots</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #fff; border: 1px solid #ACDCE8; width: 10px; height: 10px; border-radius: 30px;"></div>More Info Needed Plots</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #C3C6CF; width: 10px; height: 10px; border-radius: 30px;"></div>OverWrapping Plots</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #585858; width: 10px; height: 10px; border-radius: 30px;"></div>Protected Areas (2021-2023)</div>
     </div>
     """
