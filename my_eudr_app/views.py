@@ -198,6 +198,7 @@ def map_view(request):
     initialize_earth_engine()
     fileId = request.GET.get('file-id')
     farmId = request.GET.get('farm-id')
+    overLap = 'overlaps' in request.META.get('HTTP_REFERER').split('/')[-1]
     userLat = request.GET.get('lat') or 0.0
     userLon = request.GET.get('lon') or 0.0
     farmId = int(farmId) if farmId else None
@@ -238,7 +239,7 @@ def map_view(request):
     # Fetch data from the RESTful API endpoint.
     base_url = f"{request.scheme}://{request.get_host()}"
     response = requests.get(f"""{base_url}/api/farm/map/list/""") if not fileId and not farmId else requests.get(f"""{base_url}/api/farm/list/{farmId}""") if farmId else requests.get(
-        f"""{base_url}/api/farm/list/file/{fileId}/""")
+        f"""{base_url}/api/farm/list/file/{fileId}/""") if not overLap else requests.get(f"""{base_url}/api/farm/overlapping/{fileId}/""")
     if response.status_code == 200:
         farms = [response.json()] if farmId else response.json()
         if len(farms) > 0:
@@ -461,7 +462,7 @@ def map_view(request):
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #fff; border: 1px solid #3AD190; width: 10px; height: 10px; border-radius: 30px;"></div>Low Risk Plots</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #fff; border: 1px solid #F64468; width: 10px; height: 10px; border-radius: 30px;"></div>High Risk Plots</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #fff; border: 1px solid #ACDCE8; width: 10px; height: 10px; border-radius: 30px;"></div>More Info Needed Plots</div>
-    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #C3C6CF; width: 10px; height: 10px; border-radius: 30px;"></div>OverWrapping Plots</div>
+    <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #C3C6CF; width: 10px; height: 10px; border-radius: 30px;"></div>OverLapping Plots</div>
     <div style="display: flex; gap: 10px; align-items: center;"><div style="background: #585858; width: 10px; height: 10px; border-radius: 30px;"></div>Protected Areas (2021-2023)</div>
     </div>
     """

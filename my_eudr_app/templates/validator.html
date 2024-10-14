@@ -56,6 +56,14 @@ Validator
             <a
               href="{% url 'map' %}"
               class="d-none btn btn-primary btn-sm ms-auto text-white"
+              id="viewOverlapsBtn"
+            >
+              <i class="fa-solid fa-layer-group me-2"></i>
+              View Overlaps
+            </a>
+            <a
+              href="{% url 'map' %}"
+              class="d-none btn btn-primary btn-sm ms-auto text-white"
               id="viewMapBtn"
             >
               <i class="fa fa-map me-2"></i>
@@ -255,7 +263,11 @@ Validator
           <div id="whispCardsContainer" class="row"></div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
             Close
           </button>
         </div>

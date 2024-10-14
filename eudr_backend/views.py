@@ -524,6 +524,7 @@ def flatten_multipolygon(multipolygon):
 
     return polygon
 
+
 def flatten_multipolygon_coordinates(multipolygon_coords):
     flattened_coordinates = []
     for polygon in multipolygon_coords:
@@ -773,6 +774,38 @@ def retrieve_farm_data(request):
     serializer = EUDRFarmModelSerializer(data, many=True)
 
     return Response(serializer.data)
+
+
+@api_view(["GET"])
+def retrieve_overlapping_farm_data(request, pk):
+    files = EUDRUploadedFilesModel.objects.filter(
+        id=pk) if not request.user.is_staff else EUDRUploadedFilesModel.objects.all()
+
+    filesSerializer = EUDRUploadedFilesModelSerializer(files, many=True)
+
+    farms = EUDRFarmModel.objects.filter(
+        file_id=filesSerializer.data[0].get("id")
+    ).order_by("-updated_at")
+
+    farmSerializer = EUDRFarmModelSerializer(farms, many=True)
+
+    overLaps = []
+    farms = farmSerializer.data
+
+    for farm in farms:
+        # Assuming farm data has 'farmer_name', 'latitude', 'longitude', 'farm_size', and 'polygon' fields
+        polygon = flatten_multipolygon_coordinates(
+            farm['polygon']) if farm['polygon_type'] == 'MultiPolygon' else farm['polygon']
+        if 'polygon' in farm and len(polygon) == 1:
+            polygon = flatten_multipolygon_coordinates(farm['polygon'])
+
+            if polygon:
+                farm_polygon = Polygon(polygon[0])
+                is_overlapping = any(farm_polygon.overlaps(
+                    Polygon(other_farm['polygon'][0])) for other_farm in farms)
+                overLaps.append(farm) if is_overlapping else None
+
+    return Response(overLaps)
 
 
 @api_view(["GET"])

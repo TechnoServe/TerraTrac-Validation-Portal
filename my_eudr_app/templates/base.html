@@ -1040,6 +1040,8 @@
                   document.querySelector(
                     '#csFilterDropdown [value="' + cs + '"]'
                   ).selected = true;
+
+                  checkOverLappingFarms(fileId);
                 }
               }
 
@@ -1047,6 +1049,33 @@
               farmsContainer.innerHTML = "";
 
               generateData(data, farmsContainer);
+            }
+          })
+          .catch((error) => {
+            console.error(
+              "There was a problem with the fetch operation:",
+              error
+            );
+          });
+      }
+
+      function checkOverLappingFarms(fileId) {
+        fetch(`/api/farm/overlapping/${fileId}/`)
+          .then((resp) => {
+            if (!resp.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return resp.json();
+          })
+          .then((data) => {
+            if (data.length > 0) {
+              document
+                .querySelector("#viewOverlapsBtn")
+                .classList.remove("d-none");
+
+              document.querySelector(
+                "#viewOverlapsBtn"
+              ).href += `?file-id=${fileId}&overlaps=true`;
             }
           })
           .catch((error) => {
