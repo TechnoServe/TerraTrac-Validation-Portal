@@ -25,28 +25,11 @@ def glad_pht_prep():
 #  TMF_undist:
 
 
-def jrc_tmf_transition_prep_undist():
-    jrc_tmf_transitions_raw = ee.ImageCollection(
-        'projects/JRC/TMF/v1_2020/TransitionMap_Subtypes')
-    jrc_tmf_transitions = jrc_tmf_transitions_raw.mosaic()
-    default_value = 0
-
-    in_list_dist = [21, 22, 23, 24, 25, 26, 61, 62, 31,
-                    32, 33, 63, 64, 51, 52, 53, 54, 67, 92, 93, 94]
-    jrc_tmf_disturbed = jrc_tmf_transitions.remap(
-        in_list_dist, [1] * len(in_list_dist), default_value).rename("TMF_disturbed")
-
-    in_list_plnt = [81, 82, 83, 84, 85, 86]
-    jrc_tmf_plantations = jrc_tmf_transitions.remap(
-        in_list_plnt, [1] * len(in_list_plnt), default_value).rename("TMF_plant")
-
-    in_list_udis = [10, 11, 12]
-    jrc_tmf_undisturbed = jrc_tmf_transitions.remap(
-        in_list_udis, [1] * len(in_list_udis), default_value).rename("TMF_undist")
-
-    jrc_tmf_transition = jrc_tmf_disturbed.addBands(
-        jrc_tmf_plantations).addBands(jrc_tmf_undisturbed)
-    return jrc_tmf_transition
+def jrc_tmf_undisturbed_prep():
+    # update from https://github.com/forestdatapartnership/whisp/issues/42
+    TMF_undist_2020 = ee.ImageCollection(
+        "projects/JRC/TMF/v1_2023/AnnualChanges").select("Dec2020").mosaic().eq(1)
+    return TMF_undist_2020.rename("TMF_undist")
 
 #  JAXA_FNF_2020:
 
@@ -80,37 +63,28 @@ def esa_worldcover_trees_prep():
 
 # combine returned ee.Image objects into a single ee.Image object
 def combine_forest_cover_images():
-    jrc_gfc_2020 = jrc_gfc_2020_prep()
-    glad_pht = glad_pht_prep()
-    jrc_tmf_transition_undist = jrc_tmf_transition_prep_undist()
-    jaxa_forest = jaxa_forest_prep()
-    glad_gfc_10pc = glad_gfc_10pc_prep()
-    esa_worldcover_trees = esa_worldcover_trees_prep()
+    eufo_2020 = jrc_gfc_2020_prep()
+    glad_primary = glad_pht_prep()
+    tmf_undist = jrc_tmf_undisturbed_prep()
+    jaxa_fnf_2020 = jaxa_forest_prep()
+    gfc_tc_2020 = glad_gfc_10pc_prep()
+    esa_tc_2020 = esa_worldcover_trees_prep()
 
-    return jrc_gfc_2020.addBands(glad_pht).addBands(jrc_tmf_transition_undist).addBands(jaxa_forest).addBands(glad_gfc_10pc).addBands(esa_worldcover_trees)
+    return eufo_2020.addBands(glad_primary).addBands(tmf_undist).addBands(jaxa_fnf_2020).addBands(gfc_tc_2020).addBands(esa_tc_2020)
 
 # 2. Commodities:
 # TMF_plant:
 
 
-def jrc_tmf_transition_prep_plant():
-    jrc_tmf_transitions_raw = ee.ImageCollection(
-        'projects/JRC/TMF/v1_2020/TransitionMap_Subtypes')
-    jrc_tmf_transitions = jrc_tmf_transitions_raw.mosaic()
-    default_value = 0
-
-    in_list_dist = [21, 22, 23, 24, 25, 26, 61, 62, 31,
-                    32, 33, 63, 64, 51, 52, 53, 54, 67, 92, 93, 94]
-    jrc_tmf_disturbed = jrc_tmf_transitions.remap(
-        in_list_dist, [1] * len(in_list_dist), default_value).rename("TMF_disturbed")
-
-    in_list_plnt = [81, 82, 83, 84, 85, 86]
-    jrc_tmf_plantations = jrc_tmf_transitions.remap(
-        in_list_plnt, [1] * len(in_list_plnt), default_value).rename("TMF_plant")
-
-    jrc_tmf_transition = jrc_tmf_disturbed.addBands(
-        jrc_tmf_plantations)
-    return jrc_tmf_transition
+def jrc_tmf_plantation_prep():
+    transition = ee.ImageCollection(
+        'projects/JRC/TMF/v1_2023/TransitionMap_Subtypes').mosaic()
+    deforestation_year = ee.ImageCollection(
+        'projects/JRC/TMF/v1_2023/DeforestationYear').mosaic()
+    plantation = (transition.gte(81)).And(transition.lte(86))
+    # update from https://github.com/forestdatapartnership/whisp/issues/42
+    plantation_2020 = plantation.where(deforestation_year.gte(2021), 0)
+    return plantation_2020.rename("TMF_plant")
 
 # oil_palm_descals:
 
@@ -127,7 +101,7 @@ def creaf_descals_palm_prep():
 def fdap_palm_prep():
     fdap_palm2020_model_raw = ee.ImageCollection(
         "projects/forestdatapartnership/assets/palm/palm_2020_model_20240312")
-    # to check with Nick (increased due to false positives)
+    # to check with Nick (increased due to false postives)
     fdap_palm = fdap_palm2020_model_raw.mosaic().gt(0.95).selfMask()
     return fdap_palm.rename("Oil_palm_FDaP")
 
@@ -141,19 +115,26 @@ def eth_kalischek_cocoa_prep():
 
 
 def civ_ocs2020_prep():
-    return ee.Image("projects/ee-bnetdcign2/assets/OCS_CI_2020vf").eq(9).rename("Cocoa_bnetd")
+    return ee.Image("BNETD/land_cover/v1/2020").select("classification").eq(9).rename("Cocoa_bnetd")
+
+# Rubber_RBGE  - from Royal Botanical Gardens of Edinburgh (RBGE) NB for 2021
+
+
+def rbge_rubber_prep():
+    return ee.Image('users/wangyxtina/MapRubberPaper/rRubber10m202122_perc1585DifESAdist5pxPF').unmask().rename("Rubber_RBGE")
 
 # combine returned ee.Image objects into a single ee.Image object
 
 
 def combine_commodities_images():
-    jrc_tmf_transition_plant = jrc_tmf_transition_prep_plant()
+    tmf_plant = jrc_tmf_plantation_prep()
     oil_palm_descals = creaf_descals_palm_prep()
-    fdap_palm = fdap_palm_prep()
-    eth_kalischek_cocoa = eth_kalischek_cocoa_prep()
-    civ_ocs2020 = civ_ocs2020_prep()
+    oil_palm_fdap = fdap_palm_prep()
+    cocoa_eth = eth_kalischek_cocoa_prep()
+    cocoa_bnetd = civ_ocs2020_prep()
+    rubber_rbge = rbge_rubber_prep()
 
-    return jrc_tmf_transition_plant.addBands(oil_palm_descals).addBands(fdap_palm).addBands(eth_kalischek_cocoa).addBands(civ_ocs2020)
+    return tmf_plant.addBands(oil_palm_descals).addBands(oil_palm_fdap).addBands(cocoa_eth).addBands(cocoa_bnetd).addBands(rubber_rbge)
 
 # 	3. Disturbances before 2020:
 # TMF_deg_before_2020:
@@ -161,7 +142,7 @@ def combine_commodities_images():
 
 def tmf_deg_before_2020_prep():
     tmf_deg = ee.ImageCollection(
-        'projects/JRC/TMF/v1_2022/DegradationYear').mosaic()
+        'projects/JRC/TMF/v1_2023/DegradationYear').mosaic()
     return (tmf_deg.lte(2020)).And(tmf_deg.gte(2000)).rename("TMF_deg_before_2020")
 
 # TMF_def_before_2020:
@@ -169,7 +150,7 @@ def tmf_deg_before_2020_prep():
 
 def tmf_def_before_2020_prep():
     tmf_def = ee.ImageCollection(
-        'projects/JRC/TMF/v1_2022/DeforestationYear').mosaic()
+        'projects/JRC/TMF/v1_2023/DeforestationYear').mosaic()
     return (tmf_def.lte(2020)).And(tmf_def.gte(2000)).rename("TMF_def_before_2020")
 
 # GFC_loss_before_2020:
@@ -179,7 +160,7 @@ def glad_gfc_loss_before_2020_prep():
     # Load the Global Forest Change dataset
     gfc = ee.Image("UMD/hansen/global_forest_change_2023_v1_11")
     gfc_loss = gfc.select(['lossyear']).lte(20).And(
-        gfc.select(['treecover2000']).gt(10)).selfMask()
+        gfc.select(['treecover2000']).gt(10))
     return gfc_loss.rename("GFC_loss_before_2020")
 
 # ESA_fire_before_2020:
@@ -242,7 +223,7 @@ def combine_disturbances_before_2020_images():
 
 def tmf_deg_after_2020_prep():
     tmf_deg = ee.ImageCollection(
-        'projects/JRC/TMF/v1_2022/DegradationYear').mosaic()
+        'projects/JRC/TMF/v1_2023/DegradationYear').mosaic()
     return tmf_deg.gt(2020).rename("TMF_deg_after_2020")
 
 # TMF_def_after_2020:
@@ -250,7 +231,7 @@ def tmf_deg_after_2020_prep():
 
 def tmf_def_after_2020_prep():
     tmf_def = ee.ImageCollection(
-        'projects/JRC/TMF/v1_2022/DeforestationYear').mosaic()
+        'projects/JRC/TMF/v1_2023/DeforestationYear').mosaic()
     return tmf_def.gt(2020).rename("TMF_def_after_2020")
 
 # GFC_loss_after_2020:
