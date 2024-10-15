@@ -425,25 +425,21 @@ def map_view(request):
     m.add_child(protected_areas_map)
 
     # Add forest mapped areas from ee_images.py
-    forest_mapped_areas_vis = {'palette': ['#D73027']}
     forest_mapped_areas_map = geemap.ee_tile_layer(
         combine_forest_cover_images(), {}, 'Forest Mapped Areas', shown=False)
     m.add_child(forest_mapped_areas_map)
 
     # Add commodity areas from ee_images.py
-    commodity_areas_vis = {'palette': ['#FEE08B']}
     commodity_areas_map = geemap.ee_tile_layer(
         combine_commodities_images(), {}, 'Commodity Areas', shown=False)
     m.add_child(commodity_areas_map)
 
     # add disturbed areas before 2020
-    disturbed_areas_before_2020_vis = {'palette': ['#4575B4']}
     disturbed_areas_before_2020_map = geemap.ee_tile_layer(
         combine_disturbances_before_2020_images(), {}, 'Disturbed Areas Before 2020', shown=False)
     m.add_child(disturbed_areas_before_2020_map)
 
     # add disturbed areas after 2020
-    disturbed_areas_after_2020_vis = {'palette': ['#1A9850']}
     disturbed_areas_after_2020_map = geemap.ee_tile_layer(
         combine_disturbances_after_2020_images(), {}, 'Disturbed Areas After 2020', shown=False)
     m.add_child(disturbed_areas_after_2020_map)
