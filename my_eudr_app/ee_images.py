@@ -77,14 +77,23 @@ def combine_forest_cover_images():
 
 
 def jrc_tmf_plantation_prep():
-    transition = ee.ImageCollection(
-        'projects/JRC/TMF/v1_2023/TransitionMap_Subtypes').mosaic()
-    deforestation_year = ee.ImageCollection(
-        'projects/JRC/TMF/v1_2023/DeforestationYear').mosaic()
-    plantation = (transition.gte(81)).And(transition.lte(86))
-    # update from https://github.com/forestdatapartnership/whisp/issues/42
-    plantation_2020 = plantation.where(deforestation_year.gte(2021), 0)
-    return plantation_2020.rename("TMF_plant")
+    jrc_tmf_transitions_raw = ee.ImageCollection(
+        'projects/JRC/TMF/v1_2023/TransitionMap_Subtypes')
+    jrc_tmf_transitions = jrc_tmf_transitions_raw.mosaic()
+    default_value = 0
+
+    in_list_dist = [21, 22, 23, 24, 25, 26, 61, 62, 31,
+                    32, 33, 63, 64, 51, 52, 53, 54, 67, 92, 93, 94]
+    jrc_tmf_disturbed = jrc_tmf_transitions.remap(
+        in_list_dist, [1] * len(in_list_dist), default_value).rename("TMF_disturbed")
+
+    in_list_plnt = [81, 82, 83, 84, 85, 86]
+    jrc_tmf_plantations = jrc_tmf_transitions.remap(
+        in_list_plnt, [1] * len(in_list_plnt), default_value).rename("TMF_plant")
+
+    jrc_tmf_transition = jrc_tmf_disturbed.addBands(
+        jrc_tmf_plantations)
+    return jrc_tmf_transition
 
 # oil_palm_descals:
 
@@ -101,7 +110,7 @@ def creaf_descals_palm_prep():
 def fdap_palm_prep():
     fdap_palm2020_model_raw = ee.ImageCollection(
         "projects/forestdatapartnership/assets/palm/palm_2020_model_20240312")
-    # to check with Nick (increased due to false postives)
+    # to check with Nick (increased due to false positives)
     fdap_palm = fdap_palm2020_model_raw.mosaic().gt(0.95).selfMask()
     return fdap_palm.rename("Oil_palm_FDaP")
 
