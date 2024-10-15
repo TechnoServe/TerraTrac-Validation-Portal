@@ -1845,9 +1845,7 @@
 
     <script>
       $(window).on("load", function () {
-        if (
-          window.location.pathname === "/map/"
-        ) {
+        if (window.location.pathname === "/map/") {
           $("#loader-container").show();
 
           const queryParams = new URLSearchParams(window.location.search);
@@ -1867,19 +1865,108 @@
             },
             success: function (data) {
               if (data.error) {
-                alert(data.error);
+                Toastify({
+                  text: data.error,
+                  duration: 3000,
+                  close: true,
+                  gravity: "top",
+                  position: "right",
+                  backgroundColor: "red",
+                }).showToast();
               } else {
                 $("#mapMonde").html(data.map_html);
+                document
+                  .querySelector(".floating-share")
+                  .classList.remove("d-none");
               }
               $("#loader-container").hide();
             },
             error: function () {
-              alert("Error loading map data.");
+              Toastify({
+                text: "Error loading map data.",
+                duration: 3000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                backgroundColor: "red",
+              }).showToast();
               $("#loader-container").hide();
             },
           });
         }
       });
+    </script>
+
+    <script>
+      // Share map logic
+      document
+        .querySelector(".floating-share .fa-share-alt")
+        .addEventListener("click", function () {
+          document.querySelector(".share-options").classList.toggle("show");
+        });
+
+      document
+        .getElementById("copyLink")
+        .addEventListener("click", function (e) {
+          e.preventDefault();
+          const queryParams = new URLSearchParams(window.location.search);
+          const fileId = queryParams.get("file-id");
+
+          $.ajax({
+            url: "{% url 'map_share' %}",
+            dataType: "json",
+            method: "POST",
+            headers: {
+              "X-CSRFToken": getCookie("csrftoken"),
+            },
+            data: {
+              "file-id": fileId,
+            },
+            success: function (data) {
+              if (data.error) {
+                Toastify({
+                  text: data.error,
+                  duration: 2000,
+                  close: true,
+                  gravity: "top",
+                  position: "right",
+                  backgroundColor: "red",
+                }).showToast();
+              } else {
+                const shareUrl = data.map_link;
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                  Toastify({
+                    text: "Link copied to clipboard!",
+                    duration: 2000,
+                    close: true,
+                    gravity: "top",
+                    position: "right",
+                    backgroundColor: "green",
+                  }).showToast();
+                });
+
+                document.getElementById(
+                  "whatsappShare"
+                ).href = `https://wa.me/?text=${encodeURIComponent(shareUrl)}`;
+                document.getElementById(
+                  "emailShare"
+                ).href = `mailto:?subject=Check%20out%20this%20map&body=${encodeURIComponent(
+                  shareUrl
+                )}`;
+              }
+            },
+            error: function () {
+              Toastify({
+                text: "Error generating share link.",
+                duration: 2000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                backgroundColor: "red",
+              }).showToast();
+            },
+          });
+        });
     </script>
   </body>
 </html>

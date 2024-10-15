@@ -16,8 +16,10 @@ import boto3
 from shapely import MultiPolygon, Polygon, unary_union
 
 from eudr_backend import settings
-from eudr_backend.models import EUDRCollectionSiteModel, EUDRFarmBackupModel, WhispAPISetting, EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
+from eudr_backend.models import EUDRCollectionSiteModel, EUDRFarmBackupModel, EUDRSharedMapAccessCodeModel, WhispAPISetting, EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
 from eudr_backend.tasks import update_geoid
+from datetime import timedelta
+import uuid
 from .serializers import (
     EUDRCollectionSiteModelSerializer,
     EUDRFarmBackupModelSerializer,
@@ -986,6 +988,34 @@ def download_template(request):
         return Response({"error": "Invalid format"}, status=status.HTTP_400_BAD_REQUEST)
 
     return response
+
+
+@api_view(["POST"])
+def generate_map_link(request):
+    fileId = request.data.get("file-id")
+    try:
+        shared_map_access = EUDRSharedMapAccessCodeModel.objects.get(
+            file_id=fileId)
+        if shared_map_access.valid_until >= timezone.now():
+            access_code = shared_map_access.access_code
+        else:
+            raise EUDRSharedMapAccessCodeModel.DoesNotExist
+    except EUDRSharedMapAccessCodeModel.DoesNotExist:
+        access_code = generate_access_code()
+        valid_until = timezone.now() + timedelta(days=3)
+        shared_map_access = EUDRSharedMapAccessCodeModel.objects.create(
+            file_id=fileId,
+            access_code=access_code,
+            valid_until=valid_until
+        )
+
+    map_link = f"""{request.scheme}://{request.get_host()}/map/share/?file-id={fileId}&access-code={access_code}"""
+
+    return Response({"access_code": access_code, "map_link": map_link}, status=status.HTTP_200_OK)
+
+
+def generate_access_code():
+    return str(uuid.uuid4())
 
 
 class CustomPasswordResetView(PasswordResetView):

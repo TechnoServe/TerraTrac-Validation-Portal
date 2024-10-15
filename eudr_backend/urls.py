@@ -23,6 +23,7 @@ from eudr_backend.views import (
     create_user,
     delete_user,
     download_template,
+    generate_map_link,
     restore_farm_data,
     retrieve_all_synced_farm_data,
     retrieve_collection_sites,
@@ -90,4 +91,5 @@ urlpatterns = [
         name="retrieve_farm_data_from_file_id",
     ),
     path("api/download-template/", download_template, name="download_template"),
+    path("api/map-share/", generate_map_link, name="map_share"),
 ]

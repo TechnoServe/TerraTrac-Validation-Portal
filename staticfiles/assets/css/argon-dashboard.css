@@ -28113,4 +28113,56 @@ thead {
   cursor: pointer;
 }
 
+/* Floating share button styles */
+.floating-share {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  bottom: 20px;
+  left: 300px;
+  background-color: #40414D;
+  border-radius: 50px;
+  color: #fff;
+  cursor: pointer;
+  z-index: 9999;
+  transition: background-color 0.3s ease;
+}
+
+.floating-share:hover {
+  background-color: #444;
+}
+
+.floating-share i {
+  font-size: 20px;
+}
+
+.share-options {
+  display: none;
+  flex-direction: column;
+  position: absolute;
+  width: 150px;
+  left: 50px;
+  bottom: 0;
+  background-color: #fff;
+  border: 1px solid #333;
+  border-radius: 5px;
+  padding: 10px;
+  gap: 10px;
+}
+
+.floating-share:hover .share-options {
+  display: flex;
+}
+
+.share-options a {
+  text-decoration: none;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+
 /*# sourceMappingURL=argon-dashboard.css.map */
