@@ -22,6 +22,8 @@ from django.conf import settings
 from django.utils.http import urlsafe_base64_decode
 from eudr_backend.views import flatten_geojson, flatten_multipolygon_coordinates, is_valid_polygon
 from my_eudr_app.ee_images import combine_commodities_images, combine_disturbances_after_2020_images, combine_disturbances_before_2020_images, combine_forest_cover_images
+from django.utils import timezone
+from eudr_backend.models import EUDRSharedMapAccessCodeModel
 
 
 def signup_view(request):
@@ -96,6 +98,12 @@ def map(request):
     active_page = "map"
 
     return render(request, "map.html", {"active_page": active_page, 'user': request.user})
+
+
+def shared_map(request):
+    active_page = "shared_map"
+
+    return render(request, "shared_map.html", {"active_page": active_page, 'user': request.user})
 
 
 @login_required
@@ -193,15 +201,26 @@ def password_reset_confirm(request, uidb64=None, token=None):
     return render(request, 'auth/password_reset_confirm.html', {'form': form})
 
 
-@login_required
 def map_view(request):
-    initialize_earth_engine()
     fileId = request.GET.get('file-id')
+    accessCode = request.GET.get('access-code')
     farmId = request.GET.get('farm-id')
     overLap = 'overlaps' in request.META.get('HTTP_REFERER').split('/')[-1]
     userLat = request.GET.get('lat') or 0.0
     userLon = request.GET.get('lon') or 0.0
     farmId = int(farmId) if farmId else None
+
+    if accessCode:
+        try:
+            access_record = EUDRSharedMapAccessCodeModel.objects.get(
+                file_id=fileId, access_code=accessCode)
+            if access_record.valid_until and access_record.valid_until < timezone.now():
+                return JsonResponse({"message": "Access Code Expired", "status": 403})
+        except BaseException:
+            return JsonResponse(
+                {"message": "Invalid file ID or access code.", "status": 403})
+
+    initialize_earth_engine()
 
     # Create a Folium map object.
     m = folium.Map(location=[userLat, userLon],

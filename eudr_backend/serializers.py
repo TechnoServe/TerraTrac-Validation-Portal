@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import EUDRCollectionSiteModel, EUDRFarmBackupModel, EUDRFarmModel, EUDRUploadedFilesModel, EUDRUserModel
+from .models import EUDRCollectionSiteModel, EUDRFarmBackupModel, EUDRFarmModel, EUDRSharedMapAccessCodeModel, EUDRUploadedFilesModel, EUDRUserModel
 from django.contrib.auth.models import User
 
 
@@ -31,4 +31,10 @@ class EUDRFarmBackupModelSerializer(serializers.ModelSerializer):
 class EUDRCollectionSiteModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = EUDRCollectionSiteModel
+        fields = "__all__"
+
+
+class EUDRSharedMapAccessCodeModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EUDRSharedMapAccessCodeModel
         fields = "__all__"

@@ -51,6 +51,7 @@ urlpatterns = [
     path("validator/", views.validator, name="validator"),
     path("validated_files/", views.validated_files, name="validated_files"),
     path("map/", views.map, name="map"),
+    path("map/share/", views.shared_map, name="shared_map"),
     path("map_data", views.map_view, name="map_view"),
     path("users/", views.users, name="users"),
     path("uploads/", views.all_uploaded_files, name="uploads"),

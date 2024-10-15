@@ -1845,7 +1845,9 @@
 
     <script>
       $(window).on("load", function () {
-        if (window.location.pathname === "/map/") {
+        if (
+          window.location.pathname === "/map/"
+        ) {
           $("#loader-container").show();
 
           const queryParams = new URLSearchParams(window.location.search);

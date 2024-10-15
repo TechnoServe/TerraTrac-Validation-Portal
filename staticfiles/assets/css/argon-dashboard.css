@@ -28033,4 +28033,84 @@ thead {
   }
 }
 
+/* error-container styles */
+#error-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  justify-content: center;
+  align-items: center;
+}
+
+.message {
+  text-align: center;
+  position: relative;
+  width: 432px;
+  height: 324px;
+  margin: 0 auto;
+  border: 20px solid #134a86;
+  background: #134a86;
+  border-radius: 20px;
+  box-shadow: 0px 0px 0px 4px #fff;
+  animation-delay: 1s;
+  animation-duration: 1.3s;
+}
+.message::before {
+  left: 20px;
+}
+.message::after {
+  right: 20px;
+}
+.message-inner {
+  padding: 40px;
+  border-radius: 20px;
+  position: absolute;
+  top: 1%;
+  right: 2%;
+  bottom: 2%;
+  left: 2%;
+  color: #291b03;
+  background: #fff;
+}
+.message-title {
+  font-size: 3.6em;
+  margin: 0 0 20px;
+}
+.message-subtitle {
+  font-size: 1.4em;
+  color: #26275C;
+  margin: 0;
+}
+.rivet {
+  position: absolute;
+  background-color: #008392;
+  width: 3%;
+  border-radius: 100px;
+  padding-bottom: 3%;
+}
+.rivet.top-left {
+  top: -7px;
+  left: -7px;
+}
+.rivet.top-right {
+  top: -7px;
+  right: -7px;
+}
+.rivet.bottom-left {
+  bottom: -7px;
+  left: -7px;
+}
+.rivet.bottom-right {
+  bottom: -7px;
+  right: -7px;
+}
+
+.back-btn {
+  width: auto;
+  margin-top: 30px;
+  font-size: 1.2em;
+  cursor: pointer;
+}
+
 /*# sourceMappingURL=argon-dashboard.css.map */

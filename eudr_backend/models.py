@@ -35,7 +35,8 @@ class EUDRFarmModel(models.models.Model):
     latitude = models.models.FloatField(default=0.0)
     longitude = models.models.FloatField(default=0.0)
     polygon = models.models.JSONField()
-    polygon_type = models.models.CharField(max_length=255, null=True, blank=True)
+    polygon_type = models.models.CharField(
+        max_length=255, null=True, blank=True)
     accuracies = models.models.JSONField(default=list, blank=True)
     geoid = models.models.CharField(max_length=255, null=True, blank=True)
     is_validated = models.models.BooleanField(default=False)
@@ -93,6 +94,14 @@ class EUDRUploadedFilesModel(models.models.Model):
 
     def __str__(self):
         return self.file_name
+
+
+class EUDRSharedMapAccessCodeModel(models.models.Model):
+    file_id = models.models.CharField(max_length=255)
+    access_code = models.models.CharField(max_length=255)
+    valid_until = models.models.DateTimeField(null=True)
+    created_at = models.models.DateTimeField(auto_now_add=True)
+    updated_at = models.models.DateTimeField(auto_now=True)
 
 
 class WhispAPISetting(models.models.Model):
