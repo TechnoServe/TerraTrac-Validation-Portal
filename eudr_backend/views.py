@@ -283,10 +283,14 @@ async def async_create_farm_data(data, serializer, file_id, isSyncing=False, has
     else:
         err, analysis_results = await perform_analysis(data)
         if err:
+            # delete the file if there are errors
+            EUDRUploadedFilesModel.objects.get(id=file_id).delete()
             errors.append(err)
         else:
             err, new_data = await save_farm_data(data, file_id, analysis_results)
             if err:
+                # delete the file if there are errors
+                EUDRUploadedFilesModel.objects.get(id=file_id).delete()
                 errors.append(err)
             else:
                 created_data.extend(new_data)
@@ -370,6 +374,8 @@ async def save_farm_data(data, file_id, analysis_results=None):
             saved_instance = await sync_to_async(serializer.save)()
             saved_records.append(saved_instance)
         else:
+            # delete the file if there are errors
+            EUDRUploadedFilesModel.objects.get(id=file_id).delete()
             return serializer.errors, None
 
     return None, saved_records
