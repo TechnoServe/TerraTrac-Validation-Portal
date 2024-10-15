@@ -1907,66 +1907,104 @@
 
       document
         .getElementById("copyLink")
-        .addEventListener("click", function (e) {
+        .addEventListener("click", async function (e) {
           e.preventDefault();
           const queryParams = new URLSearchParams(window.location.search);
           const fileId = queryParams.get("file-id");
 
-          $.ajax({
-            url: "{% url 'map_share' %}",
-            dataType: "json",
-            method: "POST",
-            headers: {
-              "X-CSRFToken": getCookie("csrftoken"),
-            },
-            data: {
-              "file-id": fileId,
-            },
-            success: function (data) {
-              if (data.error) {
-                Toastify({
-                  text: data.error,
-                  duration: 2000,
-                  close: true,
-                  gravity: "top",
-                  position: "right",
-                  backgroundColor: "red",
-                }).showToast();
-              } else {
-                const shareUrl = data.map_link;
-                navigator.clipboard.writeText(shareUrl).then(() => {
-                  Toastify({
-                    text: "Link copied to clipboard!",
-                    duration: 2000,
-                    close: true,
-                    gravity: "top",
-                    position: "right",
-                    backgroundColor: "green",
-                  }).showToast();
-                });
+          const shareUrl = await generateMapUrl(fileId);
 
-                document.getElementById(
-                  "whatsappShare"
-                ).href = `https://wa.me/?text=${encodeURIComponent(shareUrl)}`;
-                document.getElementById(
-                  "emailShare"
-                ).href = `mailto:?subject=Check%20out%20this%20map&body=${encodeURIComponent(
-                  shareUrl
-                )}`;
-              }
-            },
-            error: function () {
+          if (shareUrl) {
+            navigator.clipboard.writeText(shareUrl).then(() => {
               Toastify({
-                text: "Error generating share link.",
+                text: "Link copied to clipboard!",
+                duration: 2000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                backgroundColor: "green",
+              }).showToast();
+            });
+          }
+        });
+
+      document
+        .getElementById("whatsappShare")
+        .addEventListener("click", async function (e) {
+          e.preventDefault();
+          const queryParams = new URLSearchParams(window.location.search);
+          const fileId = queryParams.get("file-id");
+
+          const shareUrl = await generateMapUrl(fileId);
+
+          if (shareUrl) {
+            window.open(
+              `https://wa.me/?text=${encodeURIComponent(shareUrl)}`,
+              "_blank"
+            );
+          }
+        });
+
+      document
+        .getElementById("emailShare")
+        .addEventListener("click", async function (e) {
+          e.preventDefault();
+          const queryParams = new URLSearchParams(window.location.search);
+          const fileId = queryParams.get("file-id");
+
+          const shareUrl = await generateMapUrl(fileId);
+
+          if (shareUrl) {
+            window.open(
+              `mailto:?subject=Check%20out%20this%20map&body=${encodeURIComponent(
+                shareUrl
+              )}`,
+              "_self"
+            );
+          }
+        });
+
+      async function generateMapUrl(fileId) {
+        let shareUrl = null;
+
+        await $.ajax({
+          url: "{% url 'map_share' %}",
+          dataType: "json",
+          method: "POST",
+          headers: {
+            "X-CSRFToken": getCookie("csrftoken"),
+          },
+          data: {
+            "file-id": fileId,
+          },
+          success: function (data) {
+            if (data.error) {
+              Toastify({
+                text: data.error,
                 duration: 2000,
                 close: true,
                 gravity: "top",
                 position: "right",
                 backgroundColor: "red",
               }).showToast();
-            },
-          });
+            } else {
+              shareUrl = data.map_link;
+            }
+          },
+          error: function () {
+            Toastify({
+              text: "Error generating share link.",
+              duration: 2000,
+              close: true,
+              gravity: "top",
+              position: "right",
+              backgroundColor: "red",
+            }).showToast();
+          },
         });
+
+        return shareUrl;
+      }
     </script>
   </body>
 </html>
