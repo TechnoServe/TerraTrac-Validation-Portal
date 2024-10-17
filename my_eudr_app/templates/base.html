@@ -1014,10 +1014,6 @@
                 document
                   .querySelector("#exportFormatButton")
                   .removeAttribute("disabled");
-                // document
-                //   .querySelector("#revalidate-all")
-                //   .removeAttribute("disabled");
-
                 // get unique collection sites and populate the dropdown
                 const collectionSites = [
                   ...new Set(data.map((farm) => farm.collection_site)),
@@ -1040,6 +1036,63 @@
                   document.querySelector(
                     '#csFilterDropdown [value="' + cs + '"]'
                   ).selected = true;
+
+                  document
+                    .querySelector("#revalidate-all")
+                    .classList.remove("d-none");
+
+                  document
+                    .querySelector("#revalidate-all")
+                    .addEventListener("click", () => {
+                      // open fullpageLoaderModal
+                      const fullpageLoaderModal = new bootstrap.Modal(
+                        document.getElementById("fullpageLoaderModal"),
+                        {
+                          backdrop: "static",
+                          keyboard: false,
+                        }
+                      );
+                      fullpageLoaderModal.show();
+                      fetch(`/api/farm/revalidate/${fileId}/`)
+                        .then((resp) => {
+                          if (!resp.ok) {
+                            // close fullpageLoaderModal
+                            fullpageLoaderModal.hide();
+                            throw new Error("Network response was not ok");
+                          }
+                          return resp.json();
+                        })
+                        .then((data) => {
+                          // close fullpageLoaderModal
+                          fullpageLoaderModal.hide();
+                          if (data) {
+                            Toastify({
+                              text: "All plots revalidated successfully!!!",
+                              duration: 3000,
+                              close: true,
+                              gravity: "top",
+                              position: "right",
+                              backgroundColor: "green",
+                            }).showToast();
+
+                            setTimeout(function () {
+                              window.location.reload();
+                            }, 2000);
+                          }
+                        })
+                        .catch((error) => {
+                          // close fullpageLoaderModal
+                          fullpageLoaderModal.hide();
+                          Toastify({
+                            text: "Error while revalidating plots. please try again",
+                            duration: 3000,
+                            close: true,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "red",
+                          }).showToast();
+                        });
+                    });
 
                   checkOverLappingFarms(fileId);
                 }

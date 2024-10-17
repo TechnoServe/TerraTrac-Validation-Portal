@@ -546,8 +546,7 @@ def transform_db_data_to_geojson(data, isSyncing=False):
         # check if latitude, longitude, and polygon fields are not found in the record, skip the record
         if 'latitude' not in record or 'longitude' not in record:
             continue
-
-        if not record.get('polygon') or record.get('polygon') in [''] or len(record.get('polygon', [])) == 1:
+        if not record.get('polygon') or record.get('polygon') in [''] or ((len(record.get('polygon', [])) == 1 and not isinstance(record.get('polygon', [])[0], list))):
             feature = {
                 "type": "Feature",
                 "geometry": {
@@ -562,7 +561,7 @@ def transform_db_data_to_geojson(data, isSyncing=False):
                 "type": "Feature",
                 "geometry": {
                     "type": "Polygon",
-                    "coordinates": [ast.literal_eval(record.get('polygon', '[]')) if type(record.get('polygon', '[]')) == str else record.get('polygon', '[]')]
+                    "coordinates": ast.literal_eval(record.get('polygon', '[]')) if type(record.get('polygon', '[]')) == str else record.get('polygon', '[]')
                 },
                 "properties": {k: v for k, v in record.items() if k not in ['latitude', 'longitude', 'polygon']}
             }
@@ -736,33 +735,24 @@ def update_farm_data(request, pk):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(["POST"])
-def revalidate_farm_data(request):
-    # get all the data belonging to authenticated user and send it to the external API for revalidation
-    files = EUDRUploadedFilesModel.objects.filter(
-        uploaded_by=request.user.username if request.user.is_authenticated else "admin"
-    )
-    filesSerializer = EUDRUploadedFilesModelSerializer(files, many=True)
-
+@api_view(["GET"])
+def revalidate_farm_data(request, pk):
     # get all the data belonging to the file_ids
     data = EUDRFarmModel.objects.filter(
-        file_id__in=[file["id"] for file in filesSerializer.data]
+        file_id=pk
     ).order_by("-updated_at")
     serializer = EUDRFarmModelSerializer(data, many=True)
 
     # format the data to geojson format and send to whisp API for processing
     raw_data = transform_db_data_to_geojson(serializer.data)
 
-    # categorize the data with same file_id and send to the external API for revalidation, store result until all file_ids are processed
-    serializer = EUDRFarmModelSerializer(data=request.data)
-
     # combine file_name and format to save in the database with dummy uploaded_by. then retrieve the file_id
 
     errors, created_data = async_to_sync(async_create_farm_data)(
-        raw_data, serializer, 1)
+        raw_data, serializer, pk)
     if errors:
         # delete the file if there are errors
-        EUDRUploadedFilesModel.objects.get(id=1).delete()
+        EUDRUploadedFilesModel.objects.get(id=pk).delete()
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
     return Response(created_data, status=status.HTTP_201_CREATED)
@@ -1009,7 +999,8 @@ def generate_map_link(request):
             valid_until=valid_until
         )
 
-    map_link = f"""{request.scheme}://{request.get_host()}/map/share/?file-id={fileId}&access-code={access_code}"""
+    map_link = f"""{request.scheme}://{request.get_host()
+                                       }/map/share/?file-id={fileId}&access-code={access_code}"""
 
     return Response({"access_code": access_code, "map_link": map_link}, status=status.HTTP_200_OK)
 

@@ -68,7 +68,7 @@ urlpatterns = [
     path("api/farm/update/<int:pk>/", update_farm_data, name="update_farm_data"),
     path("api/farm/sync/", sync_farm_data, name="sync_farm_data"),
     path("api/farm/restore/", restore_farm_data, name="restore_farm_data"),
-    path("api/farm/revalidate/", revalidate_farm_data,
+    path("api/farm/revalidate/<int:pk>/", revalidate_farm_data,
          name="revalidate_farm_data"),
     path("api/farm/list/", retrieve_farm_data, name="retrieve_farm_data"),
     path("api/farm/overlapping/<int:pk>/", retrieve_overlapping_farm_data,
