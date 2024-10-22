@@ -178,6 +178,20 @@
               <span class="nav-link-text ms-1">Users</span>
             </a>
           </li>
+          {% endif %} {% if user.is_authenticated and user.is_staff %}
+          <li class="nav-item">
+            <a
+              class="nav-link {% if active_page == 'backups' %}active{% endif %}"
+              href="{% url 'backups' %}"
+            >
+              <div
+                class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center"
+              >
+                <i class="ni ni-basket text-primary text-sm opacity-10"></i>
+              </div>
+              <span class="nav-link-text ms-1">Backups</span>
+            </a>
+          </li>
           {% endif %}
         </ul>
         <div class="fixed-bottom mb-4 pe-5">
@@ -321,6 +335,7 @@
                 >
                   <span
                     class="avatar text-bg-light rounded-4 font-weight-bolder"
+                    translate="no"
                   >
                     <!-- prettier-ignore -->
                     {{ user.first_name|slice:":1" }}{{ user.last_name|slice:":1" }}
@@ -1897,6 +1912,224 @@
     </script>
 
     <script>
+      const backupsContainer = document.getElementById("backupsContainer");
+
+      fetch("/api/collection_sites/list")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          let i = 0;
+
+          if (document.querySelector("#total_backups")) {
+            document.querySelector("#total_backups").innerText = data.length;
+          }
+
+          if (backupsContainer) {
+            // remove loading spinner
+            backupsContainer.innerHTML = "";
+
+            while (i < data.length) {
+              const tr = document.createElement("tr");
+
+              tr.innerHTML = `
+            <td>
+              <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
+            </td>
+            <td>
+              <h6 class="mb-0 text-sm">${data[i].name}</h6>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${data[i].agent_name}</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${
+                data[i].email || "N/A"
+              }</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${
+                data[i].phone_number || "N/A"
+              }</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${data[i].device_id}</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${data[i].village}</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${data[i].district}</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${new Date(
+                data[i].created_at
+              ).toLocaleString()}</p>
+            </td>
+            <td>
+              <p class="text-xs font-weight-bold mb-0">${new Date(
+                data[i].updated_at
+              ).toLocaleString()}</p>
+            </td>
+            <td class="align-middle text-center">
+              <a href="{% url 'backup_details' %}?cs-id=${
+                data[i].id
+              }" class="text-primary font-weight-bold text-lg" title="View Details"><i class="bi bi-list"></i></a>
+            </td>
+      `;
+
+              backupsContainer.appendChild(tr);
+              i++;
+            }
+
+            $("#backups").DataTable({
+              language: {
+                //customize pagination prev and next buttons: use arrows instead of words
+                paginate: {
+                  previous: '<span class="fa fa-chevron-left"></span>',
+                  next: '<span class="fa fa-chevron-right"></span>',
+                },
+                //customize number of elements to be displayed
+                lengthMenu:
+                  'Display <select class="form-control input-sm">' +
+                  '<option value="10">10</option>' +
+                  '<option value="20">20</option>' +
+                  '<option value="30">30</option>' +
+                  '<option value="40">40</option>' +
+                  '<option value="50">50</option>' +
+                  '<option value="-1">All</option>' +
+                  "</select> results",
+              },
+            });
+          }
+        })
+        .catch((error) => {
+          console.error(
+            "There was a problem with the fetch backups operation:",
+            error
+          );
+        });
+    </script>
+
+    <script>
+      const backupDetailsContainer = document.getElementById(
+        "backupDetailsContainer"
+      );
+      const queryParams = new URLSearchParams(window.location.search);
+
+      if (queryParams.get("cs-id")) {
+        fetch(`/api/farm/sync/list/${queryParams.get("cs-id")}`)
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
+          .then((data) => {
+            let i = 0;
+
+            if (backupDetailsContainer) {
+              // remove loading spinner
+              backupDetailsContainer.innerHTML = "";
+
+              while (i < data.length) {
+                const tr = document.createElement("tr");
+
+                tr.innerHTML = `
+                <td>
+                  <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
+                </td>
+                <td>
+                  <h6 class="mb-0 text-sm">${data[i].remote_id}</h6>
+                </td>
+                <td>
+                  <p class="text-xs font-weight-bold mb-0">${
+                    data[i].farmer_name
+                  }</p>
+                </td>
+                <td>
+                  <p class="text-xs font-weight-bold mb-0">${
+                    data[i].member_id
+                  }</p>
+                </td>
+                <td>
+                  <p class="text-xs font-weight-bold mb-0">${data[i].size}</p>
+                </td>
+                <td>
+                  <p class="text-xs font-weight-bold mb-0">${
+                    data[i].village
+                  }</p>
+                </td>
+                <td>
+                  <p class="text-xs font-weight-bold mb-0">${
+                    data[i].district
+                  }</p>
+                </td>
+                <td>
+                  <p class="text-xs font-weight-bold mb-0">${
+                    data[i].latitude
+                  }</p>
+                </td>
+                <td>
+                  <p class="text-xs font-weight-bold mb-0">${
+                    data[i].longitude
+                  }</p>
+                </td>
+                <td>
+                  <p class="text-xs font-weight-bold mb-0">${
+                    data[i].coordinates ? "Yes" : "No"
+                  }</p>
+                </td>
+                <td>
+                  <p class="text-xs font-weight-bold mb-0">${new Date(
+                    data[i].created_at
+                  ).toLocaleString()}</p>
+                </td>
+                <td>
+                  <p class="text-xs font-weight-bold mb-0">${new Date(
+                    data[i].updated_at
+                  ).toLocaleString()}</p>
+                </td>
+  `;
+
+                backupDetailsContainer.appendChild(tr);
+                i++;
+              }
+
+              $("#backup_details").DataTable({
+                language: {
+                  //customize pagination prev and next buttons: use arrows instead of words
+                  paginate: {
+                    previous: '<span class="fa fa-chevron-left"></span>',
+                    next: '<span class="fa fa-chevron-right"></span>',
+                  },
+                  //customize number of elements to be displayed
+                  lengthMenu:
+                    'Display <select class="form-control input-sm">' +
+                    '<option value="10">10</option>' +
+                    '<option value="20">20</option>' +
+                    '<option value="30">30</option>' +
+                    '<option value="40">40</option>' +
+                    '<option value="50">50</option>' +
+                    '<option value="-1">All</option>' +
+                    "</select> results",
+                },
+              });
+            }
+          })
+          .catch((error) => {
+            console.error(
+              "There was a problem with the fetch backups operation:",
+              error
+            );
+          });
+      }
+    </script>
+
+    <script>
       $(window).on("load", function () {
         if (window.location.pathname === "/map/") {
           $("#loader-container").show();
@@ -1952,111 +2185,113 @@
 
     <script>
       // Share map logic
-      document
-        .querySelector(".floating-share .fa-share-alt")
-        .addEventListener("click", function () {
-          document.querySelector(".share-options").classList.toggle("show");
-        });
+      if (document.querySelector(".floating-share .fa-share-alt")) {
+        document
+          .querySelector(".floating-share .fa-share-alt")
+          .addEventListener("click", function () {
+            document.querySelector(".share-options").classList.toggle("show");
+          });
 
-      document
-        .getElementById("copyLink")
-        .addEventListener("click", async function (e) {
-          e.preventDefault();
-          const queryParams = new URLSearchParams(window.location.search);
-          const fileId = queryParams.get("file-id");
+        document
+          .getElementById("copyLink")
+          .addEventListener("click", async function (e) {
+            e.preventDefault();
+            const queryParams = new URLSearchParams(window.location.search);
+            const fileId = queryParams.get("file-id");
 
-          const shareUrl = await generateMapUrl(fileId);
+            const shareUrl = await generateMapUrl(fileId);
 
-          if (shareUrl) {
-            navigator.clipboard.writeText(shareUrl).then(() => {
+            if (shareUrl) {
+              navigator.clipboard.writeText(shareUrl).then(() => {
+                Toastify({
+                  text: "Link copied to clipboard!",
+                  duration: 2000,
+                  close: true,
+                  gravity: "top",
+                  position: "right",
+                  backgroundColor: "green",
+                }).showToast();
+              });
+            }
+          });
+
+        document
+          .getElementById("whatsappShare")
+          .addEventListener("click", async function (e) {
+            e.preventDefault();
+            const queryParams = new URLSearchParams(window.location.search);
+            const fileId = queryParams.get("file-id");
+
+            const shareUrl = await generateMapUrl(fileId);
+
+            if (shareUrl) {
+              window.open(
+                `https://wa.me/?text=${encodeURIComponent(shareUrl)}`,
+                "_blank"
+              );
+            }
+          });
+
+        document
+          .getElementById("emailShare")
+          .addEventListener("click", async function (e) {
+            e.preventDefault();
+            const queryParams = new URLSearchParams(window.location.search);
+            const fileId = queryParams.get("file-id");
+
+            const shareUrl = await generateMapUrl(fileId);
+
+            if (shareUrl) {
+              window.open(
+                `mailto:?subject=Check%20out%20this%20map&body=${encodeURIComponent(
+                  shareUrl
+                )}`,
+                "_self"
+              );
+            }
+          });
+
+        async function generateMapUrl(fileId) {
+          let shareUrl = null;
+
+          await $.ajax({
+            url: "{% url 'map_share' %}",
+            dataType: "json",
+            method: "POST",
+            headers: {
+              "X-CSRFToken": getCookie("csrftoken"),
+            },
+            data: {
+              "file-id": fileId,
+            },
+            success: function (data) {
+              if (data.error) {
+                Toastify({
+                  text: data.error,
+                  duration: 2000,
+                  close: true,
+                  gravity: "top",
+                  position: "right",
+                  backgroundColor: "red",
+                }).showToast();
+              } else {
+                shareUrl = data.map_link;
+              }
+            },
+            error: function () {
               Toastify({
-                text: "Link copied to clipboard!",
-                duration: 2000,
-                close: true,
-                gravity: "top",
-                position: "right",
-                backgroundColor: "green",
-              }).showToast();
-            });
-          }
-        });
-
-      document
-        .getElementById("whatsappShare")
-        .addEventListener("click", async function (e) {
-          e.preventDefault();
-          const queryParams = new URLSearchParams(window.location.search);
-          const fileId = queryParams.get("file-id");
-
-          const shareUrl = await generateMapUrl(fileId);
-
-          if (shareUrl) {
-            window.open(
-              `https://wa.me/?text=${encodeURIComponent(shareUrl)}`,
-              "_blank"
-            );
-          }
-        });
-
-      document
-        .getElementById("emailShare")
-        .addEventListener("click", async function (e) {
-          e.preventDefault();
-          const queryParams = new URLSearchParams(window.location.search);
-          const fileId = queryParams.get("file-id");
-
-          const shareUrl = await generateMapUrl(fileId);
-
-          if (shareUrl) {
-            window.open(
-              `mailto:?subject=Check%20out%20this%20map&body=${encodeURIComponent(
-                shareUrl
-              )}`,
-              "_self"
-            );
-          }
-        });
-
-      async function generateMapUrl(fileId) {
-        let shareUrl = null;
-
-        await $.ajax({
-          url: "{% url 'map_share' %}",
-          dataType: "json",
-          method: "POST",
-          headers: {
-            "X-CSRFToken": getCookie("csrftoken"),
-          },
-          data: {
-            "file-id": fileId,
-          },
-          success: function (data) {
-            if (data.error) {
-              Toastify({
-                text: data.error,
+                text: "Error generating share link.",
                 duration: 2000,
                 close: true,
                 gravity: "top",
                 position: "right",
                 backgroundColor: "red",
               }).showToast();
-            } else {
-              shareUrl = data.map_link;
-            }
-          },
-          error: function () {
-            Toastify({
-              text: "Error generating share link.",
-              duration: 2000,
-              close: true,
-              gravity: "top",
-              position: "right",
-              backgroundColor: "red",
-            }).showToast();
-          },
-        });
+            },
+          });
 
-        return shareUrl;
+          return shareUrl;
+        }
       }
     </script>
   </body>

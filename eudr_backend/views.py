@@ -833,6 +833,17 @@ def retrieve_all_synced_farm_data(request):
 
 
 @api_view(["GET"])
+def retrieve_all_synced_farm_data_by_cs(request, pk):
+    data = EUDRFarmBackupModel.objects.filter(
+        site_id=pk
+    ).order_by("-updated_at")
+
+    serializer = EUDRFarmBackupModelSerializer(data, many=True)
+
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
 def retrieve_collection_sites(request):
     data = EUDRCollectionSiteModel.objects.all().order_by("-updated_at")
 
