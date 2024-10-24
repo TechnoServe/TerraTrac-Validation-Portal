@@ -1003,7 +1003,7 @@ def generate_map_link(request):
             raise EUDRSharedMapAccessCodeModel.DoesNotExist
     except EUDRSharedMapAccessCodeModel.DoesNotExist:
         access_code = generate_access_code()
-        valid_until = timezone.now() + timedelta(days=3)
+        valid_until = timezone.now() + timedelta(days=90)
         shared_map_access = EUDRSharedMapAccessCodeModel.objects.create(
             file_id=fileId,
             access_code=access_code,
