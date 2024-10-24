@@ -607,7 +607,7 @@
         const format = file.name.split(".").pop().toLowerCase();
         const file_name = file.name.split(".")[0];
 
-        document.querySelector("#error-container").classList.add("d-none");
+        document.querySelector("#modal-error-container").classList.add("d-none");
 
         try {
           const reader = new FileReader();
@@ -719,7 +719,7 @@
             if (!response.ok) {
               if (response.status === 400) {
                 document
-                  .querySelector("#error-container")
+                  .querySelector("#modal-error-container")
                   .classList.remove("d-none");
 
                 return response.json().then((errorData) => {
@@ -731,7 +731,7 @@
                       e.preventDefault();
 
                       document
-                        .querySelector("#error-container")
+                        .querySelector("#modal-error-container")
                         .classList.add("d-none");
                     });
                 });
@@ -764,7 +764,7 @@
           })
           .catch((error) => {
             document
-              .querySelector("#error-container")
+              .querySelector("#modal-error-container")
               .classList.remove("d-none");
 
             document.querySelector("#headingOneErrorText").textContent =
@@ -775,7 +775,7 @@
                 e.preventDefault();
 
                 document
-                  .querySelector("#error-container")
+                  .querySelector("#modal-error-container")
                   .classList.add("d-none");
               });
 

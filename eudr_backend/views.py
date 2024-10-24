@@ -36,7 +36,7 @@ REQUIRED_FIELDS = [
     'farm_village',
     'latitude',
     'longitude',
-    'polygon',
+    'polygon'
 ]
 
 OPTIONAL_FIELDS = [
@@ -45,6 +45,8 @@ OPTIONAL_FIELDS = [
     'agent_name',
     'created_at',
     'updated_at',
+    'accuracyArray',
+    'accuracies'
 ]
 
 GEOJSON_REQUIRED_FIELDS = ['geometry',
