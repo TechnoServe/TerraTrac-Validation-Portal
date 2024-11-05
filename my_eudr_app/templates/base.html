@@ -392,42 +392,6 @@
     <script src="{% static 'assets/js/plugins/perfect-scrollbar.min.js' %}"></script>
     <script src="{% static 'assets/js/plugins/smooth-scrollbar.min.js' %}"></script>
     <script src="{% static 'assets/js/plugins/chartjs.min.js' %}"></script>
-    <script>
-      // if mapMonde is loaded, ask for user's location and embed it in url
-      const mapMonde = document.querySelector("#mapMonde");
-      const base_url = window.location.href;
-      if (mapMonde) {
-        // if user allows location, get it and embed it in the url, otherwise, use default location
-        if (navigator.geolocation && !window.location.search) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const { latitude, longitude } = position.coords;
-              if (!base_url.includes("lat")) {
-                window.location.href = `${base_url}?lat=${latitude}&lon=${longitude}`;
-              }
-            },
-            (error) => {
-              if (!base_url.includes("lat")) {
-                window.location.href = `${base_url}?lat=0.0&lon=0.0`;
-              }
-            }
-          );
-        }
-      }
-    </script>
-    <script>
-      document
-        .getElementById("logout")
-        .addEventListener("click", function (event) {
-          event.preventDefault();
-          document.getElementById("logout-form").submit();
-        });
-    </script>
-    <script>
-      document.getElementById("profile").addEventListener("click", function () {
-        window.location.href = "{% url 'profile' %}";
-      });
-    </script>
     <!-- Font Awesome Icons -->
     <link
       rel="stylesheet"
@@ -436,15 +400,6 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
-    <script>
-      var win = navigator.platform.indexOf("Win") > -1;
-      if (win && document.querySelector("#sidenav-scrollbar")) {
-        var options = {
-          damping: "0.5",
-        };
-        Scrollbar.init(document.querySelector("#sidenav-scrollbar"), options);
-      }
-    </script>
     <!-- Github buttons -->
     <script async defer src="https://buttons.github.io/buttons.js"></script>
     <!-- Leaflet -->
@@ -514,6 +469,55 @@
       type="text/javascript"
       src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
     ></script>
+
+    <script>
+      // if mapMonde is loaded, ask for user's location and embed it in url
+      const mapMonde = document.querySelector("#mapMonde");
+      const base_url = window.location.href;
+      if (mapMonde) {
+        // if user allows location, get it and embed it in the url, otherwise, use default location
+        if (navigator.geolocation && !window.location.search) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              if (!base_url.includes("lat")) {
+                window.location.href = `${base_url}?lat=${latitude}&lon=${longitude}`;
+              }
+            },
+            (error) => {
+              if (!base_url.includes("lat")) {
+                window.location.href = `${base_url}?lat=0.0&lon=0.0`;
+              }
+            }
+          );
+        }
+      }
+    </script>
+
+    <script>
+      document
+        .getElementById("logout")
+        .addEventListener("click", function (event) {
+          event.preventDefault();
+          document.getElementById("logout-form").submit();
+        });
+    </script>
+
+    <script>
+      document.getElementById("profile").addEventListener("click", function () {
+        window.location.href = "{% url 'profile' %}";
+      });
+    </script>
+
+    <script>
+      var win = navigator.platform.indexOf("Win") > -1;
+      if (win && document.querySelector("#sidenav-scrollbar")) {
+        var options = {
+          damping: "0.5",
+        };
+        Scrollbar.init(document.querySelector("#sidenav-scrollbar"), options);
+      }
+    </script>
 
     <script type="text/javascript">
       function googleTranslateElementInit() {
@@ -607,7 +611,9 @@
         const format = file.name.split(".").pop().toLowerCase();
         const file_name = file.name.split(".")[0];
 
-        document.querySelector("#modal-error-container").classList.add("d-none");
+        document
+          .querySelector("#modal-error-container")
+          .classList.add("d-none");
 
         try {
           const reader = new FileReader();

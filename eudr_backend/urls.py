@@ -44,7 +44,7 @@ from eudr_backend.views import (
     update_farm_data,
     update_user,
 )
-from my_eudr_app import views
+from my_eudr_app import auth_views, map_views, views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -54,14 +54,15 @@ urlpatterns = [
     path("validated_files/", views.validated_files, name="validated_files"),
     path("map/", views.map, name="map"),
     path("map/share/", views.shared_map, name="shared_map"),
-    path("map_data", views.map_view, name="map_view"),
+    path("map_data", map_views.map_view, name="map_view"),
     path("users/", views.users, name="users"),
     path("backups/", views.backups, name="backups"),
     path("backup_details/", views.backup_details, name="backup_details"),
     path("uploads/", views.all_uploaded_files, name="uploads"),
     path("profile/", views.profile, name="profile"),
-    path('profile/change-password/', views.change_password, name='change_password'),
-    path("logout/", views.logout_view, name="logout"),
+    path('profile/change-password/',
+         auth_views.change_password, name='change_password'),
+    path("logout/", auth_views.logout_view, name="logout"),
     path("api/users/", retrieve_users, name="user_list"),
     path("api/users/<int:pk>/", retrieve_user, name="user_detail"),
     path("api/users/add/", create_user, name="user_create"),
