@@ -2300,5 +2300,22 @@
         }
       }
     </script>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get("open-uploader") === "true") {
+          // Use Bootstrap's modal method to show the modal
+          var myModal = new bootstrap.Modal(
+            document.getElementById("uploadFarmInfoModal"),
+            {
+              backdrop: "static",
+              keyboard: true,
+            }
+          );
+          myModal.show();
+        }
+      });
+    </script>
   </body>
 </html>
