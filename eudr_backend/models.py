@@ -46,6 +46,9 @@ class EUDRFarmModel(models.models.Model):
     created_at = models.models.DateTimeField(auto_now_add=True)
     updated_at = models.models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return self.farmer_name
+
 
 class EUDRFarmBackupModel(models.models.Model):
     remote_id = models.models.CharField(max_length=255, null=True, blank=True)
@@ -59,7 +62,7 @@ class EUDRFarmBackupModel(models.models.Model):
     district = models.models.CharField(max_length=255)
     latitude = models.models.FloatField(default=0.0)
     longitude = models.models.FloatField(default=0.0)
-    coordinates = models.models.JSONField()
+    coordinates = models.models.JSONField(null=True)
     accuracies = models.models.JSONField(default=list, blank=True)
     created_at = models.models.DateTimeField(auto_now_add=True)
     updated_at = models.models.DateTimeField(auto_now=True)
@@ -102,6 +105,9 @@ class EUDRSharedMapAccessCodeModel(models.models.Model):
     valid_until = models.models.DateTimeField(null=True)
     created_at = models.models.DateTimeField(auto_now_add=True)
     updated_at = models.models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.file_id
 
 
 class WhispAPISetting(models.models.Model):
