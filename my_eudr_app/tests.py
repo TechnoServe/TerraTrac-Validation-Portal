@@ -1,3 +1,7 @@
+from django.urls import reverse
+from eudr_backend.models import EUDRSharedMapAccessCodeModel
+from django.test import Client
+from unittest.mock import patch
 from django.test import TestCase
 from eudr_backend.models import (
     EUDRUserModel,
@@ -10,6 +14,9 @@ from eudr_backend.models import (
 )
 from django.db.utils import IntegrityError
 from django.core.exceptions import ValidationError
+from django.utils import timezone
+import datetime
+from django.contrib.auth.models import User
 
 
 class EUDRUserModelTest(TestCase):
@@ -199,3 +206,66 @@ class PerformanceTests(TestCase):
                 [i, i+1] for i in range(1000)]},
         )
         self.assertEqual(farm.polygon["type"], "Polygon")
+
+
+class MapViewTest(TestCase):
+    def setUp(self):
+        self.client = Client()
+        # Adjust this based on your URL configuration
+        self.map_url = reverse('map_view')
+
+        # Create and log in a test user
+        self.user = User.objects.create_user(
+            username='testuser', password='testpassword')
+        self.client.force_login(self.user)
+
+        # Create a valid access code record
+        self.access_code_record = EUDRSharedMapAccessCodeModel.objects.create(
+            file_id='1',
+            access_code='23c4b3d4-4b3d-4b3d-4b3d-4b3d4b3d4b3d',
+            valid_until=timezone.now() + datetime.timedelta(days=90)
+        )
+
+    @patch('requests.get')
+    def test_map_view_with_valid_access_code(self, mock_initialize_earth_engine):
+        response = self.client.get(
+            self.map_url + '?file-id=1&access-code=23c4b3d4-4b3d-4b3d-4b3d-4b3d4b3d4b3d')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('application/json', response['Content-Type'])
+
+    def test_map_view_with_expired_access_code(self):
+        expired_access_code = EUDRSharedMapAccessCodeModel.objects.create(
+            file_id='expired-file-id',
+            access_code='expired-code',
+            valid_until=timezone.now() - datetime.timedelta(days=1)
+        )
+
+        response = self.client.get(self.map_url, {
+            'file-id': 'expired-file-id',
+            'access-code': 'expired-code'
+        })
+
+        self.assertEqual(response.status_code, 403)
+        self.assertJSONEqual(response.content, {
+                             "message": "Access Code Expired", "status": 403})
+
+    def test_map_view_with_invalid_access_code(self):
+        response = self.client.get(self.map_url, {
+            'file-id': 'invalid-file-id',
+            'access-code': 'invalid-code'
+        })
+
+        self.assertEqual(response.status_code, 403)
+        self.assertJSONEqual(response.content, {
+                             "message": "Invalid file ID or access code.", "status": 403})
+
+    @patch('requests.get')
+    def test_map_view_without_access_code(self, mock_initialize_earth_engine):
+        response = self.client.get(self.map_url, {
+            'lat': '10.0',
+            'lon': '20.0'
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('application/json', response['Content-Type'])
