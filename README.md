@@ -78,13 +78,9 @@ To run the tests:
 
 ## Contributing
 
-If you wish to contribute, please follow the steps below:
+We welcome contributions from the community! Please read our [Contributing Guidelines](./CONTRIBUTING.md) to get started. This document will help you understand how to set up your local environment, submit code changes, and follow our coding standards.
 
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature/new-feature`).
-3. Commit your changes (`git commit -m 'Add some new feature`).
-4. Push to the branch (`git push origin feature/new-feature`).
-5. Open a pull request.
+Thank you for helping improve our project!
 
 ## License
 

@@ -23,6 +23,16 @@ Validated Files
       <div class="card mb-4">
         <div class="d-flex card-header pb-0">
           <h6>Uploaded Files List</h6>
+          <div class="ms-auto">
+            <a
+              href="{% url 'validator' %}?open-uploader=true"
+              class="btn btn-primary btn-sm ms-auto text-white"
+              id="viewMapBtn"
+            >
+              <i class="fa fa-files-o me-2"></i>
+              Upload New File
+            </a>
+          </div>
           {% if user.is_authenticated and user.is_staff %}
           <div class="ms-auto">
             <a

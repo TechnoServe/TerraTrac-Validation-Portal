@@ -6,9 +6,11 @@ from .models import EUDRFarmModel, EUDRUploadedFilesModel
 from background_task import background
 from shapely import wkt
 
+AG_BASE_URL = "https://api-ar.agstack.org"
+
 
 def get_access_token():
-    login_url = "https://api-ar.agstack.org/login"
+    login_url = f'{AG_BASE_URL}/login'
     payload = {
         "email": settings.AGSTACK_EMAIL,
         "password": settings.AGSTACK_PASSWORD
@@ -48,7 +50,7 @@ def update_geoid(user_id):
         wkt_format = wkt.dumps(polygon)
 
         response = requests.post(
-            "https://api-ar.agstack.org/register-field-boundary",
+            f'{AG_BASE_URL}/register-field-boundary',
             json={"wkt": wkt_format},
             headers=headers
         )
