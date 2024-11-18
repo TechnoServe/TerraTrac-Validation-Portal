@@ -1,6 +1,13 @@
 import ast
+import csv
 import json
 import uuid
+
+import boto3
+import pandas as pd
+import geopandas as gpd
+from eudr_backend import settings
+from eudr_backend.models import EUDRUploadedFilesModel
 
 
 def flatten_multipolygon(multipolygon):
@@ -73,12 +80,21 @@ def transform_db_data_to_geojson(data, isSyncing=False):
 
 def transform_csv_to_json(data):
     features = []
-    for record in data:
-        # check if latitude, longitude, and polygon fields are not found in the record, skip the record
+
+    # Assume the first element is the header (column names)
+    headers = data[0]
+
+    # Iterate over data starting from the second row (actual data)
+    for row in data[1:]:
+        # Create a record as a dictionary mapping headers to row values
+        record = dict(zip(headers, row))
+
+        # Ensure that latitude, longitude, and polygon fields exist
         if 'latitude' not in record or 'longitude' not in record:
             continue
-        # check if polygon field is empty array or empty string
-        if not record.get('polygon') or record.get('polygon') in ['']:
+
+        # Handle empty or missing polygon field
+        if not record['polygon'] or record['polygon'] in ['']:
             feature = {
                 "type": "Feature",
                 "geometry": {
@@ -89,15 +105,20 @@ def transform_csv_to_json(data):
             }
             features.append(feature)
         else:
-            feature = {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [ast.literal_eval(record.get('polygon', '[]'))]
-                },
-                "properties": {k: v for k, v in record.items() if k not in ['latitude', 'longitude', 'polygon']}
-            }
-            features.append(feature)
+            try:
+                coordinates = ast.literal_eval(record['polygon'])
+                feature = {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [coordinates]
+                    },
+                    "properties": {k: v for k, v in record.items() if k not in ['latitude', 'longitude', 'polygon']}
+                }
+                features.append(feature)
+            except (ValueError, SyntaxError):
+                # Skip record if polygon parsing fails
+                continue
 
     geojson = {
         "type": "FeatureCollection",
@@ -203,3 +224,39 @@ def reverse_polygon_points(polygon):
 
 def generate_access_code():
     return str(uuid.uuid4())
+
+
+def extract_data_from_file(file, data_format):
+    try:
+        if data_format == 'csv':
+            data = []
+            decoded_file = file.read().decode('utf-8', errors='replace').splitlines()
+            reader = csv.reader(decoded_file)
+            for row in reader:
+                data.append(row)
+        elif data_format == 'geojson':
+            data = gpd.read_file(file)
+            # convert to geojson
+            data = json.loads(data.to_json())
+        else:
+            raise ValueError(
+                "Unsupported data format. Please use 'csv' or 'geojson'.")
+        return data
+    except Exception as e:
+        raise e
+
+
+def store_failed_file_in_s3(file, user, file_name):
+    # Store the file in the AWS S3 bucket's failed directory
+    if file:
+        s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                          aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+        s3.upload_fileobj(file, settings.AWS_STORAGE_BUCKET_NAME,
+                          f'failed/{user.username}_{file_name}', ExtraArgs={'ACL': 'public-read'})
+
+
+def handle_failed_file_entry(file_serializer, file, user):
+    if "id" in file_serializer.data:
+        EUDRUploadedFilesModel.objects.get(
+            id=file_serializer.data.get("id")).delete()
+    store_failed_file_in_s3(file, user, file_serializer.data.get('file_name'))

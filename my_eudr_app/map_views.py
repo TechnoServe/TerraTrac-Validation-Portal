@@ -153,7 +153,7 @@ def map_view(request):
                         polygon = flatten_multipolygon_coordinates(
                             farm['polygon'])
 
-                        if polygon:
+                        if farm['polygon_type'] != 'Point':
                             farm_polygon = Polygon(polygon[0])
                             is_overlapping = any(farm_polygon.overlaps(
                                 Polygon(other_farm['polygon'][0])) for other_farm in farms)

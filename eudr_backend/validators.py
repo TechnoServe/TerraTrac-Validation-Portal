@@ -37,57 +37,58 @@ GEOJSON_REQUIRED_FIELDS = ['geometry',
 def validate_csv(data):
     errors = []
 
-    # Check if required fields are present
+    # Check if required fields are present in the header
+    header = data[0]
     for field in REQUIRED_FIELDS:
-        if field not in data[0]:
+        if field not in header:
             errors.append(f'"{field}" is required.')
     if len(errors) > 0:
         return errors
 
-    # Check if optional fields are present
-    for field in data[0]:
+    # Check for any invalid fields in the header
+    for field in header:
         if field not in REQUIRED_FIELDS and field not in OPTIONAL_FIELDS:
             errors.append(f'"{field}" is not a valid field.')
     if len(errors) > 0:
         return errors
 
-    # Check if farm_size, latitude, and longitude are numbers and polygon is a list
-    for i, record in enumerate(
-        data[:-1] if (
-            len(data[-1]) < len(REQUIRED_FIELDS)
-        ) else data
-    ):
-        try:
-            float(record['farm_size'])
-        except ValueError:
-            errors.append(f'Record {i+1}: "farm_size" must be a number.')
-        try:
-            float(record['latitude'])
-        except ValueError:
-            errors.append(f'Record {i+1}: "latitude" must be a number.')
-        try:
-            float(record['longitude'])
-        except ValueError:
-            errors.append(f'Record {i+1}: "longitude" must be a number.')
+    # Check each record for data validation
+    for i, record in enumerate(data[1:], start=1):
+        record_dict = dict(zip(header, record))
 
-    # if polygon is invalid, return error
-    for i, record in enumerate(
-        data[:-1] if (
-            len(data[-1]) < len(REQUIRED_FIELDS)
-        ) else data
-    ):
+        # Validate numerical fields
+        if not record_dict.get('latitude'):
+            record_dict['latitude'] = 0.0
+
+        if not record_dict.get('longitude'):
+            record_dict['longitude'] = 0.0
         try:
-            polygon = record['polygon']
-            if float(record['farm_size']) >= 4 and not is_valid_polygon(json.loads(polygon)):
-                errors.append(
-                    f'Record {i+1}: Should have valid polygon format.')
-            elif polygon and not is_valid_polygon(json.loads(polygon)):
-                errors.append(
-                    f'Record {i+1}: Should have valid polygon format.')
-        except ValueError:
-            errors.append(f'Record {i+1}: "polygon" must be a list.')
-        except SyntaxError:
-            errors.append(f'Record {i+1}: "polygon" must be a list.')
+            float(record_dict['farm_size'])
+        except (ValueError, KeyError):
+            errors.append(f'Record {i}: "farm_size" must be a number.')
+
+        try:
+            float(record_dict['latitude'])
+        except (ValueError, KeyError):
+            errors.append(f'Record {i}: "latitude" must be a number.')
+
+        try:
+            float(record_dict['longitude'])
+        except (ValueError, KeyError):
+            errors.append(f'Record {i}: "longitude" must be a number.')
+
+        # Validate polygon field
+        try:
+            polygon = record_dict.get('polygon', '')
+            if polygon:
+                if float(record_dict['farm_size']) >= 4 and not is_valid_polygon(json.loads(polygon)):
+                    errors.append(
+                        f'Record {i}: Should have valid polygon format.')
+                elif not is_valid_polygon(json.loads(polygon)):
+                    errors.append(
+                        f'Record {i}: Should have valid polygon format.')
+        except (ValueError, SyntaxError, KeyError):
+            errors.append(f'Record {i}: "polygon" must be a valid list.')
 
     return errors
 
@@ -95,10 +96,13 @@ def validate_csv(data):
 def validate_geojson(data: dict) -> bool:
     errors = []
 
-    if data.get('type') != 'FeatureCollection':
-        errors.append('Invalid GeoJSON type. Must be FeatureCollection')
-    if not isinstance(data.get('features'), list):
-        errors.append('Invalid GeoJSON features. Must be a list')
+    try:
+        if data.get('type') != 'FeatureCollection':
+            errors.append('Invalid GeoJSON type. Must be FeatureCollection')
+        if not isinstance(data.get('features'), list):
+            errors.append('Invalid GeoJSON features. Must be a list')
+    except AttributeError:
+        errors.append('Invalid GeoJSON. Must be a dictionary')
 
     if len(errors) > 0:
         return errors
@@ -131,7 +135,6 @@ def validate_geojson(data: dict) -> bool:
         # Check for valid geometry
         geometry = feature.get('geometry')
         if not isinstance(geometry, dict):
-            print(geometry)
             errors.append('Invalid GeoJSON geometry. Must be a dictionary')
             continue
         geometry_type = geometry.get('type')

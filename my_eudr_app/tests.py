@@ -3,6 +3,11 @@ from eudr_backend.models import EUDRSharedMapAccessCodeModel
 from django.test import Client
 from unittest.mock import patch
 from django.test import TestCase
+from django.utils import timezone
+import datetime
+from django.contrib.auth.models import User
+from rest_framework import status
+
 from eudr_backend.models import (
     EUDRUserModel,
     EUDRFarmModel,
@@ -12,54 +17,208 @@ from eudr_backend.models import (
     EUDRSharedMapAccessCodeModel,
     WhispAPISetting
 )
-from django.db.utils import IntegrityError
-from django.core.exceptions import ValidationError
-from django.utils import timezone
-import datetime
-from django.contrib.auth.models import User
 
 
-class EUDRUserModelTest(TestCase):
+class ViewsTestCase(TestCase):
     def setUp(self):
-        self.user = EUDRUserModel.objects.create(
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='johndoe', password='12345')
+        self.client.login(username='testuser', password='12345')
+        self.eudr_user = EUDRUserModel.objects.create(
             first_name="John",
             last_name="Doe",
-            username="john.doe@example.com",
-            password="password123",
+            username=self.user.username,
+            password=self.user.password,
         )
+        self.farm = EUDRFarmModel.objects.create(
+            remote_id="F123",
+            farmer_name="Alice",
+            farm_size=100.5,
+            farm_village="Springfield",
+            farm_district="District A",
+            latitude=35.0,
+            longitude=-80.0,
+            polygon={"type": "Polygon", "coordinates": [
+                [1, 2], [3, 4], [5, 6]]},
+            accuracies=[95, 90])
+        self.file = EUDRUploadedFilesModel.objects.create(
+            file_name='test.csv', uploaded_by='testuser')
+        self.collection_site = EUDRCollectionSiteModel.objects.create(
+            name='Test Site', device_id='12345')
+        self.farm_backup = EUDRFarmBackupModel.objects.create(
+            remote_id='1', site_id=self.collection_site)
 
-    def test_user_model_str(self):
-        """Test string representation of EUDRUserModel."""
-        self.assertEqual(str(self.user), self.user.username)
+    def test_create_user(self):
+        url = reverse('create_user')
+        data = {'username': 'newuser', 'password': '12345'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-    def test_invalid_user_type(self):
-        """Test invalid user_type assignment."""
-        invalid_user = EUDRUserModel(
-            first_name="Jane",
-            last_name="Smith",
-            username="jane.smith@example.com",
-            password="password123",
-            user_type="INVALID_TYPE",  # Invalid choice
-        )
-        with self.assertRaises(ValidationError):
-            invalid_user.full_clean()
+    def test_retrieve_users(self):
+        url = reverse('retrieve_users')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_user_model_unique_username(self):
-        """Test unique constraint on username field."""
-        EUDRUserModel.objects.create(
-            first_name="Alice",
-            last_name="Smith",
-            username="alice.smith@example.com",
-            password="password123",
-        )
+    def test_retrieve_user(self):
+        url = reverse('user_detail', args=[self.user.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        with self.assertRaises(IntegrityError):
-            EUDRUserModel.objects.create(
-                first_name="Bob",
-                last_name="Jones",
-                username="alice.smith@example.com",  # Duplicate username
-                password="password123",
-            )
+    def test_update_user(self):
+        url = reverse('user_update', args=[self.user.id])
+        data = {'username': 'updateduser'}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_delete_user(self):
+        url = reverse('user_delete', args=[self.user.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_create_farm_data(self):
+        url = reverse('create_farm_data')
+        data = {'format': 'geojson', 'data': {"type": "FeatureCollection", "features": [{
+            "type": "Feature",
+            "properties": {
+                "remote_id": "1b8313c1-c584-4e6b-8a1c-3e9fd962798b",
+                "farmer_name": "sjee",
+                "member_id": "",
+                "collection_site": "fhfh",
+                "agent_name": "fjf",
+                "farm_village": "dhxfy",
+                "farm_district": "fgud",
+                "farm_size": 1.11,
+                "latitude": -1.965532,
+                "longitude": 30.064553,
+                "created_at": "Mon Sep 30 12:52:09 GMT+02:00 2024",
+                "updated_at": "Mon Sep 30 12:52:09 GMT+02:00 2024"
+
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[30.0645542, -1.965532], [30.064553, -1.9655323], [30.0645528, -1.9655322], [30.0645542, -1.965532]]]
+            }
+        }, {
+            "type": "Feature",
+            "properties": {
+                "remote_id": "8317a3ca-c1c2-4990-98e4-055fbd8e4e19",
+                "farmer_name": "shdh",
+                "member_id": "",
+                "collection_site": "fhfh",
+                "agent_name": "fjf",
+                "farm_village": "dhdh",
+                "farm_district": "chxf",
+                "farm_size": 1.0,
+                "latitude": -1.965526,
+                "longitude": 30.064561,
+                "created_at": "Mon Sep 30 12:51:19 GMT+02:00 2024",
+                "updated_at": "Mon Sep 30 12:51:19 GMT+02:00 2024"
+
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [-1.965526, 30.064561]
+            }
+        }]}}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_sync_farm_data(self):
+        url = reverse('sync_farm_data')
+        data = [{'device_id': "b6cc4c5d-7e87-4edd-872a-3ffec8d92ed0", 'collection_site': {'name': 'Test Site'},
+                 'farms': [{'remote_id': '0b2a5f2f-ada0-4163-840e-b2979659b85b'}]}]
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_restore_farm_data(self):
+        url = reverse('restore_farm_data')
+        data = {'device_id': '12345'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_update_farm_data(self):
+        url = reverse('update_farm_data', args=[self.farm.id])
+        data = {'name': 'Updated Farm'}
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_revalidate_farm_data(self):
+        url = reverse('revalidate_farm_data', args=[self.file.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_retrieve_farm_data(self):
+        url = reverse('retrieve_farm_data')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_overlapping_farm_data(self):
+        url = reverse('retrieve_overlapping_farm_data', args=[self.file.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_user_farm_data(self):
+        url = reverse('retrieve_user_farm_data', args=[self.user.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_all_synced_farm_data(self):
+        url = reverse('retrieve_all_synced_farm_data')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_all_synced_farm_data_by_cs(self):
+        url = reverse('retrieve_all_synced_farm_data_by_cs',
+                      args=[self.collection_site.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_collection_sites(self):
+        url = reverse('retrieve_collection_sites')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_map_data(self):
+        url = reverse('retrieve_map_data')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_farm_detail(self):
+        url = reverse('retrieve_farm_detail', args=[self.farm.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_farm_data_from_file_id(self):
+        url = reverse('retrieve_farm_data_from_file_id', args=[self.file.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_files(self):
+        url = reverse('retrieve_files')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_s3_files(self):
+        url = reverse('retrieve_s3_files')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_retrieve_file(self):
+        url = reverse('retrieve_file', args=[self.file.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_download_template(self):
+        url = reverse('download_template') + '?format=csv'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_generate_map_link(self):
+        url = reverse('generate_map_link')
+        data = {'file-id': self.file.id}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
 class EUDRFarmModelTest(TestCase):

@@ -54,7 +54,7 @@ class EUDRFarmBackupModel(models.models.Model):
     remote_id = models.models.CharField(max_length=255, null=True, blank=True)
     farmer_name = models.models.CharField(max_length=255)
     member_id = models.models.CharField(max_length=255, null=True, blank=True)
-    size = models.models.FloatField()
+    size = models.models.FloatField(max_length=255, null=True, blank=True)
     site_id = models.models.ForeignKey(
         "EUDRCollectionSiteModel", on_delete=models.models.CASCADE, null=True, blank=True)
     agent_name = models.models.CharField(max_length=255, null=True, blank=True)
