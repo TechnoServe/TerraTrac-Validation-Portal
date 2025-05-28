@@ -251,8 +251,14 @@ def store_file_in_s3(file, user, file_name, is_failed=False):
     if file:
         s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                           aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
-        s3.upload_fileobj(file, settings.AWS_STORAGE_BUCKET_NAME,
-                          f'{'failed' if is_failed else 'processed'}/{user.username}_{file_name}', ExtraArgs={'ACL': 'public-read'})
+        folder = "failed" if is_failed else "processed"
+        s3.upload_fileobj(
+            file, 
+            settings.AWS_STORAGE_BUCKET_NAME,
+            f"{folder}/{user.username}_{file_name}", 
+            ExtraArgs={'ACL': 'public-read'}
+        )
+
 
 
 def handle_failed_file_entry(file_serializer, file, user):

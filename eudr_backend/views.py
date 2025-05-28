@@ -1,5 +1,6 @@
 import json
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from datetime import datetime
 from django.utils import timezone
 import pandas as pd
 from rest_framework import status
@@ -718,7 +719,6 @@ def create_farm_data(request):
     tags=["Farm Data Management"]
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
 def sync_farm_data(request):
     sync_results = []
     data = request.data
@@ -838,7 +838,6 @@ def sync_farm_data(request):
     tags=["Farm Data Management"]
 )
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
 def restore_farm_data(request):
     device_id = request.data.get("device_id")
     phone_number = request.data.get("phone_number")
@@ -1692,6 +1691,9 @@ def retrieve_s3_files(request):
             }
             files.append(file)
             count += 1
+        
+        # Sort files by 'last_modified' in descending order (newest first)
+        files.sort(key=lambda x: x['last_modified'], reverse=True)
 
         return Response(files)
     except Exception as e:
@@ -1934,3 +1936,283 @@ def generate_map_link(request):
                                        }/map/share/?file-id={fileId}&access-code={access_code}"""
 
     return Response({"access_code": access_code, "map_link": map_link}, status=status.HTTP_200_OK)
+
+
+
+def filter_backup(request):
+    """
+    Filters CollectionSite objects based on a date range provided in the query parameters.
+    """
+    # Get query parameters
+    start_date_str = request.GET.get('startDate')
+    end_date_str = request.GET.get('endDate')
+
+    # Validate query parameters
+    if not start_date_str or not end_date_str:
+        return JsonResponse({'error': 'Both startDate and endDate are required'}, status=400)
+
+    try:
+        # Parse dates
+        start_date = datetime.fromisoformat(start_date_str)
+        end_date = datetime.fromisoformat(end_date_str)
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Use ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)'}, status=400)
+
+    # Filter data based on the date range
+    filtered_data = EUDRCollectionSiteModel.objects.filter(
+        created_at__date__gte=start_date.date(), #use .date() to compare dates, not datetimes.
+        created_at__date__lte=end_date.date() #use .date() to compare dates, not datetimes.
+    ).values(
+        'id', 'device_id', 'name', 'agent_name', 'email', 'phone_number', 'village', 'district', 'updated_at'
+    )
+
+    # Convert QuerySet to list for JSON serialization
+    data_list = list(filtered_data)
+
+    return JsonResponse(data_list, safe=False)
+
+
+def get_filtered_files_uploaded(start_date, end_date):
+    """Retrieve files uploaded within a specific date range in the S3 bucket"""
+    s3 = boto3.client(
+        's3',
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
+    )
+    
+    response = s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
+    filtered_files = []
+
+    for content in response.get('Contents', []):
+        last_modified = content.get('LastModified')
+
+        # Convert S3 LastModified to datetime and check if it's within range
+        if start_date <= last_modified.replace(tzinfo=None) <= end_date:
+            key_parts = content.get('Key', '').split("/")
+            if len(key_parts) < 2:
+                continue  # Skip files that do not match expected folder structure
+            
+            file_parts = key_parts[1].split("_", 1)
+            if len(file_parts) < 2:
+                continue  # Skip files without the expected filename format
+
+            file_info = {
+                'file_name': file_parts[1],
+                'last_modified': last_modified.strftime("%Y-%m-%d %H:%M:%S"),
+                'size': round(content.get('Size', 0) / 1024, 2),  # Convert bytes to KB
+                'url': f"{settings.AWS_S3_BASE_URL}{content.get('Key')}",
+                'uploaded_by': file_parts[0],
+                'category': key_parts[0],
+            }
+            filtered_files.append(file_info)
+
+    return len(filtered_files), filtered_files  # Return count & list
+
+
+def filter_dashboard_metrics(request):
+    """Filter dashboard metrics based on date range"""
+    
+    # Get query parameters
+    start_date_str = request.GET.get('startDate')
+    end_date_str = request.GET.get('endDate')
+
+    # Validate query parameters
+    if not start_date_str or not end_date_str:
+        return JsonResponse({'error': 'Both startDate and endDate are required'}, status=400)
+
+    try:
+        # Parse dates
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d")
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Use YYYY-MM-DD'}, status=400)
+
+    # Filter metrics based on the date range
+    total_farms = EUDRFarmModel.objects.filter(created_at__range=(start_date, end_date)).count()
+    total_files_uploaded = EUDRUploadedFilesModel.objects.filter(created_at__range=(start_date, end_date)).count()
+    total_users = User.objects.filter(date_joined__range=(start_date, end_date)).count()
+    total_backups = EUDRCollectionSiteModel.objects.filter(created_at__range=(start_date, end_date)).count()
+    # Get total filtered file uploads from json response
+    # ✅ Get total count & list of filtered files
+    all_files_uploaded, files_uploaded = get_filtered_files_uploaded(start_date, end_date)
+
+
+    # Calculate low risk rate (example logic)
+    low_risk_plots = EUDRFarmModel.objects.filter(
+        created_at__range=(start_date, end_date),
+        analysis__EUDR_risk="low"
+    ).count()
+
+    low_farms_rate = (low_risk_plots / total_farms * 100) if total_farms > 0 else 0
+
+    # Return filtered metrics as JSON
+    return JsonResponse({
+        'total_farms': total_farms,
+        'total_files_uploaded': total_files_uploaded,
+        'low_farms_rate': round(low_farms_rate, 2),
+        'total_users': total_users,
+        'all_files_uploaded': all_files_uploaded,
+        'files_uploaded': files_uploaded,
+        'total_backups': total_backups,
+    })
+
+
+
+def filter_total_plots(request):
+    """
+    Filters EUDRFarmModel objects based on a date range provided in the query parameters.
+    """
+    # Get query parameters
+    start_date_str = request.GET.get('startDate')
+    end_date_str = request.GET.get('endDate')
+
+    # Validate query parameters
+    if not start_date_str or not end_date_str:
+        return JsonResponse({'error': 'Both startDate and endDate are required'}, status=400)
+
+    try:
+        # Parse dates
+        start_date = datetime.fromisoformat(start_date_str).date()
+        end_date = datetime.fromisoformat(end_date_str).date()
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Use ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)'}, status=400)
+    
+    # Get files uploaded by the user (or all if the user is staff)
+    if request.user.is_authenticated:
+        if request.user.is_staff:
+            files = EUDRUploadedFilesModel.objects.all()
+        else:
+            files = EUDRUploadedFilesModel.objects.filter(uploaded_by=request.user.username)
+    else:
+        files = EUDRUploadedFilesModel.objects.filter(uploaded_by="admin")
+    
+    files_serializer = EUDRUploadedFilesModelSerializer(files, many=True)
+    file_ids = [file["id"] for file in files_serializer.data]
+    
+    # Filter farm data based on file IDs and date range
+    filtered_data = EUDRFarmModel.objects.filter(
+        file_id__in=file_ids,
+        created_at__date__gte=start_date,
+        created_at__date__lte=end_date
+    ).values('created_at', 'id', 'updated_at')
+
+    # Convert QuerySet to list for JSON serialization
+    return JsonResponse(list(filtered_data), safe=False)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def filter_total_files(request):
+    """
+    Filters EUDRUploadedFilesModel objects based on a date range and retrieves files from S3.
+    """
+    # Get query parameters
+    start_date_str = request.GET.get('startDate')
+    end_date_str = request.GET.get('endDate')
+
+    # Validate query parameters
+    if not start_date_str or not end_date_str:
+        return JsonResponse({'error': 'Both startDate and endDate are required'}, status=400)
+
+    try:
+        # Parse dates
+        start_date = datetime.fromisoformat(start_date_str).date()
+        end_date = datetime.fromisoformat(end_date_str).date()
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Use ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)'}, status=400)
+
+    try:
+        # Retrieve all files from S3 bucket
+        s3 = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                          aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+        response = s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
+        files = []
+        count = 0
+        for content in response.get('Contents', []):
+            # Extract file metadata
+            last_modified = content.get('LastModified').date()  # Convert to date for filtering
+            if start_date <= last_modified <= end_date:
+                file = {
+                    'id': count,
+                    'file_name': content.get('Key').split("/")[1].split("_", 1)[1],
+                    'last_modified': content.get('LastModified'),
+                    'size': content.get('Size') / 1024,
+                    'url': f"{settings.AWS_S3_BASE_URL}{content.get('Key')}",
+                    'uploaded_by': content.get('Key').split("/")[1].split("_")[0],
+                    'category': content.get('Key').split("/")[0],
+                }
+                files.append(file)
+                count += 1
+        # Sort files by 'last_modified' in descending order (newest first)
+        files.sort(key=lambda x: x['last_modified'], reverse=True)
+        # return filtered files only
+        return Response(files)
+
+    
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def retrieve_files_with_filter(request):
+    data = None
+    # Get query parameters
+    start_date_str = request.GET.get('startDate')
+    end_date_str = request.GET.get('endDate')
+
+    # Validate query parameters
+    if not start_date_str or not end_date_str:
+        return JsonResponse({'error': 'Both startDate and endDate are required'}, status=400)
+
+    try:
+        # Parse dates
+        start_date = datetime.fromisoformat(start_date_str)
+        end_date = datetime.fromisoformat(end_date_str)
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Use ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)'}, status=400)
+    
+    if request.user.is_authenticated:
+        # Filter by the authenticated user's username
+        data = EUDRUploadedFilesModel.objects.filter(
+            uploaded_by=request.user.username, created_at__date__gte=start_date.date(), created_at__date__lte=end_date.date()
+        ).order_by("-updated_at") if not request.user.is_staff else EUDRUploadedFilesModel.objects.filter(
+            created_at__date__gte=start_date.date(), created_at__date__lte=end_date.date()
+        ).order_by("-updated_at")
+    else:
+        # Retrieve all records if no authenticated user
+        data = EUDRUploadedFilesModel.objects.all().order_by("-updated_at")
+    serializer = EUDRUploadedFilesModelSerializer(data, many=True)
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsSuperUser])
+def retrieve_users_filter(request):
+
+    data = None
+    # Get query parameters
+    start_date_str = request.GET.get('startDate')
+    end_date_str = request.GET.get('endDate')
+
+    # Validate query parameters
+    if not start_date_str or not end_date_str:
+        return JsonResponse({'error': 'Both startDate and endDate are required'}, status=400)
+
+    try:
+        # Parse dates
+        start_date = datetime.fromisoformat(start_date_str)
+        end_date = datetime.fromisoformat(end_date_str)
+    except ValueError:
+        return JsonResponse({'error': 'Invalid date format. Use ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)'}, status=400)
+    
+    # Filter data based on the date range
+    data = User.objects.filter(
+        date_joined__date__gte=start_date.date(), #use .date() to compare dates, not datetimes.
+        date_joined__date__lte=end_date.date() #use .date() to compare dates, not datetimes.
+    ).values(
+        'id', 'username', 'email', 'date_joined'
+    ).order_by("-date_joined")
+    
+    serializer = EUDRUserModelSerializer(data, many=True)
+   
+    return Response(serializer.data)

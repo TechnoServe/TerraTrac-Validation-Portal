@@ -1289,358 +1289,1184 @@ fetch("/api/files/list/", {
     console.error("There was a problem with the fetch operation:", error);
   });
 
+// const allFilesContainer = document.getElementById("allFilesContainer");
+
+// fetch("/api/files/list/all/", {
+//   method: "GET",
+//   headers: {
+//     "Content-Type": "application/json",
+//     Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+//   },
+// })
+//   .then((response) => {
+//     if (!response.ok) {
+//       throw new Error("Network response was not ok");
+//     }
+//     return response.json();
+//   })
+//   .then((data) => {
+//     let i = 0;
+
+//     if (document.querySelector("#all_files_uploaded")) {
+//       document.querySelector("#all_files_uploaded").innerText = data.length;
+//     }
+
+//     if (allFilesContainer) {
+//       // remove loading spinner
+//       allFilesContainer.innerHTML = "";
+
+//       while (i < data.length) {
+//         const tr = document.createElement("tr");
+//         tr.innerHTML = `
+//               <td>
+//                 <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
+//               </td>
+//               <td>
+//                 <div class="d-flex px-2 py-1">
+//                   <div class="d-flex justify-content-center align-items-center gap-2">
+//                     <span class="fa fa-file-alt text-primary text-xs"></span>
+//                     <h6 class="mb-0 text-sm">${data[i].file_name}</h6>
+//                   </div>
+//                 </div>
+//               </td>
+//               <td>
+//                     <p class="mb-0 text-sm">${Number(data[i].size).toFixed(
+//                       1
+//                     )}Kbs</p>
+//               </td>
+//               <td>
+//                 <p class="text-xs font-weight-bold mb-0">${
+//                   data[i].uploaded_by
+//                 }</p>
+//               </td>
+//               <td>
+//                 <p class="btn btn-${
+//                   data[i].category === "processed" ? "success" : "danger"
+//                 } text-xs font-weight-bold mb-0">${data[
+//           i
+//         ].category.toUpperCase()}</p>
+//               </td>
+//               <td>
+//                 <p class="text-xs font-weight-bold mb-0">${new Date(
+//                   data[i].last_modified
+//                 ).toLocaleString()}</p>
+//               </td>
+//               <td>
+//                 <a
+//                   href="${data[i].url}"
+//                   class="text-primary font-weight-bold text-lg me-3"
+//                   title="Download File"
+//                   download
+//                   ><i class="bi bi-download"></i></a
+//                 >
+//               </td>
+//           `;
+
+//         allFilesContainer.appendChild(tr);
+//         i++;
+//       }
+
+//       $("#all_files").DataTable({
+//         language: {
+//           //customize pagination prev and next buttons: use arrows instead of words
+//           paginate: {
+//             previous: '<span class="fa fa-chevron-left"></span>',
+//             next: '<span class="fa fa-chevron-right"></span>',
+//           },
+//           //customize number of elements to be displayed
+//           lengthMenu:
+//             'Display <select class="form-control input-sm">' +
+//             '<option value="10">10</option>' +
+//             '<option value="20">20</option>' +
+//             '<option value="30">30</option>' +
+//             '<option value="40">40</option>' +
+//             '<option value="50">50</option>' +
+//             '<option value="-1">All</option>' +
+//             "</select> results",
+//         },
+//       });
+//     }
+//   })
+//   .catch((error) => {
+//     console.error("There was a problem with the fetch operation:", error);
+//   });
+
+//   document
+//   .getElementById("filterForm")
+//   .addEventListener("submit", function (event) {
+//     event.preventDefault();
+
+//     const startDate = document.getElementById("startDate").value;
+//     const endDate = document.getElementById("endDate").value;
+
+//     // Fetch filtered data from the API endpoint
+//     fetch(
+//       `api/filtered_files/list/all/?startDate=${startDate}&endDate=${endDate}`,
+//       {
+//         method: "GET",
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: `Token ${localStorage.getItem(
+//             "terratracAuthToken"
+//           )}`,
+//         },
+//       }
+//     )
+//       .then((response) => {
+//         if (!response.ok) {
+//           throw new Error("Network response was not ok");
+//         }
+//         return response.json();
+//       })
+//       .then((data) => {
+//         console.log("API Response:", data); // Inspect the response
+
+//         const allFilesContainer =
+//           document.getElementById("allFilesContainer");
+//         allFilesContainer.innerHTML = ""; // Clear existing rows
+
+//         if (!Array.isArray(data) || data.length === 0) {
+//           allFilesContainer.innerHTML =
+//             '<tr><td colspan="7" class="text-center">No Files available</td></tr>';
+//         } else {
+//           // Populate the table with filtered data
+//           data.forEach((file, index) => {
+//             const tr = document.createElement("tr");
+//             tr.innerHTML = `
+//                   <td>
+//                       <p class="text-xs font-weight-bold mb-0">${
+//                         index + 1
+//                       }</p>
+//                   </td>
+//                   <td>
+//                       <h6 class="mb-0 text-sm">${file.file_name || "N/A"}</h6>
+//                   </td>
+//                   <td>
+//                       <p class="text-xs font-weight-bold mb-0">${
+//                         file.file_size || "N/A"
+//                       }</p>
+//                   </td>
+//                   <td>
+//                       <p class="text-xs font-weight-bold mb-0">${
+//                         file.uploaded_by || "N/A"
+//                       }</p>
+//                   </td>
+//                   <td>
+//                       <p class="text-xs font-weight-bold mb-0">${
+//                         file.category || "N/A"
+//                       }</p>
+//                   </td>
+//                   <td>
+//                       <p class="text-xs font-weight-bold mb-0">${new Date(
+//                         file.uploaded_on
+//                       ).toLocaleString()}</p>
+//                   </td>
+//                   <td class="text-center">
+//                       <a href="${file.url}?file-id=${
+//               file.id
+//             }" class="text-primary font-weight-bold text-lg" title="View Details">
+//                           <i class="bi bi-list"></i>
+//                       </a>
+//                   </td>
+//               `;
+//             allFilesContainer.appendChild(tr);
+//           });
+//         }
+
+//         // Reinitialize DataTable if needed
+//         if ($.fn.DataTable.isDataTable("#all_files")) {
+//           $("#all_files").DataTable().destroy();
+//         }
+//         const tableCustoms = $("#all_files").DataTable({
+//           columnDefs: [
+//             {
+//               targets: 0,
+//               className: "dt-control",
+//               orderable: false,
+//               data: null,
+//               defaultContent: "",
+//             },
+//           ],
+//           order: [[1, "asc"]],
+//           language: {
+//             paginate: {
+//               previous: '<span class="fa fa-chevron-left"></span>',
+//               next: '<span class="fa fa-chevron-right"></span>',
+//             },
+//             lengthMenu:
+//               'Display <select class="form-control input-sm">' +
+//               '<option value="10">10</option>' +
+//               '<option value="20">20</option>' +
+//               '<option value="30">30</option>' +
+//               '<option value="40">40</option>' +
+//               '<option value="50">50</option>' +
+//               '<option value="-1">All</option>' +
+//               "</select> results",
+//           },
+//         });
+
+//         // Add accordion functionality (if needed)
+//         $("#all_files tbody").on("click", "td.dt-control", function () {
+//           const tr = $(this).closest("tr");
+//           const row = tableCustoms.row(tr);
+
+//           if (row.child.isShown()) {
+//             row.child.hide();
+//             tr.removeClass("shown");
+//           } else {
+//             row.child(format(row.data())).show();
+//             tr.addClass("shown");
+//           }
+//         });
+//       })
+//       .catch((error) => {
+//         console.error("There was a problem with the fetch operation:", error);
+//       });
+//   });
+
+// document.getElementById("resetFilter").addEventListener("click", function () {
+//   document.getElementById("startDate").value = "";
+//   document.getElementById("endDate").value = "";
+//   document.getElementById("filterForm").submit(); // Or reload the page, or run filter with default values.
+// });
+
 const allFilesContainer = document.getElementById("allFilesContainer");
+const filterForm = document.getElementById("filterForm");
+const resetFilterBtn = document.getElementById("resetFilter");
 
-fetch("/api/files/list/all/", {
-  method: "GET",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
-  },
-})
-  .then((response) => {
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
+// Reusable function to fetch and display files
+async function fetchFiles(apiEndpoint) {
+  try {
+    // Add loading spinner while the table is being loaded
+    allFilesContainer.innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </td>
+      </tr>
+    `;
+    const response = await fetch(apiEndpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+      },
+    });
+
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    const data = await response.json();
+    console.log("API Response:", data); // Inspect the response
+
+    // Check if data is valid and not empty
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      allFilesContainer.innerHTML =
+        '<tr><td colspan="7" class="text-center">No Files available</td></tr>';
+      destroyDataTable();
+    } else {
+      displayFiles(data);
     }
-    return response.json();
-  })
-  .then((data) => {
-    let i = 0;
+  } catch (error) {
+    // console.error("Fetch error:", error);
+    // allFilesContainer.innerHTML =
+    //   '<tr><td colspan="7" class="text-center text-danger">Error fetching files. Try again.</td></tr>';
+    destroyDataTable();
+  }
+}
 
-    if (document.querySelector("#all_files_uploaded")) {
-      document.querySelector("#all_files_uploaded").innerText = data.length;
-    }
+// Function to destroy DataTable
+function destroyDataTable() {
+  if ($.fn.DataTable.isDataTable("#all_files")) {
+    $("#all_files").DataTable().destroy();
+  }
+}
 
-    if (allFilesContainer) {
-      // remove loading spinner
-      allFilesContainer.innerHTML = "";
+// Function to display files in the table
+function displayFiles(data) {
+  // Destroy existing DataTable before repopulating
+  destroyDataTable();
 
-      while (i < data.length) {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-              <td>
-                <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
-              </td>
-              <td>
-                <div class="d-flex px-2 py-1">
-                  <div class="d-flex justify-content-center align-items-center gap-2">
-                    <span class="fa fa-file-alt text-primary text-xs"></span>
-                    <h6 class="mb-0 text-sm">${data[i].file_name}</h6>
-                  </div>
-                </div>
-              </td>
-              <td>
-                    <p class="mb-0 text-sm">${Number(data[i].size).toFixed(
-                      1
-                    )}Kbs</p>
-              </td>
-              <td>
-                <p class="text-xs font-weight-bold mb-0">${
-                  data[i].uploaded_by
-                }</p>
-              </td>
-              <td>
-                <p class="btn btn-${
-                  data[i].category === "processed" ? "success" : "danger"
-                } text-xs font-weight-bold mb-0">${data[
-          i
-        ].category.toUpperCase()}</p>
-              </td>
-              <td>
-                <p class="text-xs font-weight-bold mb-0">${new Date(
-                  data[i].last_modified
-                ).toLocaleString()}</p>
-              </td>
-              <td>
-                <a
-                  href="${data[i].url}"
-                  class="text-primary font-weight-bold text-lg me-3"
-                  title="Download File"
-                  download
-                  ><i class="bi bi-download"></i></a
-                >
-              </td>
-          `;
+  // Clear the table content before adding new rows
+  allFilesContainer.innerHTML = "";
 
-        allFilesContainer.appendChild(tr);
-        i++;
-      }
+  if (!Array.isArray(data) || data.length === 0) {
+    allFilesContainer.innerHTML =
+      '<tr><td colspan="7" class="text-center">No Files available</td></tr>';
+    return;
+  }
 
-      $("#all_files").DataTable({
-        language: {
-          //customize pagination prev and next buttons: use arrows instead of words
-          paginate: {
-            previous: '<span class="fa fa-chevron-left"></span>',
-            next: '<span class="fa fa-chevron-right"></span>',
-          },
-          //customize number of elements to be displayed
-          lengthMenu:
-            'Display <select class="form-control input-sm">' +
-            '<option value="10">10</option>' +
-            '<option value="20">20</option>' +
-            '<option value="30">30</option>' +
-            '<option value="40">40</option>' +
-            '<option value="50">50</option>' +
-            '<option value="-1">All</option>' +
-            "</select> results",
-        },
-      });
-    }
-  })
-  .catch((error) => {
-    console.error("There was a problem with the fetch operation:", error);
+  data.forEach((file, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><p class="text-xs font-weight-bold mb-0">${index + 1}</p></td>
+      <td><h6 class="mb-0 text-sm">${file.file_name || "N/A"}</h6></td>
+      <td><p class="text-xs font-weight-bold mb-0">${
+        file.file_size || "N/A"
+      }</p></td>
+      <td><p class="text-xs font-weight-bold mb-0">${
+        file.uploaded_by || "N/A"
+      }</p></td>
+      <td><p class="btn btn-${
+        file.category === "processed" ? "success" : "danger"
+      } text-xs font-weight-bold mb-0">${file.category.toUpperCase()}</p></td>
+      <td><p class="text-xs font-weight-bold mb-0">${new Date(
+        file.last_modified
+      ).toLocaleString()}</p></td>
+      <td class="text-center">
+        <a href="${file.url}?file-id=${
+      file.id
+    }" class="text-primary font-weight-bold text-lg" title="View Details">
+          <i class="bi bi-list"></i>
+        </a>
+      </td>
+    `;
+    allFilesContainer.appendChild(tr);
   });
 
-const usersContainer = document.getElementById("usersContainer");
-
-if (document.querySelector("#total_users") || usersContainer) {
-  fetch("/api/users/", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
-    },
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-      return response.json();
-    })
-    .then((data) => {
-      let i = 0;
-
-      if (document.querySelector("#total_users")) {
-        document.querySelector("#total_users").innerText = data.length;
-      }
-
-      if (usersContainer) {
-        // remove loading spinner
-        usersContainer.innerHTML = "";
-
-        while (i < data.length) {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-              <td>
-                <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
-              </td>
-              <td>
-                  <h6 class="mb-0 text-sm">${data[i].first_name} ${
-            data[i].last_name
-          }</h6>
-              </td>
-              <td>
-                <p class="text-xs font-weight-bold mb-0">${data[i].username}</p>
-              </td>
-              <td>
-                <p class="text-xs font-weight-bold mb-0">${
-                  data[i].is_active ? "Active" : "Inactive"
-                }</p>
-              </td>
-              <td>
-                <p class="text-xs font-weight-bold mb-0">${new Date(
-                  data[i].date_joined
-                ).toLocaleString()}</p>
-              </td>
-              <td class="d-flex justify-content-center gap-3">
-                <a
-                  href="${validatorUrl}?user-id=${data[i].id}"
-                  class="text-primary font-weight-bold text-lg"
-                  title="View User List of Plots"
-                  ><i class="bi bi-list"></i></a
-                >
-                ${
-                  data[i].is_superuser
-                    ? ""
-                    : `<a
-                  href="#?user-id=${data[i].id}"
-                  class="text-primary font-weight-bold text-lg"
-                  title="Edit User"
-                  ><i class="bi bi-pen"></i></a
-                >
-                <a
-                  href="#?user-id=${data[i].id}"
-                  class="text-primary font-weight-bold text-lg"
-                  title="Delete User"
-                  ><i class="bi bi-trash"></i></a
-                >`
-                }
-              </td>
-          `;
-
-          usersContainer.appendChild(tr);
-          i++;
-        }
-
-        $("#users").DataTable({
-          language: {
-            //customize pagination prev and next buttons: use arrows instead of words
-            paginate: {
-              previous: '<span class="fa fa-chevron-left"></span>',
-              next: '<span class="fa fa-chevron-right"></span>',
-            },
-            //customize number of elements to be displayed
-            lengthMenu:
-              'Display <select class="form-control input-sm">' +
-              '<option value="10">10</option>' +
-              '<option value="20">20</option>' +
-              '<option value="30">30</option>' +
-              '<option value="40">40</option>' +
-              '<option value="50">50</option>' +
-              '<option value="-1">All</option>' +
-              "</select> results",
-          },
-        });
-      }
-    })
-    .catch((error) => {
-      console.error(
-        "There was a problem with the fetch users operation:",
-        error
-      );
-    });
+  // Reinitialize the DataTable with the new data
+  initializeDataTable();
 }
+
+// Function to initialize/reinitialize DataTable
+function initializeDataTable() {
+  // Destroy existing DataTable before reinitializing
+  destroyDataTable();
+
+  $("#all_files").DataTable({
+    columnDefs: [{ targets: 0, className: "dt-control", orderable: false }],
+    order: [[5, "desc"]], // Sort the "last_modified" column (index 5) in descending order
+    language: {
+      paginate: {
+        previous: '<span class="fa fa-chevron-left"></span>',
+        next: '<span class="fa fa-chevron-right"></span>',
+      },
+      lengthMenu:
+        'Display <select class="form-control input-sm">' +
+        '<option value="10">10</option>' +
+        '<option value="20">20</option>' +
+        '<option value="30">30</option>' +
+        '<option value="40">40</option>' +
+        '<option value="50">50</option>' +
+        '<option value="-1">All</option>' +
+        "</select> results",
+    },
+    // Add this to ensure proper initialization
+    retrieve: true,
+  });
+}
+
+// // Handle filter submission
+// filterForm.addEventListener("submit", (event) => {
+//   event.preventDefault();
+
+//   const startDate = document.getElementById("startDate").value;
+//   const endDate = document.getElementById("endDate").value;
+//   let apiUrl = "/api/files/list/all/";
+
+//   // If both dates are provided, fetch only the filtered data
+//   if (startDate && endDate) {
+//     apiUrl = `/uploads/api/filtered_files/list/all/?startDate=${startDate}&endDate=${endDate}`;
+//   }
+
+//   fetchFiles(apiUrl);
+// });
+
+// Make sure the DOM is fully loaded before trying to access elements
+document.addEventListener("DOMContentLoaded", function() {
+  // Get the filter form element
+  const filterForm = document.getElementById("filterForm");
+  
+  // Only add the event listener if the form exists
+  if (filterForm) {
+    filterForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+    
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+      let apiUrl = "/api/files/list/all/";
+    
+      // If both dates are provided, fetch only the filtered data
+      if (startDate && endDate) {
+        apiUrl = `/uploads/api/filtered_files/list/all/?startDate=${startDate}&endDate=${endDate}`;
+      }
+    
+      fetchFiles(apiUrl);
+    });
+
+    // Reset filter: clear filter fields and reload the full file list
+    resetFilterBtn.addEventListener("click", () => {
+      document.getElementById("startDate").value = "";
+      document.getElementById("endDate").value = "";
+      fetchFiles("/api/files/list/all/");
+    });
+  }
+});
+
+// // Reset filter: clear filter fields and reload the full file list
+// resetFilterBtn.addEventListener("click", () => {
+//   document.getElementById("startDate").value = "";
+//   document.getElementById("endDate").value = "";
+//   fetchFiles("/api/files/list/all/");
+// });
+
+// Initial fetch for all files on page load
+fetchFiles("/api/files/list/all/");
+
+// This script should be included on the main dashboard page
+async function fetchAndDisplayTotalFiles() {
+  try {
+    const response = await fetch("/api/files/list/all/", {
+      // Update endpoint as needed
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+      },
+    });
+
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    const data = await response.json();
+
+    const totalFilesElement = document.querySelector("#all_files_uploaded");
+    if (totalFilesElement) {
+      totalFilesElement.innerText = data.length;
+    }
+  } catch (error) {
+    console.error("Error fetching total files:", error);
+  }
+}
+
+// Call the function on dashboard load
+fetchAndDisplayTotalFiles();
+
+// const usersContainer = document.getElementById("usersContainer");
+
+// if (document.querySelector("#total_users") || usersContainer) {
+//   fetch("/api/users/", {
+//     method: "GET",
+//     headers: {
+//       "Content-Type": "application/json",
+//       Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+//     },
+//   })
+//     .then((response) => {
+//       if (!response.ok) {
+//         throw new Error("Network response was not ok");
+//       }
+//       return response.json();
+//     })
+//     .then((data) => {
+//       let i = 0;
+
+//       if (document.querySelector("#total_users")) {
+//         document.querySelector("#total_users").innerText = data.length;
+//       }
+
+//       if (usersContainer) {
+//         // remove loading spinner
+//         usersContainer.innerHTML = "";
+
+//         while (i < data.length) {
+//           const tr = document.createElement("tr");
+//           tr.innerHTML = `
+//               <td>
+//                 <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
+//               </td>
+//               <td>
+//                   <h6 class="mb-0 text-sm">${data[i].first_name} ${
+//             data[i].last_name
+//           }</h6>
+//               </td>
+//               <td>
+//                 <p class="text-xs font-weight-bold mb-0">${data[i].username}</p>
+//               </td>
+//               <td>
+//                 <p class="text-xs font-weight-bold mb-0">${
+//                   data[i].is_active ? "Active" : "Inactive"
+//                 }</p>
+//               </td>
+//               <td>
+//                 <p class="text-xs font-weight-bold mb-0">${new Date(
+//                   data[i].date_joined
+//                 ).toLocaleString()}</p>
+//               </td>
+//               <td class="d-flex justify-content-center gap-3">
+//                 <a
+//                   href="${validatorUrl}?user-id=${data[i].id}"
+//                   class="text-primary font-weight-bold text-lg"
+//                   title="View User List of Plots"
+//                   ><i class="bi bi-list"></i></a
+//                 >
+//                 ${
+//                   data[i].is_superuser
+//                     ? ""
+//                     : `<a
+//                   href="#?user-id=${data[i].id}"
+//                   class="text-primary font-weight-bold text-lg"
+//                   title="Edit User"
+//                   ><i class="bi bi-pen"></i></a
+//                 >
+//                 <a
+//                   href="#?user-id=${data[i].id}"
+//                   class="text-primary font-weight-bold text-lg"
+//                   title="Delete User"
+//                   ><i class="bi bi-trash"></i></a
+//                 >`
+//                 }
+//               </td>
+//           `;
+
+//           usersContainer.appendChild(tr);
+//           i++;
+//         }
+
+//         $("#users").DataTable({
+//           language: {
+//             //customize pagination prev and next buttons: use arrows instead of words
+//             paginate: {
+//               previous: '<span class="fa fa-chevron-left"></span>',
+//               next: '<span class="fa fa-chevron-right"></span>',
+//             },
+//             //customize number of elements to be displayed
+//             lengthMenu:
+//               'Display <select class="form-control input-sm">' +
+//               '<option value="10">10</option>' +
+//               '<option value="20">20</option>' +
+//               '<option value="30">30</option>' +
+//               '<option value="40">40</option>' +
+//               '<option value="50">50</option>' +
+//               '<option value="-1">All</option>' +
+//               "</select> results",
+//           },
+//         });
+//       }
+//     })
+//     .catch((error) => {
+//       console.error(
+//         "There was a problem with the fetch users operation:",
+//         error
+//       );
+//     });
+// }
+
+const usersContainer = document.getElementById("usersContainer");
+// const filterForm = document.getElementById("filterForm");
+// const resetFilterBtn = document.getElementById("resetFilter");
+
+// Reusable function to fetch and display users
+async function fetchUsers(apiEndpoint) {
+  try {
+    // Add loading spinner while the table is being loaded
+    usersContainer.innerHTML = `
+      <tr>
+        <td colspan="6" class="text-center">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </td>
+      </tr>
+    `;
+    const response = await fetch(apiEndpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+      },
+    });
+
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    const data = await response.json();
+
+    console.log("users", data);
+
+    // Check if data is valid and not empty
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      usersContainer.innerHTML =
+        '<tr><td colspan="6" class="text-center">No Users available</td></tr>';
+      destroyDataTable();
+    } else {
+      displayUsers(data);
+    }
+  } catch (error) {
+    // console.error("Fetch error:", error);
+    // usersContainer.innerHTML =
+    //   '<tr><td colspan="6" class="text-center text-danger">Error fetching users. Try again.</td></tr>';
+    destroyDataTable();
+  }
+}
+
+// Function to destroy DataTable
+function destroyDataTable() {
+  if ($.fn.DataTable.isDataTable("#users")) {
+    $("#users").DataTable().destroy();
+  }
+}
+
+// Function to initialize/reinitialize DataTable
+function initializeDataTable() {
+  // Destroy existing DataTable before reinitializing
+  destroyDataTable();
+
+  $("#users").DataTable({
+    columnDefs: [{ targets: 0, className: "dt-control", orderable: false }],
+    order: [[4, "desc"]], // Sort the last column in descending order
+    language: {
+      paginate: {
+        previous: '<span class="fa fa-chevron-left"></span>',
+        next: '<span class="fa fa-chevron-right"></span>',
+      },
+      lengthMenu:
+        'Display <select class="form-control input-sm">' +
+        '<option value="10">10</option>' +
+        '<option value="20">20</option>' +
+        '<option value="30">30</option>' +
+        '<option value="40">40</option>' +
+        '<option value="50">50</option>' +
+        '<option value="-1">All</option>' +
+        "</select> results",
+    },
+    // Add this to ensure proper initialization
+    retrieve: true,
+  });
+}
+
+// Function to display users in the table
+function displayUsers(data) {
+  // Clear the table content before adding new rows
+  usersContainer.innerHTML = "";
+
+  if (!Array.isArray(data) || data.length === 0) {
+    usersContainer.innerHTML =
+      '<tr><td colspan="6" class="text-center">No Users available</td></tr>';
+    return;
+  }
+
+  data.forEach((user, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <p class="text-xs font-weight-bold px-3 mb-0">${index + 1}.</p>
+      </td>
+      <td>
+        <h6 class="mb-0 text-sm">${user.first_name} ${user.last_name}</h6>
+      </td>
+      <td>
+        <p class="text-xs font-weight-bold mb-0">${user.username}</p>
+      </td>
+      <td>
+        <p class="text-xs font-weight-bold mb-0">${
+          user.is_active ? "Active" : "Inactive"
+        }</p>
+      </td>
+      <td>
+        <p class="text-xs font-weight-bold mb-0">${new Date(
+          user.date_joined
+        ).toLocaleString()}</p>
+      </td>
+      <td class="d-flex justify-content-center gap-3">
+        <a
+          href="${validatorUrl}?user-id=${user.id}"
+          class="text-primary font-weight-bold text-lg"
+          title="View User List of Plots"
+        ><i class="bi bi-list"></i></a>
+        ${
+          user.is_superuser
+            ? ""
+            : `
+          <a
+            href="#?user-id=${user.id}"
+            class="text-primary font-weight-bold text-lg"
+            title="Edit User"
+          ><i class="bi bi-pen"></i></a>
+          <a
+            href="#?user-id=${user.id}"
+            class="text-primary font-weight-bold text-lg"
+            title="Delete User"
+          ><i class="bi bi-trash"></i></a>
+        `
+        }
+      </td>
+    `;
+
+    usersContainer.appendChild(tr);
+  });
+
+  // Reinitialize the DataTable with the new data
+  initializeDataTable();
+}
+
+// // Handle filter submission
+// filterForm.addEventListener("submit", (event) => {
+//   event.preventDefault();
+
+//   const startDate = document.getElementById("startDate").value;
+//   const endDate = document.getElementById("endDate").value;
+//   let apiUrl = "/api/users/";
+
+//   // If both dates are provided, fetch only the filtered data
+//   if (startDate && endDate) {
+//     apiUrl = `/api/filtered_users/?startDate=${startDate}&endDate=${endDate}`;
+//   }
+
+//   fetchUsers(apiUrl);
+// });
+
+// // Reset filter: clear filter fields and reload the full user list
+// resetFilterBtn.addEventListener("click", () => {
+//   document.getElementById("startDate").value = "";
+//   document.getElementById("endDate").value = "";
+//   fetchUsers("/api/users/");
+// });
+
+// Make sure the DOM is fully loaded before trying to access elements
+document.addEventListener("DOMContentLoaded", function() {
+  // Get the filter form element
+  const filterForm = document.getElementById("filterForm");
+
+  // Only add the event listener if the form exists
+  if (filterForm) {
+
+  // Handle filter submission
+filterForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const startDate = document.getElementById("startDate").value;
+  const endDate = document.getElementById("endDate").value;
+  let apiUrl = "/api/users/";
+
+  // If both dates are provided, fetch only the filtered data
+  if (startDate && endDate) {
+    apiUrl = `/api/filtered_users/?startDate=${startDate}&endDate=${endDate}`;
+  }
+
+  fetchUsers(apiUrl);
+});
+
+// Reset filter: clear filter fields and reload the full user list
+resetFilterBtn.addEventListener("click", () => {
+  document.getElementById("startDate").value = "";
+  document.getElementById("endDate").value = "";
+  fetchUsers("/api/users/");
+});
+  }
+});
+
+// Initial fetch for all users on page load
+fetchUsers("/api/users/");
+
+// View user details function
+function viewUser(userId) {
+  window.location.href = `/users/details/?id=${userId}`;
+}
+
+// This script should be included on the main dashboard page
+async function fetchAndDisplayTotalUsers() {
+  try {
+    const response = await fetch("/api/users/", {
+      // Update endpoint as needed
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+      },
+    });
+
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    const data = await response.json();
+    console.log("Total Users Data:", data);
+    const totalUsersElement = document.querySelector("#total_users");
+    if (totalUsersElement) {
+      totalUsersElement.innerText = data.length;
+    }
+  } catch (error) {
+    console.error("Error fetching total users:", error);
+  }
+}
+
+// Call the function on dashboard load
+fetchAndDisplayTotalUsers();
 
 const backupsContainer = document.getElementById("backupsContainer");
 
-fetch("/api/collection_sites/list", {
-  method: "GET",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
-  },
-})
-  .then((response) => {
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
+// fetch("/api/collection_sites/list", {
+//   method: "GET",
+//   headers: {
+//     "Content-Type": "application/json",
+//     Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+//   },
+// })
+//   .then((response) => {
+//     if (!response.ok) {
+//       throw new Error("Network response was not ok");
+//     }
+//     return response.json();
+//   })
+//   .then((data) => {
+//     let i = 0;
+
+//     if (document.querySelector("#total_backups")) {
+//       document.querySelector("#total_backups").innerText = data.length;
+//     }
+
+//     if (backupsContainer) {
+//       // remove loading spinner
+//       backupsContainer.innerHTML = "";
+
+//       while (i < data.length) {
+//         const tr = document.createElement("tr");
+
+//         tr.innerHTML = `
+//             <td></td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${data[i].device_id}</p>
+//             </td>
+//             <td>
+//               <h6 class="mb-0 text-sm">${data[i].name}</h6>
+//             </td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${data[i].agent_name}</p>
+//             </td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${
+//                 data[i].email || "N/A"
+//               }</p>
+//             </td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${
+//                 data[i].phone_number || "N/A"
+//               }</p>
+//             </td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${data[i].village}</p>
+//             </td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${data[i].district}</p>
+//             </td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${new Date(
+//                 data[i].updated_at
+//               ).toLocaleString()}</p>
+//             </td>
+//             <td class="align-middle text-center">
+//               <a href="${backupDetailsUrl}?cs-id=${
+//           data[i].id
+//         }" class="text-primary font-weight-bold text-lg" title="View Details"><i class="bi bi-list"></i></a>
+//             </td>
+//       `;
+
+//         backupsContainer.appendChild(tr);
+//         i++;
+//       }
+
+//       const tableCustoms = $("#backups").DataTable({
+//         columnDefs: [
+//           {
+//             targets: 0,
+//             className: "dt-control",
+//             orderable: false,
+//             data: null,
+//             defaultContent: "",
+//           },
+//           {
+//             targets: [2, 3, 4, 5, 6, 7],
+//             visible: false,
+//           },
+//         ],
+//         order: [[1, "asc"]],
+//         language: {
+//           //customize pagination prev and next buttons: use arrows instead of words
+//           paginate: {
+//             previous: '<span class="fa fa-chevron-left"></span>',
+//             next: '<span class="fa fa-chevron-right"></span>',
+//           },
+//           //customize number of elements to be displayed
+//           lengthMenu:
+//             'Display <select class="form-control input-sm">' +
+//             '<option value="10">10</option>' +
+//             '<option value="20">20</option>' +
+//             '<option value="30">30</option>' +
+//             '<option value="40">40</option>' +
+//             '<option value="50">50</option>' +
+//             '<option value="-1">All</option>' +
+//             "</select> results",
+//         },
+//       });
+
+//       function format(rowData) {
+//         return `
+//             <div class="accordion-content">
+//                 <div><b>Site Name:</b> ${rowData[2]}</div>
+//                 <div><b>Agent Name:</b> ${rowData[3]}</div>
+//                 <div><b>Email:</b> ${rowData[4]}</div>
+//                 <div><b>Phone Number:</b> ${rowData[5]}</div>
+//                 <div><b>Village:</b> ${rowData[6]}</div>
+//                 <div><b>District:</b> ${rowData[7]}</div>
+//             </div>`;
+//       }
+
+//       $("#backups tbody").on("click", "td.dt-control", function () {
+//         const tr = $(this).closest("tr");
+//         const row = tableCustoms.row(tr);
+
+//         if (row.child.isShown()) {
+//           // Close the accordion
+//           row.child.hide();
+//           tr.removeClass("shown");
+//         } else {
+//           // Open the accordion
+//           row.child(format(row.data())).show();
+//           tr.addClass("shown");
+//         }
+//       });
+//     }
+//   })
+//   .catch((error) => {
+//     console.error(
+//       "There was a problem with the fetch backups operation:",
+//       error
+//     );
+//   });
+
+async function fetchBackups(apiEndpoint) {
+  try {
+    // Add loading spinner while the table is being loaded
+    backupsContainer.innerHTML = `
+      <tr>
+        <td colspan="10" class="text-center">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </td>
+      </tr>
+    `;
+    const response = await fetch(apiEndpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+      },
+    });
+
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    const data = await response.json();
+
+    console.log("backups", data);
+
+    // Check if data is valid and not empty
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      backupsContainer.innerHTML =
+        '<tr><td colspan="4" class="text-center">No Backups available</td></tr>';
+      destroyDataTable();
+    } else {
+      displayBackups(data);
     }
-    return response.json();
-  })
-  .then((data) => {
-    let i = 0;
+  } catch (error) {
+    // console.error("Fetch error:", error);
+    // usersContainer.innerHTML =
+    //   '<tr><td colspan="6" class="text-center text-danger">Error fetching users. Try again.</td></tr>';
+    destroyDataTable();
+  }
+}
 
-    if (document.querySelector("#total_backups")) {
-      document.querySelector("#total_backups").innerText = data.length;
-    }
+function destroyDataTable() {
+  if ($.fn.DataTable.isDataTable("#backups")) {
+    $("#backups").DataTable().destroy();
+  }
+}
 
-    if (backupsContainer) {
-      // remove loading spinner
-      backupsContainer.innerHTML = "";
+// Function to initialize/reinitialize DataTable
+function initializeDataTable() {
+  // Destroy existing DataTable before reinitializing
+  destroyDataTable();
 
-      while (i < data.length) {
-        const tr = document.createElement("tr");
+  $("#backups").DataTable({
+    columnDefs: [
+      {
+        targets: 0,
+        className: "dt-control",
+        orderable: false,
+        data: null,
+        defaultContent: "",
+      },
+      {
+        targets: [2, 3, 4, 5, 6, 7],
+        visible: false,
+      },
+    ],
+    order: [[7, "desc"]], // Sort the last column in descending order
+    language: {
+      paginate: {
+        previous: '<span class="fa fa-chevron-left"></span>',
+        next: '<span class="fa fa-chevron-right"></span>',
+      },
+      lengthMenu:
+        'Display <select class="form-control input-sm">' +
+        '<option value="10">10</option>' +
+        '<option value="20">20</option>' +
+        '<option value="30">30</option>' +
+        '<option value="40">40</option>' +
+        '<option value="50">50</option>' +
+        '<option value="-1">All</option>' +
+        "</select> results",
+    },
+    // Add this to ensure proper initialization
+    retrieve: true,
+  });
+}
 
-        tr.innerHTML = `
-            <td></td>
+// Function to display users in the table
+function displayBackups(data) {
+  // Clear the table content before adding new rows
+  backupsContainer.innerHTML = "";
+
+  if (!Array.isArray(data) || data.length === 0) {
+    backupsContainer.innerHTML =
+      '<tr><td colspan="4" class="text-center">No Backups available</td></tr>';
+    return;
+  }
+
+  data.forEach((backup, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+     
+        <td></td>
             <td>
-              <p class="text-xs font-weight-bold mb-0">${data[i].device_id}</p>
+              <p class="text-xs font-weight-bold mb-0">${backup.device_id}</p>
             </td>
             <td>
-              <h6 class="mb-0 text-sm">${data[i].name}</h6>
+              <h6 class="mb-0 text-sm">${backup.name}</h6>
             </td>
             <td>
-              <p class="text-xs font-weight-bold mb-0">${data[i].agent_name}</p>
+              <p class="text-xs font-weight-bold mb-0">${backup.agent_name}</p>
             </td>
             <td>
               <p class="text-xs font-weight-bold mb-0">${
-                data[i].email || "N/A"
+                backup.email || "N/A"
               }</p>
             </td>
             <td>
               <p class="text-xs font-weight-bold mb-0">${
-                data[i].phone_number || "N/A"
+                backup.phone_number || "N/A"
               }</p>
             </td>
             <td>
-              <p class="text-xs font-weight-bold mb-0">${data[i].village}</p>
+              <p class="text-xs font-weight-bold mb-0">${backup.village}</p>
             </td>
             <td>
-              <p class="text-xs font-weight-bold mb-0">${data[i].district}</p>
+              <p class="text-xs font-weight-bold mb-0">${backup.district}</p>
             </td>
             <td>
               <p class="text-xs font-weight-bold mb-0">${new Date(
-                data[i].updated_at
+                backup.updated_at
               ).toLocaleString()}</p>
             </td>
             <td class="align-middle text-center">
               <a href="${backupDetailsUrl}?cs-id=${
-          data[i].id
-        }" class="text-primary font-weight-bold text-lg" title="View Details"><i class="bi bi-list"></i></a>
+      backup.id
+    }" class="text-primary font-weight-bold text-lg" title="View Details"><i class="bi bi-list"></i></a>
             </td>
-      `;
+    `;
 
-        backupsContainer.appendChild(tr);
-        i++;
-      }
-
-      const tableCustoms = $("#backups").DataTable({
-        columnDefs: [
-          {
-            targets: 0,
-            className: "dt-control",
-            orderable: false,
-            data: null,
-            defaultContent: "",
-          },
-          {
-            targets: [2, 3, 4, 5, 6, 7],
-            visible: false,
-          },
-        ],
-        order: [[1, "asc"]],
-        language: {
-          //customize pagination prev and next buttons: use arrows instead of words
-          paginate: {
-            previous: '<span class="fa fa-chevron-left"></span>',
-            next: '<span class="fa fa-chevron-right"></span>',
-          },
-          //customize number of elements to be displayed
-          lengthMenu:
-            'Display <select class="form-control input-sm">' +
-            '<option value="10">10</option>' +
-            '<option value="20">20</option>' +
-            '<option value="30">30</option>' +
-            '<option value="40">40</option>' +
-            '<option value="50">50</option>' +
-            '<option value="-1">All</option>' +
-            "</select> results",
-        },
-      });
-
-      function format(rowData) {
-        return `
-            <div class="accordion-content">
-                <div><b>Site Name:</b> ${rowData[2]}</div>
-                <div><b>Agent Name:</b> ${rowData[3]}</div>
-                <div><b>Email:</b> ${rowData[4]}</div>
-                <div><b>Phone Number:</b> ${rowData[5]}</div>
-                <div><b>Village:</b> ${rowData[6]}</div>
-                <div><b>District:</b> ${rowData[7]}</div>
-            </div>`;
-      }
-
-      $("#backups tbody").on("click", "td.dt-control", function () {
-        const tr = $(this).closest("tr");
-        const row = tableCustoms.row(tr);
-
-        if (row.child.isShown()) {
-          // Close the accordion
-          row.child.hide();
-          tr.removeClass("shown");
-        } else {
-          // Open the accordion
-          row.child(format(row.data())).show();
-          tr.addClass("shown");
-        }
-      });
-    }
-  })
-  .catch((error) => {
-    console.error(
-      "There was a problem with the fetch backups operation:",
-      error
-    );
+    backupsContainer.appendChild(tr);
   });
+
+  // Reinitialize the DataTable with the new data
+  initializeDataTable();
+}
+
+// // Handle filter submission
+// filterForm.addEventListener("submit", (event) => {
+//   event.preventDefault();
+
+//   const startDate = document.getElementById("startDate").value;
+//   const endDate = document.getElementById("endDate").value;
+//   let apiUrl = "/api/collection_sites/list";
+
+//   // If both dates are provided, fetch only the filtered data
+//   if (startDate && endDate) {
+//     apiUrl = `/api/collection_sites/filter/?startDate=${startDate}&endDate=${endDate}`;
+//   }
+
+//   fetchBackups(apiUrl);
+// });
+
+// // Reset filter: clear filter fields and reload the full user list
+// resetFilterBtn.addEventListener("click", () => {
+//   document.getElementById("startDate").value = "";
+//   document.getElementById("endDate").value = "";
+//   fetchBackups("/api/collection_sites/list");
+// });
+
+
+// Make sure the DOM is fully loaded before trying to access elements
+document.addEventListener("DOMContentLoaded", function() {
+  // Get the filter form element
+  const filterForm = document.getElementById("filterForm");
+  
+  // Only add the event listener if the form exists
+  if (filterForm) {
+
+    // Handle filter submission
+filterForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const startDate = document.getElementById("startDate").value;
+  const endDate = document.getElementById("endDate").value;
+  let apiUrl = "/api/collection_sites/list";
+
+  // If both dates are provided, fetch only the filtered data
+  if (startDate && endDate) {
+    apiUrl = `/api/collection_sites/filter/?startDate=${startDate}&endDate=${endDate}`;
+  }
+
+  fetchBackups(apiUrl);
+});
+
+// Reset filter: clear filter fields and reload the full user list
+resetFilterBtn.addEventListener("click", () => {
+  document.getElementById("startDate").value = "";
+  document.getElementById("endDate").value = "";
+  fetchBackups("/api/collection_sites/list");
+});
+  }
+});
+
+// Initial fetch for all backups on page load
+fetchBackups("/api/collection_sites/list");
+
+async function fetchAndDisplayTotalBackups() {
+  try {
+    const response = await fetch("/api/collection_sites/list", {
+      // Update endpoint as needed
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+      },
+    });
+
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    const data = await response.json();
+    console.log("Total Backups Data on Dashboard:", data);
+    const totalBackupsElement =  document.querySelector("#total_backups");
+    console.log("Total Backups Element:", totalBackupsElement);
+    if (totalBackupsElement) {
+      totalBackupsElement.innerText = data.length;
+    }
+  } catch (error) {
+    console.error("Error fetching total backups:", error);
+  }
+}
+
+// Call the function on dashboard load
+fetchAndDisplayTotalBackups();
 
 const backupDetailsContainer = document.getElementById(
   "backupDetailsContainer"

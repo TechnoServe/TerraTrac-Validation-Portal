@@ -46,6 +46,56 @@ Validated Files
           </div>
           {% endif %}
         </div>
+
+         <!-- Date Filter Form -->
+         <div class="row px-4 mb-4">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header py-2">
+                <h6 class="mb-0">Uploaded Files by Date</h6>
+              </div>
+              <div class="card-body py-2">
+                <form id="filterForm">
+                  <div class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                      <label for="startDate" class="form-label">From</label>
+                      <input
+                        type="date"
+                        class="form-control form-control-sm"
+                        id="startDate"
+                        name="startDate"
+                      />
+                    </div>
+                    <div class="col-md-5">
+                      <label for="endDate" class="form-label">To</label>
+                      <input
+                        type="date"
+                        class="form-control form-control-sm"
+                        id="endDate"
+                        name="endDate"
+                      />
+                    </div>
+                    <div class="col-md-1 d-flex justify-content-end">
+                      <button type="submit" class="btn btn-primary btn-sm">
+                        Filter
+                      </button>
+                    </div>
+                    <div class="col-md-1 d-flex justify-content-end">
+                      <button
+                        type="button"
+                        id="resetFilter"
+                        class="btn btn-primary btn-sm"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="card-body px-0 pt-0 pb-2">
           <div class="table-responsive p-0">
             <table
@@ -94,5 +144,140 @@ Validated Files
     </div>
   </div>
 </div>
+
+
+{% comment %} <script>
+  document
+    .getElementById("filterForm")
+    .addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+
+      // Fetch filtered data from the API endpoint
+      fetch(`/api/filtered_files/list/?startDate=${startDate}&endDate=${endDate}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+        },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log("API Response:", data); // Inspect the response
+
+          const allFilesContainer = document.getElementById("filesContainer");
+          allFilesContainer.innerHTML = ""; // Clear existing rows
+
+          if (data.length === 0) {
+            // If no data is available, display a message
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                    <td colspan="5" class="text-center">
+                        <p class="text-xs font-weight-bold mb-0">No data available in table</p>
+                    </td>
+                `;
+            allFilesContainer.appendChild(tr);
+          } else {
+            // Populate the table with filtered data
+            data.forEach((file, index) => {
+              console.log("file.uploaded_on", file.updated_at);
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                        <td>
+                            <p class="text-xs font-weight-bold mb-0">${
+                              index + 1
+                            }</p>
+                        </td>
+                        <td>
+                            <h6 class="mb-0 text-sm">${
+                              file.file_name || "N/A"
+                            }</h6>
+                        </td>
+                        <td>
+                            <p class="text-xs font-weight-bold mb-0">${
+                              file.uploaded_by || "N/A"
+                            }</p>
+                        </td>
+                        <td>
+                            <p class="text-xs font-weight-bold mb-0">${new Date(
+                              file.updated_at
+                            ).toLocaleString()}</p>
+                        </td>
+                        <td class="text-center">
+                            <a href="${validatorUrl}?file-id=${
+                file.id
+              }" class="text-primary font-weight-bold text-lg" title="View Details">
+                                <i class="bi bi-list"></i>
+                            </a>
+                        </td>
+                    `;
+              allFilesContainer.appendChild(tr);
+            });
+          }
+
+          // Reinitialize DataTable if needed
+          if ($.fn.DataTable.isDataTable("#all_files")) {
+            $("#all_files").DataTable().destroy();
+          }
+          const tableCustoms = $("#all_files").DataTable({
+            columnDefs: [
+              {
+                targets: 0,
+                className: "dt-control",
+                orderable: false,
+                data: null,
+                defaultContent: "",
+              },
+            ],
+            order: [[1, "asc"]],
+            language: {
+              paginate: {
+                previous: '<span class="fa fa-chevron-left"></span>',
+                next: '<span class="fa fa-chevron-right"></span>',
+              },
+              lengthMenu:
+                'Display <select class="form-control input-sm">' +
+                '<option value="10">10</option>' +
+                '<option value="20">20</option>' +
+                '<option value="30">30</option>' +
+                '<option value="40">40</option>' +
+                '<option value="50">50</option>' +
+                '<option value="-1">All</option>' +
+                "</select> results",
+            },
+          });
+
+          // Add accordion functionality (if needed)
+          $("#all_files tbody").on("click", "td.dt-control", function () {
+            const tr = $(this).closest("tr");
+            const row = tableCustoms.row(tr);
+
+            if (row.child.isShown()) {
+              row.child.hide();
+              tr.removeClass("shown");
+            } else {
+              row.child(format(row.data())).show();
+              tr.addClass("shown");
+            }
+          });
+        })
+        .catch((error) => {
+          console.error("There was a problem with the fetch operation:", error);
+        });
+    });
+
+  document.getElementById("resetFilter").addEventListener("click", function () {
+    document.getElementById("startDate").value = "";
+    document.getElementById("endDate").value = "";
+    document.getElementById("filterForm").submit(); // Or reload the page, or run filter with default values.
+  });
+</script> {% endcomment %}
 
 {% endblock %}

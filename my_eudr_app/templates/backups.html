@@ -20,6 +20,55 @@ Backups
 <div class="row">
   <div class="row">
     <div class="col-12">
+      <!-- Filter Form -->
+      <div class="row px-4 mb-4">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header">
+              <h6 class="mb-0">Filter Backups by Date</h6>
+            </div>
+            <div class="card-body">
+              <form id="filterForm">
+                <div class="row g-2 align-items-end">
+                  <div class="col-md-5">
+                    <label for="startDate" class="form-label">From</label>
+                    <input
+                      type="date"
+                      class="form-control form-control-sm"
+                      id="startDate"
+                      name="startDate"
+                    />
+                  </div>
+                  <div class="col-md-5">
+                    <label for="endDate" class="form-label">To</label>
+                    <input
+                      type="date"
+                      class="form-control form-control-sm"
+                      id="endDate"
+                      name="endDate"
+                    />
+                  </div>
+                  <div class="col-md-1 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                      Filter
+                    </button>
+                  </div>
+                  <div class="col-md-1 d-flex justify-content-end">
+                    <button
+                      type="button"
+                      id="resetFilter"
+                      class="btn btn-primary btn-sm"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card mb-4">
         <div class="d-flex card-header pb-0">
           <h6>Backups List</h6>
@@ -68,4 +117,159 @@ Backups
     </div>
   </div>
 </div>
+
+{% comment %} <script>
+  document
+    .getElementById("filterForm")
+    .addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+
+      // Fetch filtered data from the new API endpoint
+      fetch(
+        `/api/collection_sites/filter/?startDate=${startDate}&endDate=${endDate}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${localStorage.getItem(
+              "terratracAuthToken"
+            )}`,
+          },
+        }
+      )
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log(data);
+          const backupsContainer = document.getElementById("backupsContainer");
+          backupsContainer.innerHTML = ""; // Clear existing rows
+
+          if (!Array.isArray(data) || data.length === 0) {
+            backupsContainer.innerHTML =
+              '<tr><td colspan="10" class="text-center">No Backups available</td></tr>';
+          } else {
+            data.forEach((backup) => {
+              const tr = document.createElement("tr");
+              tr.innerHTML = `
+                        <td></td>
+                        <td>
+                            <p class="text-xs font-weight-bold mb-0">${
+                              backup.device_id
+                            }</p>
+                        </td>
+                        <td>
+                            <h6 class="mb-0 text-sm">${backup.name}</h6>
+                        </td>
+                        <td>
+                            <p class="text-xs font-weight-bold mb-0">${
+                              backup.agent_name
+                            }</p>
+                        </td>
+                        <td>
+                            <p class="text-xs font-weight-bold mb-0">${
+                              backup.email || "N/A"
+                            }</p>
+                        </td>
+                        <td>
+                            <p class="text-xs font-weight-bold mb-0">${
+                              backup.phone_number || "N/A"
+                            }</p>
+                        </td>
+                        <td>
+                            <p class="text-xs font-weight-bold mb-0">${
+                              backup.village
+                            }</p>
+                        </td>
+                        <td>
+                            <p class="text-xs font-weight-bold mb-0">${
+                              backup.district
+                            }</p>
+                        </td>
+                        <td>
+                            <p class="text-xs font-weight-bold mb-0">${new Date(
+                              backup.updated_at
+                            ).toLocaleString()}</p>
+                        </td>
+                        <td class="align-middle text-center">
+                            <a href="${backupDetailsUrl}?cs-id=${
+                backup.id
+              }" class="text-primary font-weight-bold text-lg" title="View Details">
+                                <i class="bi bi-list"></i>
+                            </a>
+                        </td>
+                    `;
+              backupsContainer.appendChild(tr);
+            });
+          }
+
+          // Reinitialize DataTable if needed
+          if ($.fn.DataTable.isDataTable("#backups")) {
+            $("#backups").DataTable().destroy();
+          }
+          const tableCustoms = $("#backups").DataTable({
+            columnDefs: [
+              {
+                targets: 0,
+                className: "dt-control",
+                orderable: false,
+                data: null,
+                defaultContent: "",
+              },
+              {
+                targets: [2, 3, 4, 5, 6, 7],
+                visible: false,
+              },
+            ],
+            order: [[1, "asc"]],
+            language: {
+              paginate: {
+                previous: '<span class="fa fa-chevron-left"></span>',
+                next: '<span class="fa fa-chevron-right"></span>',
+              },
+              lengthMenu:
+                'Display <select class="form-control input-sm">' +
+                '<option value="10">10</option>' +
+                '<option value="20">20</option>' +
+                '<option value="30">30</option>' +
+                '<option value="40">40</option>' +
+                '<option value="50">50</option>' +
+                '<option value="-1">All</option>' +
+                "</select> results",
+            },
+          });
+
+          // Add accordion functionality
+          $("#backups tbody").on("click", "td.dt-control", function () {
+            const tr = $(this).closest("tr");
+            const row = tableCustoms.row(tr);
+
+            if (row.child.isShown()) {
+              row.child.hide();
+              tr.removeClass("shown");
+            } else {
+              row.child(format(row.data())).show();
+              tr.addClass("shown");
+            }
+          });
+        })
+        .catch((error) => {
+          console.error("Fetch error:", error);
+          document.getElementById("backupsContainer").innerHTML =
+            '<tr><td colspan="10" class="text-center">Failed to load backups</td></tr>';
+        });
+    });
+
+  document.getElementById("resetFilter").addEventListener("click", function () {
+    document.getElementById("startDate").value = "";
+    document.getElementById("endDate").value = "";
+    document.getElementById("filterForm").submit(); //Or reload the page, or run filter with default values.
+  });
+</script> {% endcomment %}
 {% endblock %}

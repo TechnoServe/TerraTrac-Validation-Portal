@@ -16,6 +16,38 @@
 {% extends 'base.html' %} {% block title %}Dashboard{% endblock %} {% block additional_title_content %}
 Dashboard
 {% endblock %} {% block content %}
+
+<!-- Date Filter Form -->
+<div class="row px-4 mb-4">
+  <div class="col-12">
+      <div class="card">
+          <div class="card-header py-2">
+              <h6 class="mb-0">Filter Dashboard by Date</h6>
+          </div>
+          <div class="card-body py-2">
+              <form id="filterForm">
+                  <div class="row g-2 align-items-end">
+                      <div class="col-md-5">
+                          <label for="startDate" class="form-label">From</label>
+                          <input type="date" class="form-control form-control-sm" id="startDate" name="startDate">
+                      </div>
+                      <div class="col-md-5">
+                          <label for="endDate" class="form-label">To</label>
+                          <input type="date" class="form-control form-control-sm" id="endDate" name="endDate">
+                      </div>
+                      <div class="col-md-1 d-flex justify-content-end">
+                          <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                      </div>
+                      <div class="col-md-1 d-flex justify-content-end">
+                          <button type="button" id="resetFilter" class="btn btn-primary btn-sm">Reset</button>
+                      </div>
+                  </div>
+              </form>
+          </div>
+      </div>
+  </div>
+</div>
+
 <div class="row">
   <div class="row px-4 mb-4">
     <div class="col-xl-4 col-sm-6 mb-xl-0 mb-4">
@@ -201,5 +233,167 @@ Dashboard
     </div>
   </div>
 </div>
+
+<!-- JavaScript to Handle Filtering -->
+
+<script>
+  {% comment %} document
+    .getElementById("filterForm")
+    .addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+
+      // Fetch filtered data from the server
+      fetch(
+        `/api/dashboard/metrics/?startDate=${startDate}&endDate=${endDate}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${localStorage.getItem(
+              "terratracAuthToken"
+            )}`,
+          },
+        }
+      )
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log("data",data);
+          // Update the dashboard metrics with the filtered data
+          document.getElementById("total_farms").innerText =
+            data.total_farms || "0";
+          document.getElementById("total_files_uploaded").innerText =
+            data.total_files_uploaded || "0";
+          document.getElementById("low_farms_rate").innerText =
+            data.low_farms_rate ? `${data.low_farms_rate}%` : "-%";
+          document.getElementById("total_users").innerText =
+            data.total_users || "0";
+          document.getElementById("all_files_uploaded").innerText =
+            data.all_files_uploaded || "0";
+          document.getElementById("total_backups").innerText =
+            data.total_backups || "0";
+        })
+        .catch((error) => {
+          console.error("There was a problem with the fetch operation:", error);
+        });
+    }); {% endcomment %}
+
+
+    document.getElementById("filterForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+    
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+    
+      try {
+        const response = await fetch(`/api/dashboard/metrics/?startDate=${startDate}&endDate=${endDate}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+          },
+        });
+    
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+    
+        const data = await response.json();
+        console.log("Data received:", data);
+    
+        // ✅ Update dashboard metrics safely
+        document.getElementById("total_farms").innerText = data.total_farms || "0";
+        document.getElementById("total_files_uploaded").innerText = data.total_files_uploaded || "0";
+        document.getElementById("low_farms_rate").innerText = data.low_farms_rate ? `${data.low_farms_rate}%` : "-%";
+        document.getElementById("total_users").innerText = data.total_users || "0";
+        document.getElementById("all_files_uploaded").innerText = data.total_files_uploaded || "0";
+        document.getElementById("total_backups").innerText = data.total_backups || "0";
+    
+        // ✅ Check if `files_uploaded` exists and has data
+        const filesUploaded = data.files_uploaded || [];
+        const totalFiles = filesUploaded.length;
+    
+        if (totalFiles > 0) {
+          document.querySelector("#total_farms").innerText = totalFiles;
+    
+          // ✅ Filter files based on risk levels (if available)
+          const lowRiskFarms = filesUploaded.filter(farm => farm.analysis?.eudr_risk_level === "low");
+          const highRiskFarms = filesUploaded.filter(farm => farm.analysis?.eudr_risk_level === "high");
+          const moreInfoNeededFarms = filesUploaded.filter(farm => farm.analysis?.eudr_risk_level === "more_info_needed");
+    
+          // ✅ Prevent division by 0
+          const lowPercentage = totalFiles > 0 ? ((lowRiskFarms.length / totalFiles) * 100).toFixed(2) : "0.00";
+          const highPercentage = totalFiles > 0 ? ((highRiskFarms.length / totalFiles) * 100).toFixed(2) : "0.00";
+          const moreInfoNeededPercentage = totalFiles > 0 ? ((moreInfoNeededFarms.length / totalFiles) * 100).toFixed(2) : "0.00";
+    
+          console.log("lowPercentage", lowPercentage);
+          console.log("highPercentage", highPercentage);
+          console.log("moreInfoNeededPercentage", moreInfoNeededPercentage);
+    
+          document.querySelector("#low_farms_rate").innerText = `${lowPercentage}%`;
+    
+          if (lowPercentage > 0 || highPercentage > 0 || moreInfoNeededPercentage > 0) {
+            document.querySelector("#pieChartContainer").classList.remove("d-none");
+    
+            // ✅ Destroy old pie chart safely
+            if (typeof myPieChart !== "undefined" && myPieChart !== null) {
+              myPieChart.destroy();
+            }
+    
+            // ✅ Update the pie chart
+            myPieChart = new Chart(ctx, {
+              type: "doughnut",
+              data: {
+                labels: ["High Risk", "Low Risk", "More Info Needed"],
+                datasets: [{
+                  data: [
+                    Number(highPercentage) || 0,
+                    Number(lowPercentage) || 0,
+                    Number(moreInfoNeededPercentage) || 0,
+                  ],
+                  backgroundColor: ["#F64468", "#3AD190", "#ACDCE8"],
+                  hoverOffset: 4,
+                }],
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: { position: "top" },
+                  tooltip: { enabled: true },
+                  datalabels: {
+                    color: "#fff",
+                    font: { weight: "bold", size: 16 },
+                    formatter: value => `${value}%`,
+                  },
+                },
+              },
+              plugins: [ChartDataLabels],
+            });
+          }
+        } else {
+          console.log("No files uploaded in this date range.");
+          document.querySelector("#pieChartContainer").classList.add("d-none");
+        }
+      } catch (error) {
+        console.error("Fetch error:", error);
+        alert("There was a problem with the fetch operation:", error);
+      }
+    });
+    
+    // ✅ Reset Filter Button - Clears input fields & reloads data
+    document.getElementById("resetFilter").addEventListener("click", function () {
+      document.getElementById("startDate").value = "";
+      document.getElementById("endDate").value = "";
+      document.getElementById("filterForm").submit(); //Or reload the page, or run filter with default values.
+    });
+    
+</script>
 
 {% endblock %}
