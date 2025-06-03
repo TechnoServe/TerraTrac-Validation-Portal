@@ -237,55 +237,6 @@ Dashboard
 <!-- JavaScript to Handle Filtering -->
 
 <script>
-  {% comment %} document
-    .getElementById("filterForm")
-    .addEventListener("submit", function (event) {
-      event.preventDefault();
-
-      const startDate = document.getElementById("startDate").value;
-      const endDate = document.getElementById("endDate").value;
-
-      // Fetch filtered data from the server
-      fetch(
-        `/api/dashboard/metrics/?startDate=${startDate}&endDate=${endDate}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Token ${localStorage.getItem(
-              "terratracAuthToken"
-            )}`,
-          },
-        }
-      )
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error("Network response was not ok");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          console.log("data",data);
-          // Update the dashboard metrics with the filtered data
-          document.getElementById("total_farms").innerText =
-            data.total_farms || "0";
-          document.getElementById("total_files_uploaded").innerText =
-            data.total_files_uploaded || "0";
-          document.getElementById("low_farms_rate").innerText =
-            data.low_farms_rate ? `${data.low_farms_rate}%` : "-%";
-          document.getElementById("total_users").innerText =
-            data.total_users || "0";
-          document.getElementById("all_files_uploaded").innerText =
-            data.all_files_uploaded || "0";
-          document.getElementById("total_backups").innerText =
-            data.total_backups || "0";
-        })
-        .catch((error) => {
-          console.error("There was a problem with the fetch operation:", error);
-        });
-    }); {% endcomment %}
-
-
     document.getElementById("filterForm").addEventListener("submit", async function (event) {
       event.preventDefault();
     
@@ -308,7 +259,7 @@ Dashboard
         const data = await response.json();
         console.log("Data received:", data);
     
-        // ✅ Update dashboard metrics safely
+        //  Update dashboard metrics safely
         document.getElementById("total_farms").innerText = data.total_farms || "0";
         document.getElementById("total_files_uploaded").innerText = data.total_files_uploaded || "0";
         document.getElementById("low_farms_rate").innerText = data.low_farms_rate ? `${data.low_farms_rate}%` : "-%";
@@ -316,19 +267,19 @@ Dashboard
         document.getElementById("all_files_uploaded").innerText = data.total_files_uploaded || "0";
         document.getElementById("total_backups").innerText = data.total_backups || "0";
     
-        // ✅ Check if `files_uploaded` exists and has data
+        //  Check if `files_uploaded` exists and has data
         const filesUploaded = data.files_uploaded || [];
         const totalFiles = filesUploaded.length;
     
         if (totalFiles > 0) {
           document.querySelector("#total_farms").innerText = totalFiles;
     
-          // ✅ Filter files based on risk levels (if available)
+          //  Filter files based on risk levels (if available)
           const lowRiskFarms = filesUploaded.filter(farm => farm.analysis?.eudr_risk_level === "low");
           const highRiskFarms = filesUploaded.filter(farm => farm.analysis?.eudr_risk_level === "high");
           const moreInfoNeededFarms = filesUploaded.filter(farm => farm.analysis?.eudr_risk_level === "more_info_needed");
     
-          // ✅ Prevent division by 0
+          //  Prevent division by 0
           const lowPercentage = totalFiles > 0 ? ((lowRiskFarms.length / totalFiles) * 100).toFixed(2) : "0.00";
           const highPercentage = totalFiles > 0 ? ((highRiskFarms.length / totalFiles) * 100).toFixed(2) : "0.00";
           const moreInfoNeededPercentage = totalFiles > 0 ? ((moreInfoNeededFarms.length / totalFiles) * 100).toFixed(2) : "0.00";
@@ -342,12 +293,12 @@ Dashboard
           if (lowPercentage > 0 || highPercentage > 0 || moreInfoNeededPercentage > 0) {
             document.querySelector("#pieChartContainer").classList.remove("d-none");
     
-            // ✅ Destroy old pie chart safely
+            //  Destroy old pie chart safely
             if (typeof myPieChart !== "undefined" && myPieChart !== null) {
               myPieChart.destroy();
             }
     
-            // ✅ Update the pie chart
+            //  Update the pie chart
             myPieChart = new Chart(ctx, {
               type: "doughnut",
               data: {
@@ -387,7 +338,7 @@ Dashboard
       }
     });
     
-    // ✅ Reset Filter Button - Clears input fields & reloads data
+    //  Reset Filter Button - Clears input fields & reloads data
     document.getElementById("resetFilter").addEventListener("click", function () {
       document.getElementById("startDate").value = "";
       document.getElementById("endDate").value = "";
