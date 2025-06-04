@@ -1,0 +1,284 @@
+{% load static %}
+{% block content %}
+<style>
+  /* Full-screen layout */
+  body,
+  html {
+    height: 100vh;
+    width: 100vw;
+    margin: 0;
+    padding: 0;
+    background: white;
+    color: #000;
+    font-family: "Poppins", sans-serif;
+    overflow: hidden;
+  }
+
+  /* Full-screen container */
+  .user-guide-container {
+    width: 100%;
+    height: 100vh;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+  }
+
+  /* Heading styles */
+  h2 {
+    font-size: 2.25rem;
+    line-height: 1.3;
+    letter-spacing: 0.05rem;
+    font-weight: bold;
+    text-align: center;
+    color: #134a86;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 10px 0;
+  }
+
+  /* Subheading */
+  h4 {
+    font-size: 1.5rem;
+    line-height: 1.375;
+    color: #134a86;
+    margin: 0;
+  }
+
+  /* Paragraph styles */
+  p {
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.6;
+    text-align: center;
+    color: #333;
+    margin-bottom: 15px;
+  }
+
+  /* Content section */
+  .guide-content {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 90%;
+    margin: 10px auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Scrollable iframe container */
+  .iframe-container {
+    width: 100%;
+    flex: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+    background-color: #f9f9f9;
+    position: relative;
+  }
+
+  /* Responsive iframe */
+  .iframe-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+  }
+
+  /* Button styles */
+  .btn-primary {
+    background-color: #134a86;
+    color: #fff;
+    font-size: 1.1rem;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    display: inline-block;
+    text-decoration: none;
+    margin-bottom: 15px;
+  }
+
+  /* Button hover effect */
+  .btn-primary:hover {
+    background-color: #1a5ca0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Logo styles */
+  .logo-size {
+    width: 70px;
+    height: 70px;
+    margin-top: 15px;
+    transition: transform 0.3s ease;
+  }
+  
+  .logo-size:hover {
+    transform: scale(1.05);
+  }
+
+  .button-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 15px;
+  }
+
+  /* Loading indicator */
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+  }
+
+  .loading-spinner {
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #134a86;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Responsive tweaks */
+  @media (max-width: 768px) {
+    .user-guide-container {
+      padding: 15px;
+    }
+
+    h2 {
+      font-size: 1.8rem;
+    }
+
+    .guide-content {
+      width: 95%;
+      padding: 15px;
+    }
+
+    .btn-primary {
+      font-size: 1rem;
+      padding: 8px 16px;
+    }
+    
+    .logo-size {
+      width: 60px;
+      height: 60px;
+    }
+  }
+</style>
+
+<div class="user-guide-container">
+  <div class="text-center">
+    <img
+      src="{% static 'assets/img/tns-logo.svg' %}"
+      alt="TerraTrac Logo"
+      class="logo-size"
+    />
+  </div>
+  <h2>User Guide</h2>
+  <p>
+    This guide provides comprehensive instructions on how to use the TerraTrac Validator.
+    View the document below or download it for offline reference.
+  </p>
+
+  <div class="guide-content">
+    <div class="button-container">
+      <button
+        class="btn btn-primary"
+        onclick="downloadGoogleDoc()"
+      >
+        <i class="fas fa-download"></i> Download User Guide
+      </button>
+    </div>
+
+    <!-- Scrollable iframe with loading indicator -->
+    <div class="iframe-container">
+      <div id="loading" class="loading-overlay">
+        <div class="loading-spinner"></div>
+      </div>
+      <iframe
+        id="docFrame"
+        src="https://docs.google.com/document/d/11fhjNZ4yNOOL8Tmi_N2usFoCOu--sDsw/preview"
+        allowfullscreen="true"
+        onload="hideLoading();"
+      ></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Function to hide loading indicator once iframe loads
+  function hideLoading() {
+    document.getElementById('loading').style.display = 'none';
+  }
+  
+  // Function to adjust iframe for full content display
+  function adjustIframe() {
+    var iframe = document.getElementById('docFrame');
+    
+    // Try to remove any margins or padding in the iframe content
+    iframe.onload = function() {
+      try {
+        var iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        var style = document.createElement('style');
+        style.textContent = `
+          body, html { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            width: 100% !important;
+            height: 100% !important;
+            overflow: visible !important;
+          }
+          .doc-content { 
+            margin: 0 !important; 
+            padding: 0 !important; 
+            width: 100% !important;
+          }
+        `;
+        iframeDoc.head.appendChild(style);
+      } catch(e) {
+        console.log("Cannot access iframe document due to same-origin policy");
+      }
+    };
+  }
+
+  function downloadGoogleDoc() {
+    // Extract the document ID from your iframe URL
+    const docId = "PACX-1vTB52alPqhIV5fHcILHgRdjC24KFtUShoxzrM-cDhePq2ioeYi4LJFp4Wm5Z7OPiA";
+    
+    // Use the correct export URL based on the document ID format
+    const exportUrl = `https://docs.google.com/document/d/e/${docId}/export?format=pdf`;
+    
+    // Create a temporary anchor element to download the file
+    const link = document.createElement("a");
+    link.href = exportUrl;
+    link.download = "TerraTrac_User_Guide.pdf";
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+</script>
+
+{% endblock %}

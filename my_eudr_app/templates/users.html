@@ -24,6 +24,55 @@ Users
         <div class="d-flex card-header pb-0">
           <h6>Users List</h6>
         </div>
+
+        <!-- Date Filter Form -->
+        <div class="row px-4 mb-4">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header py-2">
+                <h6 class="mb-0">Filter Users by Date</h6>
+              </div>
+              <div class="card-body py-2">
+                <form id="filterForm">
+                  <div class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                      <label for="startDate" class="form-label">From</label>
+                      <input
+                        type="date"
+                        class="form-control form-control-sm"
+                        id="startDate"
+                        name="startDate"
+                      />
+                    </div>
+                    <div class="col-md-5">
+                      <label for="endDate" class="form-label">To</label>
+                      <input
+                        type="date"
+                        class="form-control form-control-sm"
+                        id="endDate"
+                        name="endDate"
+                      />
+                    </div>
+                    <div class="col-md-1 d-flex justify-content-end">
+                      <button type="submit" class="btn btn-primary btn-sm">
+                        Filter
+                      </button>
+                    </div>
+                    <div class="col-md-1 d-flex justify-content-end">
+                      <button
+                        type="button"
+                        id="resetFilter"
+                        class="btn btn-primary btn-sm"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="card-body px-0 pt-0 pb-2">
           <div class="table-responsive p-0">
             <table
@@ -76,4 +125,5 @@ Users
     </div>
   </div>
 </div>
+
 {% endblock %}

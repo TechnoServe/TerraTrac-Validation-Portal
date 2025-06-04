@@ -16,6 +16,7 @@ Including another URLconf
 """
 
 from django.contrib import admin
+from django.shortcuts import render
 from django.urls import include, path, re_path
 
 from eudr_backend.views import (
@@ -43,6 +44,12 @@ from eudr_backend.views import (
     sync_farm_data,
     update_farm_data,
     update_user,
+    filter_backup,
+    filter_total_files,
+    retrieve_files_with_filter,
+    retrieve_users_filter,
+    filter_dashboard_metrics,
+    filter_total_plots
 )
 from my_eudr_app import auth_views, map_views, views
 from rest_framework import permissions
@@ -64,6 +71,7 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("auth/", include("my_eudr_app.urls")),
     re_path(r'^swagger(?P<format>\.json|\.yaml)$',
             schema_view.without_ui(cache_timeout=0), name='schema-json'),
     re_path(r'^swagger(?P<format>\.json|\.yaml)$',
@@ -73,7 +81,7 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc',
          cache_timeout=0), name='schema-redoc'),
     path("", views.index, name="index"),
-    path("auth/", include("my_eudr_app.urls")),
+#     path("auth/", include("my_eudr_app.urls")),
     path("validator/", views.validator, name="validator"),
     path("validated_files/", views.validated_files, name="validated_files"),
     path("map/", views.map, name="map"),
@@ -122,4 +130,15 @@ urlpatterns = [
     ),
     path("api/download-template/", download_template, name="download_template"),
     path("api/map-share/", generate_map_link, name="map_share"),
+
+
+    path("user-guide/", lambda request: render(request, "user_guide.html"), name="user_guide"),
+    path('api/filtered_plots/list/all/',filter_total_plots , name='total_plots'),
+    path('api/filtered_files/list/', retrieve_files_with_filter, name='total_files'),
+    path('api/filtered_users/',retrieve_users_filter, name='users_filter'),
+    path('api/collection_sites/filter/', filter_backup, name='filter_backups'),
+    path('uploads/api/filtered_files/list/all/', filter_total_files, name='total_files'),
+    path('api/dashboard/metrics/', filter_dashboard_metrics, name='dashboard_metrics'),
+
+
 ]

@@ -20,6 +20,55 @@ Backups
 <div class="row">
   <div class="row">
     <div class="col-12">
+      <!-- Filter Form -->
+      <div class="row px-4 mb-4">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header">
+              <h6 class="mb-0">Filter Backups by Date</h6>
+            </div>
+            <div class="card-body">
+              <form id="filterForm">
+                <div class="row g-2 align-items-end">
+                  <div class="col-md-5">
+                    <label for="startDate" class="form-label">From</label>
+                    <input
+                      type="date"
+                      class="form-control form-control-sm"
+                      id="startDate"
+                      name="startDate"
+                    />
+                  </div>
+                  <div class="col-md-5">
+                    <label for="endDate" class="form-label">To</label>
+                    <input
+                      type="date"
+                      class="form-control form-control-sm"
+                      id="endDate"
+                      name="endDate"
+                    />
+                  </div>
+                  <div class="col-md-1 d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                      Filter
+                    </button>
+                  </div>
+                  <div class="col-md-1 d-flex justify-content-end">
+                    <button
+                      type="button"
+                      id="resetFilter"
+                      class="btn btn-primary btn-sm"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card mb-4">
         <div class="d-flex card-header pb-0">
           <h6>Backups List</h6>
@@ -68,4 +117,5 @@ Backups
     </div>
   </div>
 </div>
+
 {% endblock %}
