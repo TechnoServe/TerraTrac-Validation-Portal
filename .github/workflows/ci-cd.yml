@@ -47,6 +47,7 @@ jobs:
           echo "EE_ACCOUNT_NAME=$EE_ACCOUNT_NAME" >> .env
           echo "SERVER_USER=$SERVER_USER" >> .env
           echo "SERVER_HOST=$SERVER_HOST" >> .env
+          echo "WHISP_API_KEY"=$WHISP_API_KEY" >> .env
 
       - name: Create ee creds json file
         run: |
