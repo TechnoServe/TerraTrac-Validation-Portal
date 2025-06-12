@@ -226,6 +226,35 @@ def format_geojson_data(geojson, analysis, file_id=None):
             return value
         return 0 if keep_zero else None
     
+    # Mapping of commodity to corresponding risk key
+    COMMODITY_RISK_MAP = {
+        "Coffee": "risk_pcrop",
+        "Cocoa": "risk_pcrop",
+        "Rubber": "risk_acrop",
+        "Oil palm": "risk_acrop",
+        "Soy": "risk_acrop",
+        "Livestock": "risk_livestock",
+        "Timber": "risk_timber"
+    }
+
+
+    def extract_risk_level_by_commodity(analysis_result, commodity):
+        try:
+            properties = analysis_result[0]['properties']
+            commodity = properties.get("commodity", "Coffee")  # Default to 'Coffee' if missing
+            risk_key = COMMODITY_RISK_MAP.get(commodity)
+
+            if risk_key and risk_key in properties:
+                return properties[risk_key]
+            else:
+                print(f"No risk key found for commodity: {commodity}")
+                return None
+
+        except (IndexError, KeyError, TypeError) as e:
+            print(f"Error extracting risk level for {commodity}: {e}")
+            return None
+
+    
     # def derive_eudr_risk_level(properties):
     #     """Derive EUDR risk level from individual risk fields"""
     #     # risk_fields = ['risk_pcrop', 'risk_acrop', 'risk_timber']
@@ -270,7 +299,6 @@ def format_geojson_data(geojson, analysis, file_id=None):
         
     
     risk_info = extract_risk_levels(analysis)
-    print(risk_info)
 
     # Ensure the GeoJSON contains features
     geojson = json.loads(geojson) if isinstance(geojson, str) else geojson
@@ -282,6 +310,9 @@ def format_geojson_data(geojson, analysis, file_id=None):
     for i, feature in enumerate(features):
         properties = feature.get('properties', {})
         geometry = feature.get('geometry', {})
+
+        risk_info_commodity = extract_risk_level_by_commodity( analysis, commodity=properties.get("commodity") or "Coffee",)
+        print(risk_info_commodity)
         
         # # Debug: Print available property keys for first feature
         # if i == 0:
@@ -329,6 +360,7 @@ def format_geojson_data(geojson, analysis, file_id=None):
         
         formatted_data = {
             "remote_id": properties.get("remote_id"),
+            "commodity":properties.get("commodity") or "Coffee",
             "farmer_name": properties.get("farmer_name"),
             "farm_size": float(properties.get("farm_size", properties.get('Area', properties.get('Plot_area_ha', 0)))),
             "collection_site": properties.get("collection_site"),
@@ -416,7 +448,8 @@ def format_geojson_data(geojson, analysis, file_id=None):
                     # derive_eudr_risk_level(merged_data)
                     # derive_eudr_risk_level(properties) or 
                     # derive_eudr_risk_level(feature_analysis) 
-                    risk_info['risk_pcrop']
+                    # risk_info['risk_pcrop']
+                   risk_info_commodity
                 )
             }
         }
