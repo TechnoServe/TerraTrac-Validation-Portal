@@ -469,11 +469,11 @@ if (response) {
         farm.updated_at = new Date(farm.updated_at).toLocaleString();
         return farm;
       });
-      // order filteredFarms by analysis.eudr_risk_level
+      // order filteredFarms by farmData[i].analysis?.risk_timber
       filteredFarms.sort((a, b) => {
-        if (a.analysis.eudr_risk_level === "low") {
+        if (a.analysis?.risk_timber === "low") {
           return -1;
-        } else if (a.analysis.eudr_risk_level === "medium") {
+        } else if (a.analysis?.risk_timber === "medium") {
           return 0;
         } else {
           return 1;
@@ -484,13 +484,13 @@ if (response) {
         document.querySelector("#total_farms").innerText = data.length;
         // check where eudr_risk_level is high and calculate the percentage
         const lowRiskFarms = data.filter(
-          (farm) => farm.analysis.eudr_risk_level === "low"
+          (farm) => farm.farmData[i].analysis?.risk_timber === "low"
         );
         const highRiskFarms = data.filter(
-          (farm) => farm.analysis.eudr_risk_level === "high"
+          (farm) => farm.farmData[i].analysis?.risk_timber === "high"
         );
         const moreInfoNeededFarms = data.filter(
-          (farm) => farm.analysis.eudr_risk_level === "more_info_needed"
+          (farm) => farm.farmData[i].analysis?.risk_timber === "more_info_needed"
         );
 
         const lowPercentage = (
@@ -662,6 +662,8 @@ if (response) {
         // remove loading spinner
         farmsContainer.innerHTML = "";
 
+        console.log("farm data",data);
+
         generateData(data, farmsContainer);
       }
     })
@@ -770,6 +772,8 @@ collectionSiteDropdown?.addEventListener("change", (e) => {
 
   farmsContainer.innerHTML = "";
 
+  console.log("filtered farms",filteredFarms);
+
   generateData(filteredFarms, farmsContainer);
 });
 
@@ -783,7 +787,7 @@ document
       selectedRiskLevel === ""
         ? farmData
         : farmData.filter(
-            (farm) => farm.analysis.eudr_risk_level === selectedRiskLevel
+            (farm) => farm.farmData[i].analysis?.risk_timber === selectedRiskLevel
           );
 
     farmsContainer.innerHTML = "";
@@ -1045,8 +1049,10 @@ async function loadJsonFile(languageCode) {
 }
 
 function generateData(farmData, farmsContainer) {
+  console.log("farm data", farmData)
   let i = 0;
   while (i < farmData.length) {
+    console.log("risk timber",farmData[i].analysis);
     const tr = document.createElement("tr");
     tr.innerHTML = `
             <td></td>
@@ -1086,7 +1092,7 @@ function generateData(farmData, farmsContainer) {
               }</p>
             </td>
             <td>
-              <p
+<p
                 class="${
                   farmData[i].analysis.eudr_risk_level === "high"
                     ? "text-xs font-weight-bold mb-0"
@@ -1105,7 +1111,7 @@ function generateData(farmData, farmsContainer) {
         ? "#15E289"
         : farmData[i].analysis.eudr_risk_level
     }">${
-      farmData[i].analysis.eudr_risk_level
+      farmData[i].analysis?.eudr_risk_level
         .replace(/_/g, " ")
         .replace(/\b\w/g, (char) => char.toUpperCase()) || "-"
     }</p>
@@ -1289,6 +1295,247 @@ fetch("/api/files/list/", {
     console.error("There was a problem with the fetch operation:", error);
   });
 
+// const allFilesContainer = document.getElementById("allFilesContainer");
+
+// fetch("/api/files/list/all/", {
+//   method: "GET",
+//   headers: {
+//     "Content-Type": "application/json",
+//     Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+//   },
+// })
+//   .then((response) => {
+//     if (!response.ok) {
+//       throw new Error("Network response was not ok");
+//     }
+//     return response.json();
+//   })
+//   .then((data) => {
+//     let i = 0;
+
+//     if (document.querySelector("#all_files_uploaded")) {
+//       document.querySelector("#all_files_uploaded").innerText = data.length;
+//     }
+
+//     if (allFilesContainer) {
+//       // remove loading spinner
+//       allFilesContainer.innerHTML = "";
+
+//       while (i < data.length) {
+//         const tr = document.createElement("tr");
+//         tr.innerHTML = `
+//               <td>
+//                 <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
+//               </td>
+//               <td>
+//                 <div class="d-flex px-2 py-1">
+//                   <div class="d-flex justify-content-center align-items-center gap-2">
+//                     <span class="fa fa-file-alt text-primary text-xs"></span>
+//                     <h6 class="mb-0 text-sm">${data[i].file_name}</h6>
+//                   </div>
+//                 </div>
+//               </td>
+//               <td>
+//                     <p class="mb-0 text-sm">${Number(data[i].size).toFixed(
+//                       1
+//                     )}Kbs</p>
+//               </td>
+//               <td>
+//                 <p class="text-xs font-weight-bold mb-0">${
+//                   data[i].uploaded_by
+//                 }</p>
+//               </td>
+//               <td>
+//                 <p class="btn btn-${
+//                   data[i].category === "processed" ? "success" : "danger"
+//                 } text-xs font-weight-bold mb-0">${data[
+//           i
+//         ].category.toUpperCase()}</p>
+//               </td>
+//               <td>
+//                 <p class="text-xs font-weight-bold mb-0">${new Date(
+//                   data[i].last_modified
+//                 ).toLocaleString()}</p>
+//               </td>
+//               <td>
+//                 <a
+//                   href="${data[i].url}"
+//                   class="text-primary font-weight-bold text-lg me-3"
+//                   title="Download File"
+//                   download
+//                   ><i class="bi bi-download"></i></a
+//                 >
+//               </td>
+//           `;
+
+//         allFilesContainer.appendChild(tr);
+//         i++;
+//       }
+
+//       $("#all_files").DataTable({
+//         language: {
+//           //customize pagination prev and next buttons: use arrows instead of words
+//           paginate: {
+//             previous: '<span class="fa fa-chevron-left"></span>',
+//             next: '<span class="fa fa-chevron-right"></span>',
+//           },
+//           //customize number of elements to be displayed
+//           lengthMenu:
+//             'Display <select class="form-control input-sm">' +
+//             '<option value="10">10</option>' +
+//             '<option value="20">20</option>' +
+//             '<option value="30">30</option>' +
+//             '<option value="40">40</option>' +
+//             '<option value="50">50</option>' +
+//             '<option value="-1">All</option>' +
+//             "</select> results",
+//         },
+//       });
+//     }
+//   })
+//   .catch((error) => {
+//     console.error("There was a problem with the fetch operation:", error);
+//   });
+
+//   document
+//   .getElementById("filterForm")
+//   .addEventListener("submit", function (event) {
+//     event.preventDefault();
+
+//     const startDate = document.getElementById("startDate").value;
+//     const endDate = document.getElementById("endDate").value;
+
+//     // Fetch filtered data from the API endpoint
+//     fetch(
+//       `api/filtered_files/list/all/?startDate=${startDate}&endDate=${endDate}`,
+//       {
+//         method: "GET",
+//         headers: {
+//           "Content-Type": "application/json",
+//           Authorization: `Token ${localStorage.getItem(
+//             "terratracAuthToken"
+//           )}`,
+//         },
+//       }
+//     )
+//       .then((response) => {
+//         if (!response.ok) {
+//           throw new Error("Network response was not ok");
+//         }
+//         return response.json();
+//       })
+//       .then((data) => {
+//         console.log("API Response:", data); // Inspect the response
+
+//         const allFilesContainer =
+//           document.getElementById("allFilesContainer");
+//         allFilesContainer.innerHTML = ""; // Clear existing rows
+
+//         if (!Array.isArray(data) || data.length === 0) {
+//           allFilesContainer.innerHTML =
+//             '<tr><td colspan="7" class="text-center">No Files available</td></tr>';
+//         } else {
+//           // Populate the table with filtered data
+//           data.forEach((file, index) => {
+//             const tr = document.createElement("tr");
+//             tr.innerHTML = `
+//                   <td>
+//                       <p class="text-xs font-weight-bold mb-0">${
+//                         index + 1
+//                       }</p>
+//                   </td>
+//                   <td>
+//                       <h6 class="mb-0 text-sm">${file.file_name || "N/A"}</h6>
+//                   </td>
+//                   <td>
+//                       <p class="text-xs font-weight-bold mb-0">${
+//                         file.file_size || "N/A"
+//                       }</p>
+//                   </td>
+//                   <td>
+//                       <p class="text-xs font-weight-bold mb-0">${
+//                         file.uploaded_by || "N/A"
+//                       }</p>
+//                   </td>
+//                   <td>
+//                       <p class="text-xs font-weight-bold mb-0">${
+//                         file.category || "N/A"
+//                       }</p>
+//                   </td>
+//                   <td>
+//                       <p class="text-xs font-weight-bold mb-0">${new Date(
+//                         file.uploaded_on
+//                       ).toLocaleString()}</p>
+//                   </td>
+//                   <td class="text-center">
+//                       <a href="${file.url}?file-id=${
+//               file.id
+//             }" class="text-primary font-weight-bold text-lg" title="View Details">
+//                           <i class="bi bi-list"></i>
+//                       </a>
+//                   </td>
+//               `;
+//             allFilesContainer.appendChild(tr);
+//           });
+//         }
+
+//         // Reinitialize DataTable if needed
+//         if ($.fn.DataTable.isDataTable("#all_files")) {
+//           $("#all_files").DataTable().destroy();
+//         }
+//         const tableCustoms = $("#all_files").DataTable({
+//           columnDefs: [
+//             {
+//               targets: 0,
+//               className: "dt-control",
+//               orderable: false,
+//               data: null,
+//               defaultContent: "",
+//             },
+//           ],
+//           order: [[1, "asc"]],
+//           language: {
+//             paginate: {
+//               previous: '<span class="fa fa-chevron-left"></span>',
+//               next: '<span class="fa fa-chevron-right"></span>',
+//             },
+//             lengthMenu:
+//               'Display <select class="form-control input-sm">' +
+//               '<option value="10">10</option>' +
+//               '<option value="20">20</option>' +
+//               '<option value="30">30</option>' +
+//               '<option value="40">40</option>' +
+//               '<option value="50">50</option>' +
+//               '<option value="-1">All</option>' +
+//               "</select> results",
+//           },
+//         });
+
+//         // Add accordion functionality (if needed)
+//         $("#all_files tbody").on("click", "td.dt-control", function () {
+//           const tr = $(this).closest("tr");
+//           const row = tableCustoms.row(tr);
+
+//           if (row.child.isShown()) {
+//             row.child.hide();
+//             tr.removeClass("shown");
+//           } else {
+//             row.child(format(row.data())).show();
+//             tr.addClass("shown");
+//           }
+//         });
+//       })
+//       .catch((error) => {
+//         console.error("There was a problem with the fetch operation:", error);
+//       });
+//   });
+
+// document.getElementById("resetFilter").addEventListener("click", function () {
+//   document.getElementById("startDate").value = "";
+//   document.getElementById("endDate").value = "";
+//   document.getElementById("filterForm").submit(); // Or reload the page, or run filter with default values.
+// });
+
 const allFilesContainer = document.getElementById("allFilesContainer");
 const filterForm = document.getElementById("filterForm");
 const resetFilterBtn = document.getElementById("resetFilter");
@@ -1416,6 +1663,22 @@ function initializeDataTable() {
   });
 }
 
+// // Handle filter submission
+// filterForm.addEventListener("submit", (event) => {
+//   event.preventDefault();
+
+//   const startDate = document.getElementById("startDate").value;
+//   const endDate = document.getElementById("endDate").value;
+//   let apiUrl = "/api/files/list/all/";
+
+//   // If both dates are provided, fetch only the filtered data
+//   if (startDate && endDate) {
+//     apiUrl = `/uploads/api/filtered_files/list/all/?startDate=${startDate}&endDate=${endDate}`;
+//   }
+
+//   fetchFiles(apiUrl);
+// });
+
 // Make sure the DOM is fully loaded before trying to access elements
 document.addEventListener("DOMContentLoaded", function() {
   // Get the filter form element
@@ -1446,6 +1709,13 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   }
 });
+
+// // Reset filter: clear filter fields and reload the full file list
+// resetFilterBtn.addEventListener("click", () => {
+//   document.getElementById("startDate").value = "";
+//   document.getElementById("endDate").value = "";
+//   fetchFiles("/api/files/list/all/");
+// });
 
 // Initial fetch for all files on page load
 fetchFiles("/api/files/list/all/");
@@ -1478,7 +1748,119 @@ async function fetchAndDisplayTotalFiles() {
 // Call the function on dashboard load
 fetchAndDisplayTotalFiles();
 
+// const usersContainer = document.getElementById("usersContainer");
+
+// if (document.querySelector("#total_users") || usersContainer) {
+//   fetch("/api/users/", {
+//     method: "GET",
+//     headers: {
+//       "Content-Type": "application/json",
+//       Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+//     },
+//   })
+//     .then((response) => {
+//       if (!response.ok) {
+//         throw new Error("Network response was not ok");
+//       }
+//       return response.json();
+//     })
+//     .then((data) => {
+//       let i = 0;
+
+//       if (document.querySelector("#total_users")) {
+//         document.querySelector("#total_users").innerText = data.length;
+//       }
+
+//       if (usersContainer) {
+//         // remove loading spinner
+//         usersContainer.innerHTML = "";
+
+//         while (i < data.length) {
+//           const tr = document.createElement("tr");
+//           tr.innerHTML = `
+//               <td>
+//                 <p class="text-xs font-weight-bold px-3 mb-0">${i + 1}.</p>
+//               </td>
+//               <td>
+//                   <h6 class="mb-0 text-sm">${data[i].first_name} ${
+//             data[i].last_name
+//           }</h6>
+//               </td>
+//               <td>
+//                 <p class="text-xs font-weight-bold mb-0">${data[i].username}</p>
+//               </td>
+//               <td>
+//                 <p class="text-xs font-weight-bold mb-0">${
+//                   data[i].is_active ? "Active" : "Inactive"
+//                 }</p>
+//               </td>
+//               <td>
+//                 <p class="text-xs font-weight-bold mb-0">${new Date(
+//                   data[i].date_joined
+//                 ).toLocaleString()}</p>
+//               </td>
+//               <td class="d-flex justify-content-center gap-3">
+//                 <a
+//                   href="${validatorUrl}?user-id=${data[i].id}"
+//                   class="text-primary font-weight-bold text-lg"
+//                   title="View User List of Plots"
+//                   ><i class="bi bi-list"></i></a
+//                 >
+//                 ${
+//                   data[i].is_superuser
+//                     ? ""
+//                     : `<a
+//                   href="#?user-id=${data[i].id}"
+//                   class="text-primary font-weight-bold text-lg"
+//                   title="Edit User"
+//                   ><i class="bi bi-pen"></i></a
+//                 >
+//                 <a
+//                   href="#?user-id=${data[i].id}"
+//                   class="text-primary font-weight-bold text-lg"
+//                   title="Delete User"
+//                   ><i class="bi bi-trash"></i></a
+//                 >`
+//                 }
+//               </td>
+//           `;
+
+//           usersContainer.appendChild(tr);
+//           i++;
+//         }
+
+//         $("#users").DataTable({
+//           language: {
+//             //customize pagination prev and next buttons: use arrows instead of words
+//             paginate: {
+//               previous: '<span class="fa fa-chevron-left"></span>',
+//               next: '<span class="fa fa-chevron-right"></span>',
+//             },
+//             //customize number of elements to be displayed
+//             lengthMenu:
+//               'Display <select class="form-control input-sm">' +
+//               '<option value="10">10</option>' +
+//               '<option value="20">20</option>' +
+//               '<option value="30">30</option>' +
+//               '<option value="40">40</option>' +
+//               '<option value="50">50</option>' +
+//               '<option value="-1">All</option>' +
+//               "</select> results",
+//           },
+//         });
+//       }
+//     })
+//     .catch((error) => {
+//       console.error(
+//         "There was a problem with the fetch users operation:",
+//         error
+//       );
+//     });
+// }
+
 const usersContainer = document.getElementById("usersContainer");
+// const filterForm = document.getElementById("filterForm");
+// const resetFilterBtn = document.getElementById("resetFilter");
 
 // Reusable function to fetch and display users
 async function fetchUsers(apiEndpoint) {
@@ -1623,6 +2005,29 @@ function displayUsers(data) {
   initializeDataTable();
 }
 
+// // Handle filter submission
+// filterForm.addEventListener("submit", (event) => {
+//   event.preventDefault();
+
+//   const startDate = document.getElementById("startDate").value;
+//   const endDate = document.getElementById("endDate").value;
+//   let apiUrl = "/api/users/";
+
+//   // If both dates are provided, fetch only the filtered data
+//   if (startDate && endDate) {
+//     apiUrl = `/api/filtered_users/?startDate=${startDate}&endDate=${endDate}`;
+//   }
+
+//   fetchUsers(apiUrl);
+// });
+
+// // Reset filter: clear filter fields and reload the full user list
+// resetFilterBtn.addEventListener("click", () => {
+//   document.getElementById("startDate").value = "";
+//   document.getElementById("endDate").value = "";
+//   fetchUsers("/api/users/");
+// });
+
 // Make sure the DOM is fully loaded before trying to access elements
 document.addEventListener("DOMContentLoaded", function() {
   // Get the filter form element
@@ -1694,6 +2099,144 @@ fetchAndDisplayTotalUsers();
 
 const backupsContainer = document.getElementById("backupsContainer");
 
+// fetch("/api/collection_sites/list", {
+//   method: "GET",
+//   headers: {
+//     "Content-Type": "application/json",
+//     Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+//   },
+// })
+//   .then((response) => {
+//     if (!response.ok) {
+//       throw new Error("Network response was not ok");
+//     }
+//     return response.json();
+//   })
+//   .then((data) => {
+//     let i = 0;
+
+//     if (document.querySelector("#total_backups")) {
+//       document.querySelector("#total_backups").innerText = data.length;
+//     }
+
+//     if (backupsContainer) {
+//       // remove loading spinner
+//       backupsContainer.innerHTML = "";
+
+//       while (i < data.length) {
+//         const tr = document.createElement("tr");
+
+//         tr.innerHTML = `
+//             <td></td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${data[i].device_id}</p>
+//             </td>
+//             <td>
+//               <h6 class="mb-0 text-sm">${data[i].name}</h6>
+//             </td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${data[i].agent_name}</p>
+//             </td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${
+//                 data[i].email || "N/A"
+//               }</p>
+//             </td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${
+//                 data[i].phone_number || "N/A"
+//               }</p>
+//             </td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${data[i].village}</p>
+//             </td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${data[i].district}</p>
+//             </td>
+//             <td>
+//               <p class="text-xs font-weight-bold mb-0">${new Date(
+//                 data[i].updated_at
+//               ).toLocaleString()}</p>
+//             </td>
+//             <td class="align-middle text-center">
+//               <a href="${backupDetailsUrl}?cs-id=${
+//           data[i].id
+//         }" class="text-primary font-weight-bold text-lg" title="View Details"><i class="bi bi-list"></i></a>
+//             </td>
+//       `;
+
+//         backupsContainer.appendChild(tr);
+//         i++;
+//       }
+
+//       const tableCustoms = $("#backups").DataTable({
+//         columnDefs: [
+//           {
+//             targets: 0,
+//             className: "dt-control",
+//             orderable: false,
+//             data: null,
+//             defaultContent: "",
+//           },
+//           {
+//             targets: [2, 3, 4, 5, 6, 7],
+//             visible: false,
+//           },
+//         ],
+//         order: [[1, "asc"]],
+//         language: {
+//           //customize pagination prev and next buttons: use arrows instead of words
+//           paginate: {
+//             previous: '<span class="fa fa-chevron-left"></span>',
+//             next: '<span class="fa fa-chevron-right"></span>',
+//           },
+//           //customize number of elements to be displayed
+//           lengthMenu:
+//             'Display <select class="form-control input-sm">' +
+//             '<option value="10">10</option>' +
+//             '<option value="20">20</option>' +
+//             '<option value="30">30</option>' +
+//             '<option value="40">40</option>' +
+//             '<option value="50">50</option>' +
+//             '<option value="-1">All</option>' +
+//             "</select> results",
+//         },
+//       });
+
+//       function format(rowData) {
+//         return `
+//             <div class="accordion-content">
+//                 <div><b>Site Name:</b> ${rowData[2]}</div>
+//                 <div><b>Agent Name:</b> ${rowData[3]}</div>
+//                 <div><b>Email:</b> ${rowData[4]}</div>
+//                 <div><b>Phone Number:</b> ${rowData[5]}</div>
+//                 <div><b>Village:</b> ${rowData[6]}</div>
+//                 <div><b>District:</b> ${rowData[7]}</div>
+//             </div>`;
+//       }
+
+//       $("#backups tbody").on("click", "td.dt-control", function () {
+//         const tr = $(this).closest("tr");
+//         const row = tableCustoms.row(tr);
+
+//         if (row.child.isShown()) {
+//           // Close the accordion
+//           row.child.hide();
+//           tr.removeClass("shown");
+//         } else {
+//           // Open the accordion
+//           row.child(format(row.data())).show();
+//           tr.addClass("shown");
+//         }
+//       });
+//     }
+//   })
+//   .catch((error) => {
+//     console.error(
+//       "There was a problem with the fetch backups operation:",
+//       error
+//     );
+//   });
 
 async function fetchBackups(apiEndpoint) {
   try {
@@ -1842,6 +2385,29 @@ function displayBackups(data) {
   // Reinitialize the DataTable with the new data
   initializeDataTable();
 }
+
+// // Handle filter submission
+// filterForm.addEventListener("submit", (event) => {
+//   event.preventDefault();
+
+//   const startDate = document.getElementById("startDate").value;
+//   const endDate = document.getElementById("endDate").value;
+//   let apiUrl = "/api/collection_sites/list";
+
+//   // If both dates are provided, fetch only the filtered data
+//   if (startDate && endDate) {
+//     apiUrl = `/api/collection_sites/filter/?startDate=${startDate}&endDate=${endDate}`;
+//   }
+
+//   fetchBackups(apiUrl);
+// });
+
+// // Reset filter: clear filter fields and reload the full user list
+// resetFilterBtn.addEventListener("click", () => {
+//   document.getElementById("startDate").value = "";
+//   document.getElementById("endDate").value = "";
+//   fetchBackups("/api/collection_sites/list");
+// });
 
 
 // Make sure the DOM is fully loaded before trying to access elements

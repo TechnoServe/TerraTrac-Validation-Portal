@@ -5,6 +5,7 @@ from django.db.models import Q
 from eudr_backend.models import EUDRFarmModel, EUDRUploadedFilesModel, WhispAPISetting
 from eudr_backend.serializers import EUDRFarmModelSerializer
 from eudr_backend.utils import flatten_geojson, format_geojson_data, transform_db_data_to_geojson
+from decouple import config
 
 
 # Define an async function
@@ -27,6 +28,7 @@ async def async_create_farm_data(data, file_id, isSyncing=False, hasCreatedFiles
         return errors, created_data
     else:
         err, analysis_results = await perform_analysis(data)
+        # print(analysis_results)
         if err:
             # delete the file if there are errors
             EUDRUploadedFilesModel.objects.get(id=file_id).delete()
@@ -58,8 +60,14 @@ async def get_existing_record(data):
 
 
 async def perform_analysis(data, hasCreatedFiles=[]):
-    url = "https://whisp.openforis.org/api/geojson"
-    headers = {"Content-Type": "application/json"}
+    api_key = config("WHISP_API_KEY")
+    if not api_key:
+        raise ValueError("WHISP_API_KEY environment variable not set.")
+    
+    # print(f"Using API Key: {api_key}")
+    url = "https://whisp.openforis.org/api/submit/geojson"
+    headers = {"X-API-KEY": api_key,
+               "Content-Type": "application/json"}
     settings = await sync_to_async(WhispAPISetting.objects.first)()
     chunk_size = settings.chunk_size if settings else 500
     analysis_results = []
@@ -84,13 +92,15 @@ async def perform_analysis(data, hasCreatedFiles=[]):
                     EUDRUploadedFilesModel.objects.filter(
                         id__in=hasCreatedFiles).delete()
                 return {"Validation against global database failed."}, None
-            analysis_results.extend(response.json().get('data', []))
-
+            analysis_results.extend(response.json().get(
+                'data', []). get('features', []))
     return None, analysis_results
 
 
 async def save_farm_data(data, file_id, analysis_results=None):
+    print("analysis results",analysis_results)
     formatted_data = format_geojson_data(data, analysis_results, file_id)
+    # print("formatted data",formatted_data)
     saved_records = []
 
     for item in formatted_data:
