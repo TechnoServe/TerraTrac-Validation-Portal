@@ -208,7 +208,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AGSTACK_EMAIL = config('AGSTACK_API_EMAIL')
 AGSTACK_PASSWORD = config('AGSTACK_API_PASSWORD')
-WHISP_API_KEY= config('WHISP_API_KEY')
+WHISP_API_KEY = config('WHISP_API_KEY')
 
 # email credentials
 # settings.py
