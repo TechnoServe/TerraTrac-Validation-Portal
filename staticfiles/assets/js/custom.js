@@ -464,6 +464,14 @@ if (response) {
       return resp.json();
     })
     .then((data) => {
+      // const farmsWithAnalysis = data.filter(farm => farm.analysis);
+      // console.log("famr data",data)
+      // console.log("analysis",data[0].analysis?.risk_timber)
+    //   data.forEach((farm, index) => {
+    //   const risk = farm.analysis?.risk_timber ?? "not provided";
+    //   console.log(`Farm #${index} | Agent: ${farm.agent_name} | risk_timber: ${risk}`);
+    // });
+
       farmData = data;
       filteredFarms = data.map((farm) => {
         farm.updated_at = new Date(farm.updated_at).toLocaleString();
@@ -484,13 +492,13 @@ if (response) {
         document.querySelector("#total_farms").innerText = data.length;
         // check where eudr_risk_level is high and calculate the percentage
         const lowRiskFarms = data.filter(
-          (farm) => farm.farmData[i].analysis?.risk_timber === "low"
+          (farm) => farm.analysis?.eudr_risk_level === "low"
         );
         const highRiskFarms = data.filter(
-          (farm) => farm.farmData[i].analysis?.risk_timber === "high"
+          (farm) => farm.analysis?.eudr_risk_level === "high"
         );
         const moreInfoNeededFarms = data.filter(
-          (farm) => farm.farmData[i].analysis?.risk_timber === "more_info_needed"
+          (farm) => farm.analysis?.eudr_risk_level === "more_info_needed"
         );
 
         const lowPercentage = (
@@ -661,8 +669,6 @@ if (response) {
 
         // remove loading spinner
         farmsContainer.innerHTML = "";
-
-        console.log("farm data",data);
 
         generateData(data, farmsContainer);
       }
@@ -1049,10 +1055,8 @@ async function loadJsonFile(languageCode) {
 }
 
 function generateData(farmData, farmsContainer) {
-  console.log("farm data", farmData)
   let i = 0;
   while (i < farmData.length) {
-    console.log("risk timber",farmData[i].analysis);
     const tr = document.createElement("tr");
     tr.innerHTML = `
             <td></td>
@@ -1111,9 +1115,11 @@ function generateData(farmData, farmsContainer) {
         ? "#15E289"
         : farmData[i].analysis.eudr_risk_level
     }">${
-      farmData[i].analysis?.eudr_risk_level
+      typeof farmData[i].analysis?.eudr_risk_level === "string"
+      ? farmData[i].analysis.eudr_risk_level
         .replace(/_/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase()) || "-"
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+      : "-"
     }</p>
             </td>
             <td class="align-middle text-center text-sm">
