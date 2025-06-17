@@ -237,6 +237,7 @@ class ViewsTestCase(TestCase):
         data = {"type": "FeatureCollection", "features": [{
             "type": "Feature",
             "properties": {
+                "commodity": "COFFEE",
                 "farmer_name": "sjee",
                 "member_id": "",
                 "collection_site": "fhfh",
@@ -254,6 +255,7 @@ class ViewsTestCase(TestCase):
         }, {
             "type": "Feature",
             "properties": {
+                "commodity": "COFFEE",
                 "farmer_name": "shdh",
                 "member_id": "",
                 "collection_site": "fhfh",
@@ -273,6 +275,8 @@ class ViewsTestCase(TestCase):
             }
         }]}
         response = self.client.post(url, data, format='json')
+        print("response code",response.status_code)
+        print("response data",response.data)
         self.file.id = response.data['file_id']
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
