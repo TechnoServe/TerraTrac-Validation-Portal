@@ -80,6 +80,7 @@ class IntegrationTests(TestCase):
             "type": "Feature",
             "properties": {
                 "remote_id": "1b8313c1-c584-4e6b-8a1c-3e9fd962798b",
+                "commodity": "COFFEE",
                 "farmer_name": "sjee",
                 "member_id": "",
                 "collection_site": "fhfh",
@@ -101,6 +102,7 @@ class IntegrationTests(TestCase):
             "type": "Feature",
             "properties": {
                 "remote_id": "8317a3ca-c1c2-4990-98e4-055fbd8e4e19",
+                "commodity": "COFFEE",
                 "farmer_name": "shdh",
                 "member_id": "",
                 "collection_site": "fhfh",
