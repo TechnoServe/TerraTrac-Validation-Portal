@@ -609,10 +609,11 @@ def create_farm_data(request):
         # Custom function to handle failed file entries
         handle_failed_file_entry(file_serializer, file, request.user)
         return Response({'error': 'File serialization failed'}, status=status.HTTP_400_BAD_REQUEST)
-
+    print("username",request.user.username,request.user.is_authenticated )
     # Proceed with other operations...
-    update_geoid(repeat=60,
-                 user_id=request.user.username if request.user.is_authenticated else "admin")
+    # update_geoid(repeat=60,
+    #              user_id=request.user.username if request.user.is_authenticated else "admin")
+    update_geoid(user_id=request.user.username if request.user.is_authenticated else "admin")
     store_file_in_s3(file, request.user, file_name, True) if file else None
     return Response({'message': 'File/data processed successfully', 'file_id': file_id}, status=status.HTTP_201_CREATED)
 

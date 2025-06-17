@@ -10,7 +10,8 @@ REQUIRED_FIELDS = [
     'farm_village',
     'latitude',
     'longitude',
-    'polygon'
+    'polygon',
+    'commodity'
 ]
 
 OPTIONAL_FIELDS = [
@@ -24,6 +25,7 @@ OPTIONAL_FIELDS = [
 ]
 
 GEOJSON_REQUIRED_FIELDS = ['geometry',
+                           'commodity'
                            'farmer_name',
                            'farm_size',
                            'collection_site',
@@ -124,6 +126,7 @@ def validate_geojson(data: dict) -> bool:
             'farm_size': (int, float),
             'latitude': (int, float),
             'longitude': (int, float),
+            'commodity' : str
         }
         for prop, prop_type in required_properties.items():
             if not isinstance(properties.get(prop), prop_type):
