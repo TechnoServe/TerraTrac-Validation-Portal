@@ -23,6 +23,7 @@ def get_access_token():
 
 
 # @background(schedule=60)  # Schedule task to run every 5 minutes
+# @background(schedule=60)  # Schedule task to run every 5 minutes
 def update_geoid(user_id):
     access_token = get_access_token()
     headers = {
@@ -47,6 +48,7 @@ def update_geoid(user_id):
         reversed_coords = [[(lat, lon) for lat, lon in ring]
                            for ring in farm.polygon]
 
+        # Create a Shapely Polygon
         # Create a Shapely Polygon
         polygon = Polygon(reversed_coords[0])
 
