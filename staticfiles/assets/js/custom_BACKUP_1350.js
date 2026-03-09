@@ -472,15 +472,26 @@ if (response) {
     //   console.log(`Farm #${index} | Agent: ${farm.agent_name} | risk_timber: ${risk}`);
     // });
 
+      // const farmsWithAnalysis = data.filter(farm => farm.analysis);
+      // console.log("famr data",data)
+      // console.log("analysis",data[0].analysis?.risk_timber)
+    //   data.forEach((farm, index) => {
+    //   const risk = farm.analysis?.risk_timber ?? "not provided";
+    //   console.log(`Farm #${index} | Agent: ${farm.agent_name} | risk_timber: ${risk}`);
+    // });
+
       farmData = data;
       filteredFarms = data.map((farm) => {
         farm.updated_at = new Date(farm.updated_at).toLocaleString();
         return farm;
       });
       // order filteredFarms by farmData[i].analysis?.risk_timber
+      // order filteredFarms by farmData[i].analysis?.risk_timber
       filteredFarms.sort((a, b) => {
         if (a.analysis?.risk_timber === "low") {
+        if (a.analysis?.risk_timber === "low") {
           return -1;
+        } else if (a.analysis?.risk_timber === "medium") {
         } else if (a.analysis?.risk_timber === "medium") {
           return 0;
         } else {
@@ -493,11 +504,14 @@ if (response) {
         // check where eudr_risk_level is high and calculate the percentage
         const lowRiskFarms = data.filter(
           (farm) => farm.analysis?.eudr_risk_level === "low"
+          (farm) => farm.analysis?.eudr_risk_level === "low"
         );
         const highRiskFarms = data.filter(
           (farm) => farm.analysis?.eudr_risk_level === "high"
+          (farm) => farm.analysis?.eudr_risk_level === "high"
         );
         const moreInfoNeededFarms = data.filter(
+          (farm) => farm.analysis?.eudr_risk_level === "more_info_needed"
           (farm) => farm.analysis?.eudr_risk_level === "more_info_needed"
         );
 
@@ -780,6 +794,8 @@ collectionSiteDropdown?.addEventListener("change", (e) => {
 
   console.log("filtered farms",filteredFarms);
 
+  console.log("filtered farms",filteredFarms);
+
   generateData(filteredFarms, farmsContainer);
 });
 
@@ -793,6 +809,7 @@ document
       selectedRiskLevel === ""
         ? farmData
         : farmData.filter(
+            (farm) => farm.farmData[i].analysis?.risk_timber === selectedRiskLevel
             (farm) => farm.farmData[i].analysis?.risk_timber === selectedRiskLevel
           );
 
@@ -1097,6 +1114,7 @@ function generateData(farmData, farmsContainer) {
             </td>
             <td>
 <p
+<p
                 class="${
                   farmData[i].analysis.eudr_risk_level === "high"
                     ? "text-xs font-weight-bold mb-0"
@@ -1117,7 +1135,11 @@ function generateData(farmData, farmsContainer) {
     }">${
       typeof farmData[i].analysis?.eudr_risk_level === "string"
       ? farmData[i].analysis.eudr_risk_level
+      typeof farmData[i].analysis?.eudr_risk_level === "string"
+      ? farmData[i].analysis.eudr_risk_level
         .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+      : "-"
         .replace(/\b\w/g, (char) => char.toUpperCase())
       : "-"
     }</p>
@@ -1362,7 +1384,108 @@ function displayFiles(data) {
 
   // Clear the table content before adding new rows
   allFilesContainer.innerHTML = "";
+const filterForm = document.getElementById("filterForm");
+const resetFilterBtn = document.getElementById("resetFilter");
 
+// Reusable function to fetch and display files
+async function fetchFiles(apiEndpoint) {
+  try {
+    // Add loading spinner while the table is being loaded
+    allFilesContainer.innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </td>
+      </tr>
+    `;
+    const response = await fetch(apiEndpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+      },
+    });
+
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    const data = await response.json();
+    console.log("API Response:", data); // Inspect the response
+
+    // Check if data is valid and not empty
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      allFilesContainer.innerHTML =
+        '<tr><td colspan="7" class="text-center">No Files available</td></tr>';
+      destroyDataTable();
+    } else {
+      displayFiles(data);
+    }
+  } catch (error) {
+    // console.error("Fetch error:", error);
+    // allFilesContainer.innerHTML =
+    //   '<tr><td colspan="7" class="text-center text-danger">Error fetching files. Try again.</td></tr>';
+    destroyDataTable();
+  }
+}
+
+// Function to destroy DataTable
+function destroyDataTable() {
+  if ($.fn.DataTable.isDataTable("#all_files")) {
+    $("#all_files").DataTable().destroy();
+  }
+}
+
+// Function to display files in the table
+function displayFiles(data) {
+  // Destroy existing DataTable before repopulating
+  destroyDataTable();
+
+  // Clear the table content before adding new rows
+  allFilesContainer.innerHTML = "";
+
+  if (!Array.isArray(data) || data.length === 0) {
+    allFilesContainer.innerHTML =
+      '<tr><td colspan="7" class="text-center">No Files available</td></tr>';
+    return;
+  }
+
+  data.forEach((file, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><p class="text-xs font-weight-bold mb-0">${index + 1}</p></td>
+      <td><h6 class="mb-0 text-sm">${file.file_name || "N/A"}</h6></td>
+      <td><p class="text-xs font-weight-bold mb-0">${
+        file.file_size || "N/A"
+      }</p></td>
+      <td><p class="text-xs font-weight-bold mb-0">${
+        file.uploaded_by || "N/A"
+      }</p></td>
+      <td><p class="btn btn-${
+        file.category === "processed" ? "success" : "danger"
+      } text-xs font-weight-bold mb-0">${file.category.toUpperCase()}</p></td>
+      <td><p class="text-xs font-weight-bold mb-0">${new Date(
+        file.last_modified
+      ).toLocaleString()}</p></td>
+      <td class="text-center">
+        <a href="${file.url}?file-id=${
+      file.id
+    }" class="text-primary font-weight-bold text-lg" title="View Details">
+          <i class="bi bi-list"></i>
+        </a>
+      </td>
+    `;
+    allFilesContainer.appendChild(tr);
+  });
+
+  // Reinitialize the DataTable with the new data
+  initializeDataTable();
+}
+
+// Function to initialize/reinitialize DataTable
+function initializeDataTable() {
+  // Destroy existing DataTable before reinitializing
+  destroyDataTable();
   if (!Array.isArray(data) || data.length === 0) {
     allFilesContainer.innerHTML =
       '<tr><td colspan="7" class="text-center">No Files available</td></tr>';
@@ -1580,7 +1703,144 @@ function initializeDataTable() {
 function displayUsers(data) {
   // Clear the table content before adding new rows
   usersContainer.innerHTML = "";
+// const filterForm = document.getElementById("filterForm");
+// const resetFilterBtn = document.getElementById("resetFilter");
 
+// Reusable function to fetch and display users
+async function fetchUsers(apiEndpoint) {
+  try {
+    // Add loading spinner while the table is being loaded
+    usersContainer.innerHTML = `
+      <tr>
+        <td colspan="6" class="text-center">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </td>
+      </tr>
+    `;
+    const response = await fetch(apiEndpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${localStorage.getItem("terratracAuthToken")}`,
+      },
+    });
+
+    if (!response.ok) throw new Error("Network response was not ok");
+
+    const data = await response.json();
+
+    console.log("users", data);
+
+    // Check if data is valid and not empty
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      usersContainer.innerHTML =
+        '<tr><td colspan="6" class="text-center">No Users available</td></tr>';
+      destroyDataTable();
+    } else {
+      displayUsers(data);
+    }
+  } catch (error) {
+    // console.error("Fetch error:", error);
+    // usersContainer.innerHTML =
+    //   '<tr><td colspan="6" class="text-center text-danger">Error fetching users. Try again.</td></tr>';
+    destroyDataTable();
+  }
+}
+
+// Function to destroy DataTable
+function destroyDataTable() {
+  if ($.fn.DataTable.isDataTable("#users")) {
+    $("#users").DataTable().destroy();
+  }
+}
+
+// Function to initialize/reinitialize DataTable
+function initializeDataTable() {
+  // Destroy existing DataTable before reinitializing
+  destroyDataTable();
+
+  $("#users").DataTable({
+    columnDefs: [{ targets: 0, className: "dt-control", orderable: false }],
+    order: [[4, "desc"]], // Sort the last column in descending order
+    language: {
+      paginate: {
+        previous: '<span class="fa fa-chevron-left"></span>',
+        next: '<span class="fa fa-chevron-right"></span>',
+      },
+      lengthMenu:
+        'Display <select class="form-control input-sm">' +
+        '<option value="10">10</option>' +
+        '<option value="20">20</option>' +
+        '<option value="30">30</option>' +
+        '<option value="40">40</option>' +
+        '<option value="50">50</option>' +
+        '<option value="-1">All</option>' +
+        "</select> results",
+    },
+    // Add this to ensure proper initialization
+    retrieve: true,
+  });
+}
+
+// Function to display users in the table
+function displayUsers(data) {
+  // Clear the table content before adding new rows
+  usersContainer.innerHTML = "";
+
+  if (!Array.isArray(data) || data.length === 0) {
+    usersContainer.innerHTML =
+      '<tr><td colspan="6" class="text-center">No Users available</td></tr>';
+    return;
+  }
+
+  data.forEach((user, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <p class="text-xs font-weight-bold px-3 mb-0">${index + 1}.</p>
+      </td>
+      <td>
+        <h6 class="mb-0 text-sm">${user.first_name} ${user.last_name}</h6>
+      </td>
+      <td>
+        <p class="text-xs font-weight-bold mb-0">${user.username}</p>
+      </td>
+      <td>
+        <p class="text-xs font-weight-bold mb-0">${
+          user.is_active ? "Active" : "Inactive"
+        }</p>
+      </td>
+      <td>
+        <p class="text-xs font-weight-bold mb-0">${new Date(
+          user.date_joined
+        ).toLocaleString()}</p>
+      </td>
+      <td class="d-flex justify-content-center gap-3">
+        <a
+          href="${validatorUrl}?user-id=${user.id}"
+          class="text-primary font-weight-bold text-lg"
+          title="View User List of Plots"
+        ><i class="bi bi-list"></i></a>
+        ${
+          user.is_superuser
+            ? ""
+            : `
+          <a
+            href="#?user-id=${user.id}"
+            class="text-primary font-weight-bold text-lg"
+            title="Edit User"
+          ><i class="bi bi-pen"></i></a>
+          <a
+            href="#?user-id=${user.id}"
+            class="text-primary font-weight-bold text-lg"
+            title="Delete User"
+          ><i class="bi bi-trash"></i></a>
+        `
+        }
+      </td>
+    `;
   if (!Array.isArray(data) || data.length === 0) {
     usersContainer.innerHTML =
       '<tr><td colspan="6" class="text-center">No Users available</td></tr>';
@@ -1818,33 +2078,57 @@ function displayBackups(data) {
     tr.innerHTML = `
      
         <td></td>
+// Function to display users in the table
+function displayBackups(data) {
+  // Clear the table content before adding new rows
+  backupsContainer.innerHTML = "";
+
+  if (!Array.isArray(data) || data.length === 0) {
+    backupsContainer.innerHTML =
+      '<tr><td colspan="4" class="text-center">No Backups available</td></tr>';
+    return;
+  }
+
+  data.forEach((backup, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+     
+        <td></td>
             <td>
+              <p class="text-xs font-weight-bold mb-0">${backup.device_id}</p>
               <p class="text-xs font-weight-bold mb-0">${backup.device_id}</p>
             </td>
             <td>
               <h6 class="mb-0 text-sm">${backup.name}</h6>
+              <h6 class="mb-0 text-sm">${backup.name}</h6>
             </td>
             <td>
+              <p class="text-xs font-weight-bold mb-0">${backup.agent_name}</p>
               <p class="text-xs font-weight-bold mb-0">${backup.agent_name}</p>
             </td>
             <td>
               <p class="text-xs font-weight-bold mb-0">${
+                backup.email || "N/A"
                 backup.email || "N/A"
               }</p>
             </td>
             <td>
               <p class="text-xs font-weight-bold mb-0">${
                 backup.phone_number || "N/A"
+                backup.phone_number || "N/A"
               }</p>
             </td>
             <td>
               <p class="text-xs font-weight-bold mb-0">${backup.village}</p>
+              <p class="text-xs font-weight-bold mb-0">${backup.village}</p>
             </td>
             <td>
+              <p class="text-xs font-weight-bold mb-0">${backup.district}</p>
               <p class="text-xs font-weight-bold mb-0">${backup.district}</p>
             </td>
             <td>
               <p class="text-xs font-weight-bold mb-0">${new Date(
+                backup.updated_at
                 backup.updated_at
               ).toLocaleString()}</p>
             </td>
@@ -1852,7 +2136,10 @@ function displayBackups(data) {
               <a href="${backupDetailsUrl}?cs-id=${
       backup.id
     }" class="text-primary font-weight-bold text-lg" title="View Details"><i class="bi bi-list"></i></a>
+      backup.id
+    }" class="text-primary font-weight-bold text-lg" title="View Details"><i class="bi bi-list"></i></a>
             </td>
+    `;
     `;
 
     backupsContainer.appendChild(tr);
@@ -1921,6 +2208,13 @@ async function fetchAndDisplayTotalBackups() {
     if (totalBackupsElement) {
       totalBackupsElement.innerText = data.length;
     }
+  } catch (error) {
+    console.error("Error fetching total backups:", error);
+  }
+}
+
+// Call the function on dashboard load
+fetchAndDisplayTotalBackups();
   } catch (error) {
     console.error("Error fetching total backups:", error);
   }

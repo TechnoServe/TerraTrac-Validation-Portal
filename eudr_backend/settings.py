@@ -208,7 +208,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AGSTACK_EMAIL = config('AGSTACK_API_EMAIL')
 AGSTACK_PASSWORD = config('AGSTACK_API_PASSWORD')
-WHISP_API_KEY = config('WHISP_API_KEY')
+# WHISP_API_KEY = config('WHISP_API_KEY')
 
 # email credentials
 # settings.py
@@ -227,6 +227,9 @@ AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
 AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME')
 AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+AWS_S3_BASE_URL = (
+    f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/"
+)
 AWS_S3_BASE_URL = (
     f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/"
 )

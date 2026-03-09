@@ -312,7 +312,7 @@ def format_geojson_data(geojson, analysis, file_id=None):
         geometry = feature.get('geometry', {})
 
         risk_info_commodity = extract_risk_level_by_commodity( analysis, commodity=properties.get("commodity") or "Coffee",)
-        print(risk_info_commodity)
+        # print(risk_info_commodity)
         
         # # Debug: Print available property keys for first feature
         # if i == 0:
